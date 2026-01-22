@@ -14,8 +14,16 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>services/cloud-config</module>
+        <module>services/config-service</module>
         <module>services/eureka-service</module>
+        <module>services/analytics-service</module>
+        <module>services/booking-service</module>
+        <module>services/event-service</module>
+        <module>services/graphql-gateway</module>
+        <module>services/notification-service</module>
+        <module>services/payment-service</module>
+        <module>services/ticket-service</module>
+        <module>services/user-service</module>
     </modules>
 
     <!-- Properties -->
