@@ -1,0 +1,202 @@
+name: booking-platform
+
+services:
+
+# ==================== DATABASES ====================
+  postgres:
+    image: postgres:16-alpine
+    container_name: booking-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin
+      POSTGRES_MULTIPLE_DATABASES: keycloakdb,userdb,bookingdb,paymentdb,ticketdb,notificationdb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d keycloakdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - booking-network
+
+  mongodb:
+    image: mongo:7
+    container_name: booking-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: booking-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-network
+
+# ==================== MESSAGING ====================
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: booking-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft mode (no Zookeeper)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Topics
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # Cluster ID (required for KRaft)
+      CLUSTER_ID: "booking-platform-kafka-cluster"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - booking-network
+
+# ==================== SECURITY ====================
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: booking-keycloak
+    command: start-dev --import-realm
+    ports:
+      - "8180:8080"
+    environment:
+      # Admin credentials
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      # Database
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://booking-postgres:5432/keycloakdb
+      KC_DB_USERNAME: admin
+      KC_DB_PASSWORD: admin
+      # Allow HTTP from external (development only)
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      KC_PROXY_HEADERS: xforwarded
+      # Features
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+    volumes:
+      - ../keycloak:/opt/keycloak/data/import
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && cat <&3 | grep -q '200 OK'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - booking-network
+
+# ==================== OBSERVABILITY ====================
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: booking-zipkin
+    ports:
+      - "9411:9411"
+    environment:
+      STORAGE_TYPE: mem
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9411/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-network
+
+# ==================== DEV TOOLS ====================
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: booking-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      - booking-network
+
+  sonarqube:
+    image: sonarqube:10-community
+    container_name: booking-sonarqube
+    ports:
+      - "9000:9000"
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: "true"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/api/system/status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
+    networks:
+      - booking-network
+
+# ==================== VOLUMES ====================
+volumes:
+  postgres_data:
+    name: booking-postgres-data
+  mongodb_data:
+    name: booking-mongodb-data
+  redis_data:
+    name: booking-redis-data
+  kafka_data:
+    name: booking-kafka-data
+  sonarqube_data:
+    name: booking-sonarqube-data
+  sonarqube_extensions:
+    name: booking-sonarqube-extensions
+  sonarqube_logs:
+    name: booking-sonarqube-logs
+
+# ==================== NETWORKS ====================
+networks:
+  booking-network:
+    name: booking-network
+    driver: bridge
