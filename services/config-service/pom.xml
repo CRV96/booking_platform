@@ -22,12 +22,6 @@
             <artifactId>spring-cloud-config-server</artifactId>
         </dependency>
 
-        <!-- Security for config server endpoints -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-
     </dependencies>
 
     <build>

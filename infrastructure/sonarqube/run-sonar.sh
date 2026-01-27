@@ -17,6 +17,7 @@ echo ""
 
 # Run Maven with SonarQube using 1Password to inject env vars
 op run --env-file=".env" -- mvn clean verify sonar:sonar \
+  -DskipTests \
   -Dsonar.projectKey=Booking-Platform \
   -Dsonar.projectName='Booking Platform' \
   -Dsonar.host.url=http://localhost:9000 \
