@@ -1,0 +1,63 @@
+{
+  "realm": "booking-platform",
+  "enabled": true,
+  "sslRequired": "none",
+
+  "roles": {
+    "realm": [
+      {
+        "name": "employee",
+        "description": "Employee role"
+      },
+      {
+        "name": "customer",
+        "description": "Customer role"
+      }
+    ]
+  },
+
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Employee",
+      "lastName": "Admin",
+      "email": "employee.admin@booking.com",
+
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+
+      "realmRoles": [
+        "employee"
+      ],
+
+      "clientRoles": {
+        "realm-management": [
+          "realm-admin",
+          "manage-realm",
+          "manage-users",
+          "manage-clients",
+          "manage-identity-providers",
+          "manage-authorization",
+          "manage-events",
+          "view-realm",
+          "view-users",
+          "view-identity-providers",
+          "view-authorization",
+          "view-events",
+          "query-users"
+        ],
+        "account": [
+          "view-profile",
+          "manage-account"
+        ]
+      }
+    }
+  ]
+}

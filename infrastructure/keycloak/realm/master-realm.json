@@ -1,4 +1,5 @@
 {
   "realm": "master",
+  "enabled": true,
   "sslRequired": "none"
 }
