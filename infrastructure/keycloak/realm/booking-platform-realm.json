@@ -3,6 +3,10 @@
   "enabled": true,
   "sslRequired": "none",
 
+  "attributes": {
+    "userProfileEnabled": "true"
+  },
+
   "roles": {
     "realm": [
       {
@@ -16,6 +20,17 @@
     ]
   },
 
+  "groups": [
+    {
+      "name": "employees",
+      "realmRoles": ["employee"]
+    },
+    {
+      "name": "customers",
+      "realmRoles": ["customer"]
+    }
+  ],
+
   "users": [
     {
       "username": "admin",
@@ -25,6 +40,15 @@
       "lastName": "Admin",
       "email": "employee.admin@booking.com",
 
+      "attributes": {
+        "phoneNumber": ["+1234567890"],
+        "country": ["US"],
+        "preferredLanguage": ["en"],
+        "dateOfBirth": ["1990-01-15"],
+        "billingAddress": ["123 Admin Street, New York, NY 10001"],
+        "profilePictureUrl": [""]
+      },
+
       "credentials": [
         {
           "type": "password",
@@ -33,8 +57,8 @@
         }
       ],
 
-      "realmRoles": [
-        "employee"
+      "groups": [
+        "/employees"
       ],
 
       "clientRoles": {
@@ -58,6 +82,100 @@
           "manage-account"
         ]
       }
+    },
+    {
+      "username": "john.doe",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "attributes": {
+        "phoneNumber": ["+1555123456"],
+        "country": ["US"],
+        "preferredLanguage": ["en"],
+        "dateOfBirth": ["1985-06-20"],
+        "billingAddress": ["456 Oak Street, Los Angeles, CA 90001"],
+        "profilePictureUrl": [""]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/customers"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      }
+    },
+    {
+      "username": "jane.smith",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane.smith@example.com",
+      "attributes": {
+        "phoneNumber": ["+44789123456"],
+        "country": ["UK"],
+        "preferredLanguage": ["en"],
+        "dateOfBirth": ["1992-03-15"],
+        "billingAddress": ["10 Baker Street, London, W1U 3BW"],
+        "profilePictureUrl": [""]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/customers"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      }
+    },
+    {
+      "username": "carlos.garcia",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Carlos",
+      "lastName": "Garcia",
+      "email": "carlos.garcia@example.com",
+      "attributes": {
+        "phoneNumber": ["+34612345678"],
+        "country": ["ES"],
+        "preferredLanguage": ["es"],
+        "dateOfBirth": ["1988-11-30"],
+        "billingAddress": ["Calle Mayor 25, Madrid, 28013"],
+        "profilePictureUrl": [""]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/customers"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      }
     }
-  ]
+  ],
+
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"phoneNumber\",\"displayName\":\"Phone Number\",\"validations\":{\"length\":{\"max\":20}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"country\",\"displayName\":\"Country\",\"validations\":{\"length\":{\"max\":100}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"preferredLanguage\",\"displayName\":\"Preferred Language\",\"validations\":{\"length\":{\"max\":10}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"dateOfBirth\",\"displayName\":\"Date of Birth\",\"validations\":{\"pattern\":{\"pattern\":\"^\\\\d{4}-\\\\d{2}-\\\\d{2}$\"}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"billingAddress\",\"displayName\":\"Billing Address\",\"validations\":{\"length\":{\"max\":500}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"profilePictureUrl\",\"displayName\":\"Profile Picture URL\",\"validations\":{\"length\":{\"max\":500}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
+          ]
+        }
+      }
+    ]
+  }
 }

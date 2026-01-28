@@ -11,12 +11,12 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
-      POSTGRES_MULTIPLE_DATABASES: keycloakdb,userdb,bookingdb,paymentdb,ticketdb,notificationdb
+      POSTGRES_MULTIPLE_DATABASES: userdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d keycloakdb"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d userdb"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -107,7 +107,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
 
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://booking-postgres:5432/keycloakdb
+      KC_DB_URL: jdbc:postgresql://booking-postgres:5432/userdb
       KC_DB_USERNAME: admin
       KC_DB_PASSWORD: admin
 
