@@ -1,0 +1,138 @@
+# ============================================================================
+# BOOKING PLATFORM - GRAPHQL SCHEMA
+# ============================================================================
+
+type Query {
+    """Get the currently authenticated user"""
+    me: User
+
+    """Get a user by ID (admin only)"""
+    user(id: ID!): User
+
+    """Search users with pagination (admin only)"""
+    users(query: String, page: Int = 0, pageSize: Int = 20): UserConnection!
+}
+
+type Mutation {
+    # -------------------------------------------------------------------------
+    # Authentication
+    # -------------------------------------------------------------------------
+
+    """Register a new user account"""
+    register(input: RegisterInput!): AuthPayload!
+
+    """Login with username/email and password"""
+    login(input: LoginInput!): AuthPayload!
+
+    """Refresh access token using refresh token"""
+    refreshToken(refreshToken: String!): AuthPayload!
+
+    """Logout and invalidate refresh token"""
+    logout(refreshToken: String!): LogoutPayload!
+
+    # -------------------------------------------------------------------------
+    # User Profile
+    # -------------------------------------------------------------------------
+
+    """Update the current user's profile"""
+    updateProfile(input: UpdateProfileInput!): User!
+}
+
+# ============================================================================
+# AUTHENTICATION TYPES
+# ============================================================================
+
+input RegisterInput {
+    email: String!
+    password: String!
+    firstName: String!
+    lastName: String!
+    phoneNumber: String
+    country: String
+    preferredLanguage: String
+}
+
+input LoginInput {
+    username: String!
+    password: String!
+}
+
+type AuthPayload {
+    """JWT access token"""
+    accessToken: String!
+
+    """Refresh token for obtaining new access tokens"""
+    refreshToken: String!
+
+    """Access token expiry time in seconds"""
+    expiresIn: Int!
+
+    """Refresh token expiry time in seconds"""
+    refreshExpiresIn: Int!
+
+    """Token type (usually "Bearer")"""
+    tokenType: String!
+
+    """The authenticated user"""
+    user: User
+}
+
+type LogoutPayload {
+    success: Boolean!
+}
+
+# ============================================================================
+# USER TYPES
+# ============================================================================
+
+type User {
+    id: ID!
+    username: String!
+    email: String!
+    emailVerified: Boolean!
+    enabled: Boolean!
+    firstName: String
+    lastName: String
+    createdAt: String
+
+    # Custom attributes
+    phoneNumber: String
+    country: String
+    preferredLanguage: String
+    preferredCurrency: String
+    timezone: String
+    profilePictureUrl: String
+
+    # Preferences
+    emailNotifications: Boolean
+    smsNotifications: Boolean
+
+    # Roles
+    roles: [String!]!
+}
+
+input UpdateProfileInput {
+    firstName: String
+    lastName: String
+    email: String
+    phoneNumber: String
+    country: String
+    preferredLanguage: String
+    preferredCurrency: String
+    timezone: String
+    profilePictureUrl: String
+    emailNotifications: Boolean
+    smsNotifications: Boolean
+}
+
+# ============================================================================
+# PAGINATION
+# ============================================================================
+
+type UserConnection {
+    users: [User!]!
+    totalCount: Int!
+    page: Int!
+    pageSize: Int!
+    totalPages: Int!
+}

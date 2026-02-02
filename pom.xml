@@ -15,6 +15,7 @@
     <description>Event Ticket Booking Platform - Microservices Architecture</description>
 
     <modules>
+        <module>common</module>
         <module>services/config-service</module>
         <module>services/eureka-service</module>
         <module>services/graphql-gateway</module>
@@ -111,6 +112,16 @@
             </dependency>
             <dependency>
                 <groupId>io.grpc</groupId>
+                <artifactId>grpc-api</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
+                <artifactId>grpc-core</artifactId>
+                <version>${grpc.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.grpc</groupId>
                 <artifactId>grpc-protobuf</artifactId>
                 <version>${grpc.version}</version>
             </dependency>
@@ -159,6 +170,13 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct-processor</artifactId>
                 <version>${mapstruct.version}</version>
+            </dependency>
+
+            <!-- Common module (shared protos, DTOs, utils) -->
+            <dependency>
+                <groupId>com.booking.platform</groupId>
+                <artifactId>common</artifactId>
+                <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
