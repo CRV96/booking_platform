@@ -1,0 +1,73 @@
+package com.booking.platform.graphql_gateway.exception;
+
+import graphql.GraphQLError;
+import graphql.GraphqlErrorBuilder;
+import graphql.schema.DataFetchingEnvironment;
+import io.grpc.Status;
+import io.grpc.StatusRuntimeException;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.graphql.execution.DataFetcherExceptionResolverAdapter;
+import org.springframework.graphql.execution.ErrorType;
+import org.springframework.stereotype.Component;
+
+import java.time.Instant;
+import java.util.Map;
+
+@Component
+@Slf4j
+public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter {
+
+    @Override
+    protected GraphQLError resolveToSingleError(Throwable ex, DataFetchingEnvironment env) {
+        if (ex instanceof GraphQLException gqlEx) {
+            return buildError(env, gqlEx.getMessage(), gqlEx.getCode(), mapErrorType(gqlEx.getErrorCode()));
+        }
+
+        if (ex instanceof StatusRuntimeException grpcEx) {
+            ErrorCode errorCode = mapGrpcStatus(grpcEx.getStatus().getCode());
+            String message = grpcEx.getStatus().getDescription() != null 
+                ? grpcEx.getStatus().getDescription() 
+                : errorCode.getDefaultMessage();
+            return buildError(env, message, errorCode.getCode(), mapErrorType(errorCode));
+        }
+
+        // Log unexpected errors
+        log.error("Unexpected error in GraphQL resolver", ex);
+        return buildError(env, ErrorCode.INTERNAL_ERROR.getDefaultMessage(), 
+                         ErrorCode.INTERNAL_ERROR.getCode(), ErrorType.INTERNAL_ERROR);
+    }
+
+    private GraphQLError buildError(DataFetchingEnvironment env, String message, String code, ErrorType errorType) {
+        return GraphqlErrorBuilder.newError(env)
+                .message(message)
+                .errorType(errorType)
+                .extensions(Map.of(
+                        "code", code,
+                        "timestamp", Instant.now().toString(),
+                        "path", env.getExecutionStepInfo().getPath().toString()
+                ))
+                .build();
+    }
+
+    private ErrorType mapErrorType(ErrorCode errorCode) {
+        return switch (errorCode) {
+            case INVALID_CREDENTIALS, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED -> ErrorType.UNAUTHORIZED;
+            case FORBIDDEN -> ErrorType.FORBIDDEN;
+            case USER_NOT_FOUND -> ErrorType.NOT_FOUND;
+            case VALIDATION_ERROR, INVALID_INPUT, USER_ALREADY_EXISTS -> ErrorType.BAD_REQUEST;
+            default -> ErrorType.INTERNAL_ERROR;
+        };
+    }
+
+    private ErrorCode mapGrpcStatus(Status.Code code) {
+        return switch (code) {
+            case NOT_FOUND -> ErrorCode.USER_NOT_FOUND;
+            case ALREADY_EXISTS -> ErrorCode.USER_ALREADY_EXISTS;
+            case UNAUTHENTICATED -> ErrorCode.INVALID_CREDENTIALS;
+            case PERMISSION_DENIED -> ErrorCode.FORBIDDEN;
+            case INVALID_ARGUMENT -> ErrorCode.INVALID_INPUT;
+            case UNAVAILABLE -> ErrorCode.SERVICE_UNAVAILABLE;
+            default -> ErrorCode.INTERNAL_ERROR;
+        };
+    }
+}

@@ -6,7 +6,7 @@ import com.booking.platform.user_service.exception.InvalidTokenException;
 /**
  * Service for handling authentication operations with Keycloak.
  */
-public interface KeycloakAuthService {
+public interface AuthService {
 
     /**
      * Authenticates a user with username/password and returns tokens.

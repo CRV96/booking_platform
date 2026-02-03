@@ -1,4 +1,4 @@
-package com.booking.platform.graphql_gateway.dto;
+package com.booking.platform.graphql_gateway.dto.user;
 
 public record UpdateProfileInput(
     String firstName,
