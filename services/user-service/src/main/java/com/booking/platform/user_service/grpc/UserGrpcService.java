@@ -2,8 +2,8 @@ package com.booking.platform.user_service.grpc;
 
 import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.user_service.exception.*;
-import com.booking.platform.user_service.service.KeycloakAuthService;
-import com.booking.platform.user_service.service.KeycloakAuthService.TokenResponse;
+import com.booking.platform.user_service.service.AuthService;
+import com.booking.platform.user_service.service.AuthService.TokenResponse;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -26,7 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
-    private final KeycloakAuthService authService;
+    private final AuthService authService;
     private final KeycloakUserService userService;
 
     // =========================================================================

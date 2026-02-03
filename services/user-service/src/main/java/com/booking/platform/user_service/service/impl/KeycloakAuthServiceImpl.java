@@ -4,7 +4,7 @@ import com.booking.platform.user_service.config.KeycloakAuthProperties;
 import com.booking.platform.user_service.exception.AuthenticationException;
 import com.booking.platform.user_service.exception.InvalidCredentialsException;
 import com.booking.platform.user_service.exception.InvalidTokenException;
-import com.booking.platform.user_service.service.KeycloakAuthService;
+import com.booking.platform.user_service.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -22,17 +22,17 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @Slf4j
 @RequiredArgsConstructor
 @EnableConfigurationProperties(KeycloakAuthProperties.class)
-public class KeycloakAuthServiceImpl implements KeycloakAuthService {
+public class KeycloakAuthServiceImpl implements AuthService {
 
     private final WebClient webClient;
     private final KeycloakAuthProperties authProperties;
 
     @Override
-    public KeycloakAuthService.TokenResponse login(String username, String password) {
+    public AuthService.TokenResponse login(String username, String password) {
         log.debug("Attempting login for user: {}", username);
 
         try {
-            KeycloakAuthService.TokenResponse response = webClient.post()
+            AuthService.TokenResponse response = webClient.post()
                     .uri(authProperties.getTokenEndpoint())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(BodyInserters
@@ -41,7 +41,7 @@ public class KeycloakAuthServiceImpl implements KeycloakAuthService {
                             .with("username", username)
                             .with("password", password))
                     .retrieve()
-                    .bodyToMono(KeycloakAuthService.TokenResponse.class)
+                    .bodyToMono(AuthService.TokenResponse.class)
                     .block();
 
             log.info("Login successful for user: {}", username);
@@ -57,11 +57,11 @@ public class KeycloakAuthServiceImpl implements KeycloakAuthService {
     }
 
     @Override
-    public KeycloakAuthService.TokenResponse refreshToken(String refreshToken) {
+    public AuthService.TokenResponse refreshToken(String refreshToken) {
         log.debug("Attempting to refresh token");
 
         try {
-            KeycloakAuthService.TokenResponse response = webClient.post()
+            AuthService.TokenResponse response = webClient.post()
                     .uri(authProperties.getTokenEndpoint())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(BodyInserters
@@ -69,7 +69,7 @@ public class KeycloakAuthServiceImpl implements KeycloakAuthService {
                             .with("client_id", authProperties.clientId())
                             .with("refresh_token", refreshToken))
                     .retrieve()
-                    .bodyToMono(KeycloakAuthService.TokenResponse.class)
+                    .bodyToMono(AuthService.TokenResponse.class)
                     .block();
 
             log.debug("Token refresh successful");

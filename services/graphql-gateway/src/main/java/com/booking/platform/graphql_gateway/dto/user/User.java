@@ -1,4 +1,4 @@
-package com.booking.platform.graphql_gateway.dto;
+package com.booking.platform.graphql_gateway.dto.user;
 
 import com.booking.platform.common.grpc.user.UserInfo;
 

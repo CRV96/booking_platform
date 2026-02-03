@@ -2,11 +2,12 @@ package com.booking.platform.graphql_gateway.resolver;
 
 import com.booking.platform.common.grpc.user.SearchUsersResponse;
 import com.booking.platform.common.grpc.user.UserInfo;
-import com.booking.platform.graphql_gateway.client.UserServiceClient;
-import com.booking.platform.graphql_gateway.dto.UpdateProfileInput;
-import com.booking.platform.graphql_gateway.dto.User;
-import com.booking.platform.graphql_gateway.dto.UserConnection;
-import io.grpc.StatusRuntimeException;
+import com.booking.platform.graphql_gateway.client.UserOperationsClient;
+import com.booking.platform.graphql_gateway.dto.user.UpdateProfileInput;
+import com.booking.platform.graphql_gateway.dto.user.User;
+import com.booking.platform.graphql_gateway.dto.user.UserConnection;
+import com.booking.platform.graphql_gateway.exception.ErrorCode;
+import com.booking.platform.graphql_gateway.exception.GraphQLException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -18,21 +19,18 @@ import java.util.List;
 
 /**
  * GraphQL resolver for user queries and profile mutations.
+ * Exceptions are handled by {@link com.booking.platform.graphql_gateway.exception.GraphQLExceptionHandler}
  */
 @Controller
 @Slf4j
 @RequiredArgsConstructor
 public class UserResolver {
 
-    private final UserServiceClient userServiceClient;
-
-    // TODO: Implement authentication context to get current user ID
-    // For now, these endpoints require the user ID to be passed explicitly
+    private final UserOperationsClient userOperationsClient;
 
     @QueryMapping
     public User me() {
         // TODO: Get user ID from JWT token in security context
-        // For now, return null - will implement with security
         log.warn("me() query called but authentication not yet implemented");
         return null;
     }
@@ -41,17 +39,9 @@ public class UserResolver {
     public User user(@Argument("id") String id) {
         log.debug("GraphQL query: user({})", id);
 
-        try {
-            UserInfo userInfo = userServiceClient.getUser(id);
-            return User.fromGrpc(userInfo);
+        UserInfo userInfo = userOperationsClient.getUser(id);
 
-        } catch (StatusRuntimeException e) {
-            log.error("Get user failed: {}", e.getStatus().getDescription());
-            throw new AuthResolver.GraphQLException(
-                mapGrpcCode(e),
-                e.getStatus().getDescription()
-            );
-        }
+        return User.fromGrpc(userInfo);
     }
 
     @QueryMapping
@@ -64,47 +54,25 @@ public class UserResolver {
         int actualPage = page != null ? page : 0;
         int actualPageSize = pageSize != null ? pageSize : 20;
 
-        try {
-            SearchUsersResponse response = userServiceClient.searchUsers(query, actualPage, actualPageSize);
+        SearchUsersResponse response = userOperationsClient.searchUsers(query, actualPage, actualPageSize);
 
-            List<User> users = response.getUsersList().stream()
-                .map(User::fromGrpc)
-                .toList();
+        List<User> users = response.getUsersList().stream()
+            .map(User::fromGrpc)
+            .toList();
 
-            return new UserConnection(
-                users,
-                response.getTotalCount(),
-                response.getPage(),
-                response.getPageSize(),
-                response.getTotalPages()
-            );
-
-        } catch (StatusRuntimeException e) {
-            log.error("Search users failed: {}", e.getStatus().getDescription());
-            throw new AuthResolver.GraphQLException(
-                mapGrpcCode(e),
-                e.getStatus().getDescription()
-            );
-        }
+        return new UserConnection(
+            users,
+            response.getTotalCount(),
+            response.getPage(),
+            response.getPageSize(),
+            response.getTotalPages()
+        );
     }
 
     @MutationMapping
     public User updateProfile(@Argument("input") UpdateProfileInput input) {
         // TODO: Get user ID from JWT token in security context
-        // For now, this is a placeholder
         log.warn("updateProfile() called but authentication not yet implemented");
-        throw new AuthResolver.GraphQLException(
-            "NOT_IMPLEMENTED",
-            "Authentication required - not yet implemented"
-        );
-    }
-
-    private String mapGrpcCode(StatusRuntimeException e) {
-        return switch (e.getStatus().getCode()) {
-            case NOT_FOUND -> "USER_NOT_FOUND";
-            case PERMISSION_DENIED -> "FORBIDDEN";
-            case UNAUTHENTICATED -> "UNAUTHENTICATED";
-            default -> "INTERNAL_ERROR";
-        };
+        throw new GraphQLException(ErrorCode.NOT_IMPLEMENTED);
     }
 }

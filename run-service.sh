@@ -1,31 +1,138 @@
 #!/bin/bash
 # =============================================================================
 # Run a specific Spring Boot service
-# Usage: ./run-service.sh <service-name>
+# Usage: ./run-service.sh <service-name> [options]
 # Example: ./run-service.sh config-service
+# Example: ./run-service.sh user-service --debug
 # =============================================================================
 
 set -e
 
-if [ -z "$1" ]; then
-    echo "Usage: ./run-service.sh <service-name>"
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Default debug port (same for all services)
+DEFAULT_DEBUG_PORT=5005
+
+# Valid services
+VALID_SERVICES=(
+    "config-service"
+    "eureka-service"
+    "graphql-gateway"
+    "user-service"
+    "event-service"
+    "booking-service"
+    "payment-service"
+    "ticket-service"
+    "notification-service"
+    "analytics-service"
+)
+
+show_usage() {
+    echo "Usage: ./run-service.sh <service-name> [options]"
     echo ""
     echo "Available services:"
-    echo "  config-service"
-    echo "  eureka-service"
-    echo "  graphql-gateway"
-    echo "  user-service"
-    echo "  event-service"
-    echo "  booking-service"
-    echo "  payment-service"
-    echo "  ticket-service"
-    echo "  notification-service"
-    echo "  analytics-service"
-    exit 1
+    for service in "${VALID_SERVICES[@]}"; do
+        echo "  $service"
+    done
+    echo ""
+    echo "Options:"
+    echo "  --debug, -d          Enable remote debugging (port $DEFAULT_DEBUG_PORT)"
+    echo "  --port, -p <port>    Custom debug port (default: $DEFAULT_DEBUG_PORT)"
+    echo "  --suspend, -s        Wait for debugger before starting"
+    echo "  --help, -h           Show this help"
+    echo ""
+    echo "Examples:"
+    echo "  ./run-service.sh user-service              # Run normally"
+    echo "  ./run-service.sh user-service --debug      # Run with debug on port $DEFAULT_DEBUG_PORT"
+    echo "  ./run-service.sh user-service -d -p 5006   # Run with debug on custom port"
+    echo "  ./run-service.sh user-service -d -s        # Debug & wait for debugger"
+}
+
+is_valid_service() {
+    local service=$1
+    for valid in "${VALID_SERVICES[@]}"; do
+        if [ "$valid" == "$service" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+if [ -z "$1" ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
+    show_usage
+    exit 0
 fi
 
 SERVICE_NAME=$1
+shift
+
+# Validate service name
+if ! is_valid_service "$SERVICE_NAME"; then
+    echo -e "${RED}Unknown service: $SERVICE_NAME${NC}"
+    show_usage
+    exit 1
+fi
+
+# Parse options
+DEBUG_MODE=false
+DEBUG_PORT=$DEFAULT_DEBUG_PORT
+SUSPEND="n"
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --debug|-d)
+            DEBUG_MODE=true
+            shift
+            ;;
+        --port|-p)
+            DEBUG_PORT="$2"
+            shift 2
+            ;;
+        --suspend|-s)
+            SUSPEND="y"
+            shift
+            ;;
+        *)
+            echo -e "${RED}Unknown option: $1${NC}"
+            show_usage
+            exit 1
+            ;;
+    esac
+done
+
+# Set Java home
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 
-echo "Starting $SERVICE_NAME..."
-op run --env-file=".env" -- mvn spring-boot:run -pl "services/$SERVICE_NAME"
+# Build Maven command
+MVN_CMD="mvn spring-boot:run -pl services/$SERVICE_NAME"
+
+# Add debug configuration if enabled
+if [ "$DEBUG_MODE" = true ]; then
+    DEBUG_OPTS="-agentlib:jdwp=transport=dt_socket,server=y,suspend=$SUSPEND,address=*:$DEBUG_PORT"
+    MVN_CMD="$MVN_CMD -Dspring-boot.run.jvmArguments=\"$DEBUG_OPTS\""
+
+    echo -e "${YELLOW}=======================================${NC}"
+    echo -e "${YELLOW}DEBUG MODE ENABLED${NC}"
+    echo -e "${YELLOW}=======================================${NC}"
+    echo -e "Service:      ${GREEN}$SERVICE_NAME${NC}"
+    echo -e "Debug Port:   ${CYAN}$DEBUG_PORT${NC}"
+    echo -e "Suspend:      ${CYAN}$SUSPEND${NC}"
+    echo -e "${YELLOW}=======================================${NC}"
+
+    if [ "$SUSPEND" = "y" ]; then
+        echo -e "${YELLOW}Waiting for debugger to attach on port $DEBUG_PORT...${NC}"
+    else
+        echo -e "${GREEN}Attach debugger to port $DEBUG_PORT when ready${NC}"
+    fi
+    echo ""
+else
+    echo -e "${GREEN}Starting $SERVICE_NAME...${NC}"
+fi
+
+# Run with 1Password environment
+op run --env-file=".env" -- bash -c "$MVN_CMD"
