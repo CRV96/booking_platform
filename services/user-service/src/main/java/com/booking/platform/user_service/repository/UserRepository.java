@@ -12,6 +12,7 @@ import java.util.Optional;
 
 /**
  * Read-only repository for users.
+ * Maps to Keycloak's user_entity table.
  */
 @Repository
 public interface UserRepository extends JpaRepository<UserEntity, String> {
@@ -20,7 +21,9 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     Optional<UserEntity> findByEmail(String email);
 
-    Page<UserEntity> findByEnabledTrue(Pageable pageable);
+    boolean existsByUsername(String username);
+
+    boolean existsByEmail(String email);
 
     @Query("SELECT u FROM UserEntity u WHERE " +
            "LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%')) " +

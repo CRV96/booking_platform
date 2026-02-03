@@ -9,18 +9,18 @@ import java.util.Map;
  * Service for managing users in Keycloak via the Admin API.
  * Extends UserService with Keycloak-specific implementation marker.
  */
-public interface KeycloakUserService extends UserService {
-    // All methods are inherited from UserService
-    // This interface exists for type clarity and future Keycloak-specific methods
-    UserRepresentation getUserById(String userId);
+public interface KeycloakUserService extends UserService<UserRepresentation> {
 
-    UserRepresentation getUserByUsername(String username);
-
-    UserRepresentation getUserByEmail(String email);
+    String createUser(String email, String password, String firstName, String lastName,
+                      Map<String, String> attributes);
 
     UserRepresentation updateUser(String userId, String firstName, String lastName,
                                   String email, Map<String, String> attributes);
 
     List<UserRepresentation> searchUsers(String search, int page, int pageSize);
+
+    List<String> getUserRoles(String userId);
+
+    int getUserCount(String search);
 
 }

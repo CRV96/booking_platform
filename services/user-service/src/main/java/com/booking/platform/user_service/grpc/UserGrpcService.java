@@ -4,6 +4,7 @@ import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.user_service.exception.*;
 import com.booking.platform.user_service.service.AuthService;
 import com.booking.platform.user_service.service.AuthService.TokenResponse;
+import com.booking.platform.user_service.service.DatabaseUserService;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
@@ -27,7 +28,8 @@ import java.util.Map;
 public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
     private final AuthService authService;
-    private final KeycloakUserService userService;
+    private final KeycloakUserService keycloakUserService;
+    private final DatabaseUserService databaseUserService;
 
     // =========================================================================
     // AUTHENTICATION OPERATIONS
@@ -51,7 +53,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
             }
 
             // Create user in Keycloak
-            String userId = userService.createUser(
+            String userId = keycloakUserService.createUser(
                 request.getEmail(),
                 request.getPassword(),
                 request.getFirstName(),
@@ -63,8 +65,8 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
             TokenResponse tokens = authService.login(request.getEmail(), request.getPassword());
 
             // Get user info
-            UserRepresentation user = userService.getUserById(userId);
-            List<String> roles = userService.getUserRoles(userId);
+            UserRepresentation user = keycloakUserService.getUserById(userId);
+            List<String> roles = keycloakUserService.getUserRoles(userId);
 
             // Build response
             AuthResponse response = AuthResponse.newBuilder()
@@ -102,8 +104,8 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
             TokenResponse tokens = authService.login(request.getUsername(), request.getPassword());
 
             // Get user info
-            UserRepresentation user = userService.getUserByUsername(request.getUsername());
-            List<String> roles = userService.getUserRoles(user.getId());
+            UserRepresentation user = keycloakUserService.getUserByUsername(request.getUsername());
+            List<String> roles = keycloakUserService.getUserRoles(user.getId());
 
             // Build response
             AuthResponse response = AuthResponse.newBuilder()
@@ -191,8 +193,8 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         log.debug("gRPC GetUser request for ID: {}", request.getUserId());
 
         try {
-            UserRepresentation user = userService.getUserById(request.getUserId());
-            List<String> roles = userService.getUserRoles(request.getUserId());
+            UserRepresentation user = keycloakUserService.getUserById(request.getUserId());
+            List<String> roles = keycloakUserService.getUserRoles(request.getUserId());
 
             UserResponse response = UserResponse.newBuilder()
                 .setUser(mapToUserInfo(user, roles))
@@ -218,8 +220,8 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         log.debug("gRPC GetUserByUsername request: {}", request.getUsername());
 
         try {
-            UserRepresentation user = userService.getUserByUsername(request.getUsername());
-            List<String> roles = userService.getUserRoles(user.getId());
+            UserRepresentation user = keycloakUserService.getUserByUsername(request.getUsername());
+            List<String> roles = keycloakUserService.getUserRoles(user.getId());
 
             UserResponse response = UserResponse.newBuilder()
                 .setUser(mapToUserInfo(user, roles))
@@ -245,8 +247,8 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         log.debug("gRPC GetUserByEmail request: {}", request.getEmail());
 
         try {
-            UserRepresentation user = userService.getUserByEmail(request.getEmail());
-            List<String> roles = userService.getUserRoles(user.getId());
+            UserRepresentation user = keycloakUserService.getUserByEmail(request.getEmail());
+            List<String> roles = keycloakUserService.getUserRoles(user.getId());
 
             UserResponse response = UserResponse.newBuilder()
                 .setUser(mapToUserInfo(user, roles))
@@ -299,7 +301,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
                 attributes.put("smsNotifications", String.valueOf(request.getSmsNotifications()));
             }
 
-            UserRepresentation user = userService.updateUser(
+            UserRepresentation user = keycloakUserService.updateUser(
                 request.getUserId(),
                 request.hasFirstName() ? request.getFirstName() : null,
                 request.hasLastName() ? request.getLastName() : null,
@@ -307,7 +309,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
                 attributes
             );
 
-            List<String> roles = userService.getUserRoles(request.getUserId());
+            List<String> roles = keycloakUserService.getUserRoles(request.getUserId());
 
             UserResponse response = UserResponse.newBuilder()
                 .setUser(mapToUserInfo(user, roles))
@@ -339,8 +341,8 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
             int page = request.getPage();
             int pageSize = Math.min(Math.max(request.getPageSize(), 1), 100); // Clamp between 1-100
 
-            List<UserRepresentation> users = userService.searchUsers(query, page, pageSize);
-            int totalCount = userService.getUserCount(query);
+            List<UserRepresentation> users = keycloakUserService.searchUsers(query, page, pageSize);
+            int totalCount = keycloakUserService.getUserCount(query);
             int totalPages = (int) Math.ceil((double) totalCount / pageSize);
 
             SearchUsersResponse.Builder responseBuilder = SearchUsersResponse.newBuilder()
@@ -350,7 +352,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
                 .setTotalPages(totalPages);
 
             for (UserRepresentation user : users) {
-                List<String> roles = userService.getUserRoles(user.getId());
+                List<String> roles = keycloakUserService.getUserRoles(user.getId());
                 responseBuilder.addUsers(mapToUserInfo(user, roles));
             }
 
