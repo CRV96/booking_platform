@@ -130,14 +130,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         userValidator.validateUserId(request.getUserId());
 
         UserRepresentation user = keycloakUserService.getUserById(request.getUserId());
-        List<String> roles = keycloakUserService.getUserRoles(request.getUserId());
-
-        UserResponse response = UserResponse.newBuilder()
-                .setUser(userGrpcMapper.toUserInfo(user, roles))
-                .build();
-
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+        sendUserResponse(user, responseObserver);
     }
 
     @Override
@@ -147,14 +140,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         userValidator.validateUsername(request.getUsername());
 
         UserRepresentation user = keycloakUserService.getUserByUsername(request.getUsername());
-        List<String> roles = keycloakUserService.getUserRoles(user.getId());
-
-        UserResponse response = UserResponse.newBuilder()
-                .setUser(userGrpcMapper.toUserInfo(user, roles))
-                .build();
-
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+        sendUserResponse(user, responseObserver);
     }
 
     @Override
@@ -164,14 +150,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         userValidator.validateEmail(request.getEmail());
 
         UserRepresentation user = keycloakUserService.getUserByEmail(request.getEmail());
-        List<String> roles = keycloakUserService.getUserRoles(user.getId());
-
-        UserResponse response = UserResponse.newBuilder()
-                .setUser(userGrpcMapper.toUserInfo(user, roles))
-                .build();
-
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
+        sendUserResponse(user, responseObserver);
     }
 
     @Override
@@ -214,6 +193,10 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         int totalCount = keycloakUserService.getUserCount(query);
         int totalPages = (int) Math.ceil((double) totalCount / pageSize);
 
+        // Fetch all roles in parallel (fixes N+1 problem)
+        List<String> userIds = users.stream().map(UserRepresentation::getId).toList();
+        Map<String, List<String>> usersRoles = keycloakUserService.getUsersRoles(userIds);
+
         SearchUsersResponse.Builder responseBuilder = SearchUsersResponse.newBuilder()
                 .setTotalCount(totalCount)
                 .setPage(page)
@@ -221,7 +204,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
                 .setTotalPages(totalPages);
 
         for (UserRepresentation user : users) {
-            List<String> roles = keycloakUserService.getUserRoles(user.getId());
+            List<String> roles = usersRoles.getOrDefault(user.getId(), List.of());
             responseBuilder.addUsers(userGrpcMapper.toUserInfo(user, roles));
         }
 
@@ -246,5 +229,16 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
     private int clampPageSize(int pageSize) {
         return Math.min(Math.max(pageSize, 1), 100);
+    }
+
+    private void sendUserResponse(UserRepresentation user, StreamObserver<UserResponse> responseObserver) {
+        List<String> roles = keycloakUserService.getUserRoles(user.getId());
+
+        UserResponse response = UserResponse.newBuilder()
+                .setUser(userGrpcMapper.toUserInfo(user, roles))
+                .build();
+
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 }

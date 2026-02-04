@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Keycloak Admin API implementation for user management.
@@ -123,6 +125,34 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
     @Override
     public List<String> getUserRoles(String userId) {
+        return fetchUserRoles(userId);
+    }
+
+    @Override
+    public Map<String, List<String>> getUsersRoles(List<String> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+
+        log.debug("Fetching roles for {} users in parallel", userIds.size());
+
+        Map<String, List<String>> result = new ConcurrentHashMap<>();
+
+        // Fetch all roles in parallel
+        List<CompletableFuture<Void>> futures = userIds.stream()
+                .map(userId -> CompletableFuture.runAsync(() ->
+                        result.put(userId, fetchUserRoles(userId))))
+                .toList();
+
+        // Wait for all to complete
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+
+        return result;
+    }
+
+    // ==================== Private Helper Methods ====================
+
+    private List<String> fetchUserRoles(String userId) {
         return getUsersResource().get(userId)
                 .roles()
                 .realmLevel()
@@ -131,8 +161,6 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
                 .map(RoleRepresentation::getName)
                 .toList();
     }
-
-    // ==================== Private Helper Methods ====================
 
     private UserRepresentation buildUserRepresentation(String email, String firstName, String lastName,
                                                        Map<String, String> attributes) {

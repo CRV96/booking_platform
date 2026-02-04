@@ -21,6 +21,15 @@ public interface KeycloakUserService extends UserService<UserRepresentation> {
 
     List<String> getUserRoles(String userId);
 
+    /**
+     * Get roles for multiple users in parallel.
+     * More efficient than calling getUserRoles() in a loop.
+     *
+     * @param userIds List of user IDs
+     * @return Map of userId to their roles
+     */
+    Map<String, List<String>> getUsersRoles(List<String> userIds);
+
     int getUserCount(String search);
 
 }
