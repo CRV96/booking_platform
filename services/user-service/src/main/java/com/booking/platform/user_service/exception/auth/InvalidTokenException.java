@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.exception;
+package com.booking.platform.user_service.exception.auth;
 
 /**
  * Thrown when a token (access or refresh) is invalid or expired.

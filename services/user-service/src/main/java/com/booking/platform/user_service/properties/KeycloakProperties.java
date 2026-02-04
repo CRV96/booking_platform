@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.config;
+package com.booking.platform.user_service.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 

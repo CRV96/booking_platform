@@ -2,7 +2,7 @@ package com.booking.platform.user_service.service.impl;
 
 import com.booking.platform.user_service.entity.UserAttributeEntity;
 import com.booking.platform.user_service.entity.UserEntity;
-import com.booking.platform.user_service.exception.UserNotFoundException;
+import com.booking.platform.user_service.exception.user.UserNotFoundException;
 import com.booking.platform.user_service.repository.UserAttributeRepository;
 import com.booking.platform.user_service.repository.UserRepository;
 import com.booking.platform.user_service.service.DatabaseUserService;

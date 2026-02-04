@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.exception;
+package com.booking.platform.user_service.exception.auth;
 
 /**
  * Thrown when login credentials are invalid.

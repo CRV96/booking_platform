@@ -1,5 +1,6 @@
-package com.booking.platform.user_service.exception;
+package com.booking.platform.user_service.exception.auth;
 
+import com.booking.platform.user_service.exception.UserServiceException;
 import io.grpc.Status;
 
 /**

@@ -1,5 +1,8 @@
 package com.booking.platform.user_service.dto;
 
+import com.booking.platform.user_service.dto.attributes.PreferencesInfo;
+import com.booking.platform.user_service.dto.attributes.ProfileInfo;
+
 import java.time.Instant;
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.booking.platform.graphql_gateway.client;
+package com.booking.platform.graphql_gateway.grpc.client;
 
 import com.booking.platform.common.grpc.user.AuthResponse;
 

@@ -1,9 +1,9 @@
 package com.booking.platform.user_service.service.impl;
 
-import com.booking.platform.user_service.config.KeycloakProperties;
+import com.booking.platform.user_service.properties.KeycloakProperties;
 import com.booking.platform.user_service.constants.KeycloakConstants;
-import com.booking.platform.user_service.exception.UserAlreadyExistsException;
-import com.booking.platform.user_service.exception.UserNotFoundException;
+import com.booking.platform.user_service.exception.user.UserAlreadyExistsException;
+import com.booking.platform.user_service.exception.user.UserNotFoundException;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;

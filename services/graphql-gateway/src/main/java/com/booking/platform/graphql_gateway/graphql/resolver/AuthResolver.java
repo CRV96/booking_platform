@@ -1,6 +1,6 @@
-package com.booking.platform.graphql_gateway.resolver;
+package com.booking.platform.graphql_gateway.graphql.resolver;
 
-import com.booking.platform.graphql_gateway.client.AuthClient;
+import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
 import com.booking.platform.graphql_gateway.dto.auth.AuthPayload;
 import com.booking.platform.graphql_gateway.dto.auth.LoginInput;
 import com.booking.platform.graphql_gateway.dto.auth.LogoutPayload;

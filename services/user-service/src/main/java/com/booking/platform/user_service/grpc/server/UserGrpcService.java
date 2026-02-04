@@ -1,10 +1,8 @@
-package com.booking.platform.user_service.grpc;
+package com.booking.platform.user_service.grpc.server;
 
 import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.user_service.mapper.AttributeMapper;
 import com.booking.platform.user_service.mapper.UserGrpcMapper;
-import com.booking.platform.user_service.service.AuthService;
-import com.booking.platform.user_service.service.AuthService.TokenResponse;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.UserValidator;
 import io.grpc.stub.StreamObserver;
@@ -17,8 +15,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * gRPC service implementation for user operations.
- * Handles authentication (via Keycloak) and user management.
+ * gRPC service implementation for user profile operations.
+ * Handles user retrieval, updates, and search functionality.
  *
  * Exception handling is delegated to {@link com.booking.platform.user_service.grpc.interceptor.GrpcExceptionInterceptor}
  */
@@ -27,101 +25,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
-    private final AuthService authService;
     private final KeycloakUserService keycloakUserService;
     private final UserGrpcMapper userGrpcMapper;
     private final AttributeMapper attributeMapper;
     private final UserValidator userValidator;
-
-    // =========================================================================
-    // AUTHENTICATION OPERATIONS
-    // =========================================================================
-
-    @Override
-    public void register(RegisterRequest request, StreamObserver<AuthResponse> responseObserver) {
-        log.info("gRPC Register request for email: {}", request.getEmail());
-
-        userValidator.validateRegisterRequest(request);
-
-        Map<String, String> attributes = attributeMapper.fromRegisterRequest(request);
-
-        String userId = keycloakUserService.createUser(
-                request.getEmail(),
-                request.getPassword(),
-                request.getFirstName(),
-                request.getLastName(),
-                attributes
-        );
-
-        // Auto-login: get tokens for the new user
-        TokenResponse tokens = authService.login(request.getEmail(), request.getPassword());
-
-        UserRepresentation user = keycloakUserService.getUserById(userId);
-        List<String> roles = keycloakUserService.getUserRoles(userId);
-
-        AuthResponse response = buildAuthResponse(tokens, user, roles);
-
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-        log.info("User registered successfully: {}", userId);
-    }
-
-    @Override
-    public void login(LoginRequest request, StreamObserver<AuthResponse> responseObserver) {
-        log.info("gRPC Login request for user: {}", request.getUsername());
-
-        userValidator.validateLoginRequest(request);
-
-        TokenResponse tokens = authService.login(request.getUsername(), request.getPassword());
-
-        UserRepresentation user = keycloakUserService.getUserByUsername(request.getUsername());
-        List<String> roles = keycloakUserService.getUserRoles(user.getId());
-
-        AuthResponse response = buildAuthResponse(tokens, user, roles);
-
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-        log.info("Login successful for user: {}", request.getUsername());
-    }
-
-    @Override
-    public void refreshToken(RefreshTokenRequest request, StreamObserver<AuthResponse> responseObserver) {
-        log.debug("gRPC RefreshToken request");
-
-        userValidator.validateRefreshToken(request.getRefreshToken());
-
-        TokenResponse tokens = authService.refreshToken(request.getRefreshToken());
-
-        AuthResponse response = AuthResponse.newBuilder()
-                .setAccessToken(tokens.access_token())
-                .setRefreshToken(tokens.refresh_token())
-                .setExpiresIn(tokens.expires_in())
-                .setRefreshExpiresIn(tokens.refresh_expires_in())
-                .setTokenType(tokens.token_type())
-                .build();
-
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-        log.debug("Token refresh successful");
-    }
-
-    @Override
-    public void logout(LogoutRequest request, StreamObserver<LogoutResponse> responseObserver) {
-        log.debug("gRPC Logout request");
-
-        boolean success = authService.logout(request.getRefreshToken());
-
-        LogoutResponse response = LogoutResponse.newBuilder()
-                .setSuccess(success)
-                .build();
-
-        responseObserver.onNext(response);
-        responseObserver.onCompleted();
-    }
-
-    // =========================================================================
-    // USER PROFILE OPERATIONS
-    // =========================================================================
 
     @Override
     public void getUser(GetUserRequest request, StreamObserver<UserResponse> responseObserver) {
@@ -210,21 +117,6 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
         responseObserver.onNext(responseBuilder.build());
         responseObserver.onCompleted();
-    }
-
-    // =========================================================================
-    // PRIVATE HELPER METHODS
-    // =========================================================================
-
-    private AuthResponse buildAuthResponse(TokenResponse tokens, UserRepresentation user, List<String> roles) {
-        return AuthResponse.newBuilder()
-                .setAccessToken(tokens.access_token())
-                .setRefreshToken(tokens.refresh_token())
-                .setExpiresIn(tokens.expires_in())
-                .setRefreshExpiresIn(tokens.refresh_expires_in())
-                .setTokenType(tokens.token_type())
-                .setUser(userGrpcMapper.toUserInfo(user, roles))
-                .build();
     }
 
     private int clampPageSize(int pageSize) {

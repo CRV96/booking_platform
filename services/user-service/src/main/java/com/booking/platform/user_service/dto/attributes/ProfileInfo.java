@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.dto;
+package com.booking.platform.user_service.dto.attributes;
 
 /**
  * User profile information.

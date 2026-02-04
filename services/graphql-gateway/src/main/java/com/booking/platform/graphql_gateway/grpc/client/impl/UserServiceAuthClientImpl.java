@@ -1,7 +1,7 @@
-package com.booking.platform.graphql_gateway.client.impl;
+package com.booking.platform.graphql_gateway.grpc.client.impl;
 
 import com.booking.platform.common.grpc.user.*;
-import com.booking.platform.graphql_gateway.client.AuthClient;
+import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
 import com.booking.platform.graphql_gateway.constants.UserServiceConst;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class UserServiceAuthClientImpl implements AuthClient {
 
     @GrpcClient(UserServiceConst.UserGRPCConst.USER_SERVICE_GRPC_CLIENT)
-    private UserServiceGrpc.UserServiceBlockingStub userServiceStub;
+    private AuthServiceGrpc.AuthServiceBlockingStub authServiceStub;
 
     @Override
     public AuthResponse register(String email, String password, String firstName, String lastName,
@@ -29,7 +29,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
         if (country != null) builder.setCountry(country);
         if (preferredLanguage != null) builder.setPreferredLanguage(preferredLanguage);
 
-        return userServiceStub.register(builder.build());
+        return authServiceStub.register(builder.build());
     }
 
     @Override
@@ -41,7 +41,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
             .setPassword(password)
             .build();
 
-        return userServiceStub.login(request);
+        return authServiceStub.login(request);
     }
 
     @Override
@@ -52,7 +52,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
             .setRefreshToken(refreshToken)
             .build();
 
-        return userServiceStub.refreshToken(request);
+        return authServiceStub.refreshToken(request);
     }
 
     @Override
@@ -63,7 +63,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
             .setRefreshToken(refreshToken)
             .build();
 
-        LogoutResponse response = userServiceStub.logout(request);
+        LogoutResponse response = authServiceStub.logout(request);
         return response.getSuccess();
     }
 

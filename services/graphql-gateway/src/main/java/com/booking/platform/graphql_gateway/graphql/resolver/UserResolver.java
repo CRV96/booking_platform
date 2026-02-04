@@ -1,8 +1,8 @@
-package com.booking.platform.graphql_gateway.resolver;
+package com.booking.platform.graphql_gateway.graphql.resolver;
 
 import com.booking.platform.common.grpc.user.SearchUsersResponse;
 import com.booking.platform.common.grpc.user.UserInfo;
-import com.booking.platform.graphql_gateway.client.UserOperationsClient;
+import com.booking.platform.graphql_gateway.grpc.client.UserOperationsClient;
 import com.booking.platform.graphql_gateway.dto.user.UpdateProfileInput;
 import com.booking.platform.graphql_gateway.dto.user.User;
 import com.booking.platform.graphql_gateway.dto.user.UserConnection;

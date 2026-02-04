@@ -1,8 +1,8 @@
 package com.booking.platform.user_service.mapper;
 
 import com.booking.platform.user_service.constants.UserAttributes;
-import com.booking.platform.user_service.dto.PreferencesInfo;
-import com.booking.platform.user_service.dto.ProfileInfo;
+import com.booking.platform.user_service.dto.attributes.PreferencesInfo;
+import com.booking.platform.user_service.dto.attributes.ProfileInfo;
 import com.booking.platform.user_service.dto.UserDTO;
 import com.booking.platform.user_service.entity.UserAttributeEntity;
 import com.booking.platform.user_service.entity.UserEntity;
