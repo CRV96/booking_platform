@@ -1,5 +1,6 @@
 package com.booking.platform.user_service.config;
 
+import com.booking.platform.user_service.properties.KeycloakProperties;
 import org.keycloak.OAuth2Constants;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;

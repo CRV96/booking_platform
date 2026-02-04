@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package booking.user;
+
+import "user/common.proto";
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.user";
+option java_outer_classname = "AuthServiceProto";
+
+// ============================================================================
+// AUTH SERVICE
+// ============================================================================
+// Handles authentication operations via Keycloak including registration,
+// login, token refresh, and logout.
+
+service AuthService {
+  // Register a new user. Creates user in Keycloak and returns tokens.
+  rpc Register(RegisterRequest) returns (AuthResponse);
+
+  // Login with username/email and password. Returns tokens from Keycloak.
+  rpc Login(LoginRequest) returns (AuthResponse);
+
+  // Exchange a refresh token for new access/refresh tokens.
+  rpc RefreshToken(RefreshTokenRequest) returns (AuthResponse);
+
+  // Logout - invalidates the refresh token in Keycloak.
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+}
+
+// ============================================================================
+// AUTHENTICATION MESSAGES
+// ============================================================================
+
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string first_name = 3;
+  string last_name = 4;
+
+  // Optional fields
+  optional string phone_number = 5;
+  optional string country = 6;
+  optional string preferred_language = 7;
+}
+
+message LoginRequest {
+  string username = 1;  // Can be username or email
+  string password = 2;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {
+  bool success = 1;
+}
+
+message AuthResponse {
+  string access_token = 1;
+  string refresh_token = 2;
+  int32 expires_in = 3;          // Access token expiry in seconds
+  int32 refresh_expires_in = 4;  // Refresh token expiry in seconds
+  string token_type = 5;         // Usually "Bearer"
+
+  // User info returned on successful auth
+  UserInfo user = 6;
+}

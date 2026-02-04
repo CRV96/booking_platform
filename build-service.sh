@@ -34,7 +34,8 @@ show_usage() {
     echo "  ticket-service      - Ticket management"
     echo "  notification-service - Notifications"
     echo "  analytics-service   - Analytics"
-    echo "  all                 - Build all modules"
+    echo "  all                 - Build all services (excludes config-service and eureka-service)"
+    echo "  all-with-infra      - Build all services including config-service and eureka-service"
     echo ""
     echo "Options:"
     echo "  --with-deps, -d     Also build dependencies (mvn -am)"
@@ -47,7 +48,8 @@ show_usage() {
     echo "  ./build-service.sh user-service              # Build user-service only"
     echo "  ./build-service.sh user-service --with-deps  # Build with dependencies"
     echo "  ./build-service.sh user-service --clean      # Clean and build"
-    echo "  ./build-service.sh all                       # Build everything"
+    echo "  ./build-service.sh all                       # Build all app services (no infra)"
+    echo "  ./build-service.sh all-with-infra            # Build everything including infra"
 }
 
 if [ -z "$1" ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
@@ -90,6 +92,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Services lists
+INFRA_SERVICES="services/config-service,services/eureka-service"
+APP_SERVICES="common,services/graphql-gateway,services/user-service,services/event-service,services/booking-service,services/payment-service,services/ticket-service,services/notification-service,services/analytics-service"
+
 # Determine module path
 case $MODULE_NAME in
     common)
@@ -99,6 +105,11 @@ case $MODULE_NAME in
         MODULE_PATH="services/$MODULE_NAME"
         ;;
     all)
+        # Build all except infrastructure services (config-service, eureka-service)
+        MODULE_PATH="$APP_SERVICES"
+        ;;
+    all-with-infra)
+        # Build everything including infrastructure services
         MODULE_PATH=""
         ;;
     *)

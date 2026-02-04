@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package booking.user;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.user";
+option java_outer_classname = "UserCommonProto";
+
+// ============================================================================
+// SHARED USER MESSAGES
+// ============================================================================
+
+message UserInfo {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  bool email_verified = 4;
+  bool enabled = 5;
+
+  string first_name = 6;
+  string last_name = 7;
+
+  // Custom attributes
+  optional string phone_number = 8;
+  optional string country = 9;
+  optional string preferred_language = 10;
+  optional string preferred_currency = 11;
+  optional string timezone = 12;
+  optional string profile_picture_url = 13;
+
+  // Notification preferences
+  optional bool email_notifications = 14;
+  optional bool sms_notifications = 15;
+
+  // Timestamps (ISO 8601 format)
+  string created_at = 16;
+
+  // Roles assigned to the user
+  repeated string roles = 17;
+}
