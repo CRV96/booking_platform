@@ -1,26 +1,26 @@
 package com.booking.platform.user_service.grpc;
 
 import com.booking.platform.common.grpc.user.*;
-import com.booking.platform.user_service.exception.*;
+import com.booking.platform.user_service.mapper.AttributeMapper;
+import com.booking.platform.user_service.mapper.UserGrpcMapper;
 import com.booking.platform.user_service.service.AuthService;
 import com.booking.platform.user_service.service.AuthService.TokenResponse;
-import com.booking.platform.user_service.service.DatabaseUserService;
 import com.booking.platform.user_service.service.KeycloakUserService;
-import io.grpc.Status;
+import com.booking.platform.user_service.validation.UserValidator;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.keycloak.representations.idm.UserRepresentation;
 
-import java.time.Instant;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * gRPC service implementation for user operations.
  * Handles authentication (via Keycloak) and user management.
+ *
+ * Exception handling is delegated to {@link com.booking.platform.user_service.grpc.interceptor.GrpcExceptionInterceptor}
  */
 @GrpcService
 @Slf4j
@@ -29,7 +29,9 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
     private final AuthService authService;
     private final KeycloakUserService keycloakUserService;
-    private final DatabaseUserService databaseUserService;
+    private final UserGrpcMapper userGrpcMapper;
+    private final AttributeMapper attributeMapper;
+    private final UserValidator userValidator;
 
     // =========================================================================
     // AUTHENTICATION OPERATIONS
@@ -39,114 +41,58 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
     public void register(RegisterRequest request, StreamObserver<AuthResponse> responseObserver) {
         log.info("gRPC Register request for email: {}", request.getEmail());
 
-        try {
-            // Build custom attributes map
-            Map<String, String> attributes = new HashMap<>();
-            if (request.hasPhoneNumber()) {
-                attributes.put("phoneNumber", request.getPhoneNumber());
-            }
-            if (request.hasCountry()) {
-                attributes.put("country", request.getCountry());
-            }
-            if (request.hasPreferredLanguage()) {
-                attributes.put("preferredLanguage", request.getPreferredLanguage());
-            }
+        userValidator.validateRegisterRequest(request);
 
-            // Create user in Keycloak
-            String userId = keycloakUserService.createUser(
+        Map<String, String> attributes = attributeMapper.fromRegisterRequest(request);
+
+        String userId = keycloakUserService.createUser(
                 request.getEmail(),
                 request.getPassword(),
                 request.getFirstName(),
                 request.getLastName(),
                 attributes
-            );
+        );
 
-            // Auto-login: get tokens for the new user
-            TokenResponse tokens = authService.login(request.getEmail(), request.getPassword());
+        // Auto-login: get tokens for the new user
+        TokenResponse tokens = authService.login(request.getEmail(), request.getPassword());
 
-            // Get user info
-            UserRepresentation user = keycloakUserService.getUserById(userId);
-            List<String> roles = keycloakUserService.getUserRoles(userId);
+        UserRepresentation user = keycloakUserService.getUserById(userId);
+        List<String> roles = keycloakUserService.getUserRoles(userId);
 
-            // Build response
-            AuthResponse response = AuthResponse.newBuilder()
-                .setAccessToken(tokens.access_token())
-                .setRefreshToken(tokens.refresh_token())
-                .setExpiresIn(tokens.expires_in())
-                .setRefreshExpiresIn(tokens.refresh_expires_in())
-                .setTokenType(tokens.token_type())
-                .setUser(mapToUserInfo(user, roles))
-                .build();
+        AuthResponse response = buildAuthResponse(tokens, user, roles);
 
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-            log.info("User registered successfully: {}", userId);
-
-        } catch (UserAlreadyExistsException e) {
-            log.warn("Registration failed - user exists: {}", request.getEmail());
-            responseObserver.onError(Status.ALREADY_EXISTS
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        } catch (Exception e) {
-            log.error("Registration failed", e);
-            responseObserver.onError(Status.INTERNAL
-                .withDescription("Registration failed: " + e.getMessage())
-                .asRuntimeException());
-        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+        log.info("User registered successfully: {}", userId);
     }
 
     @Override
     public void login(LoginRequest request, StreamObserver<AuthResponse> responseObserver) {
         log.info("gRPC Login request for user: {}", request.getUsername());
 
-        try {
-            // Authenticate with Keycloak
-            TokenResponse tokens = authService.login(request.getUsername(), request.getPassword());
+        userValidator.validateLoginRequest(request);
 
-            // Get user info
-            UserRepresentation user = keycloakUserService.getUserByUsername(request.getUsername());
-            List<String> roles = keycloakUserService.getUserRoles(user.getId());
+        TokenResponse tokens = authService.login(request.getUsername(), request.getPassword());
 
-            // Build response
-            AuthResponse response = AuthResponse.newBuilder()
-                .setAccessToken(tokens.access_token())
-                .setRefreshToken(tokens.refresh_token())
-                .setExpiresIn(tokens.expires_in())
-                .setRefreshExpiresIn(tokens.refresh_expires_in())
-                .setTokenType(tokens.token_type())
-                .setUser(mapToUserInfo(user, roles))
-                .build();
+        UserRepresentation user = keycloakUserService.getUserByUsername(request.getUsername());
+        List<String> roles = keycloakUserService.getUserRoles(user.getId());
 
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-            log.info("Login successful for user: {}", request.getUsername());
+        AuthResponse response = buildAuthResponse(tokens, user, roles);
 
-        } catch (InvalidCredentialsException e) {
-            log.warn("Login failed - invalid credentials: {}", request.getUsername());
-            responseObserver.onError(Status.UNAUTHENTICATED
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        } catch (UserNotFoundException e) {
-            log.warn("Login failed - user not found: {}", request.getUsername());
-            responseObserver.onError(Status.NOT_FOUND
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        } catch (Exception e) {
-            log.error("Login failed", e);
-            responseObserver.onError(Status.INTERNAL
-                .withDescription("Login failed: " + e.getMessage())
-                .asRuntimeException());
-        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+        log.info("Login successful for user: {}", request.getUsername());
     }
 
     @Override
     public void refreshToken(RefreshTokenRequest request, StreamObserver<AuthResponse> responseObserver) {
         log.debug("gRPC RefreshToken request");
 
-        try {
-            TokenResponse tokens = authService.refreshToken(request.getRefreshToken());
+        userValidator.validateRefreshToken(request.getRefreshToken());
 
-            AuthResponse response = AuthResponse.newBuilder()
+        TokenResponse tokens = authService.refreshToken(request.getRefreshToken());
+
+        AuthResponse response = AuthResponse.newBuilder()
                 .setAccessToken(tokens.access_token())
                 .setRefreshToken(tokens.refresh_token())
                 .setExpiresIn(tokens.expires_in())
@@ -154,20 +100,9 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
                 .setTokenType(tokens.token_type())
                 .build();
 
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-
-        } catch (InvalidTokenException e) {
-            log.warn("Token refresh failed - invalid token");
-            responseObserver.onError(Status.UNAUTHENTICATED
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        } catch (Exception e) {
-            log.error("Token refresh failed", e);
-            responseObserver.onError(Status.INTERNAL
-                .withDescription("Token refresh failed: " + e.getMessage())
-                .asRuntimeException());
-        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+        log.debug("Token refresh successful");
     }
 
     @Override
@@ -177,8 +112,8 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         boolean success = authService.logout(request.getRefreshToken());
 
         LogoutResponse response = LogoutResponse.newBuilder()
-            .setSuccess(success)
-            .build();
+                .setSuccess(success)
+                .build();
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
@@ -192,228 +127,124 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
     public void getUser(GetUserRequest request, StreamObserver<UserResponse> responseObserver) {
         log.debug("gRPC GetUser request for ID: {}", request.getUserId());
 
-        try {
-            UserRepresentation user = keycloakUserService.getUserById(request.getUserId());
-            List<String> roles = keycloakUserService.getUserRoles(request.getUserId());
+        userValidator.validateUserId(request.getUserId());
 
-            UserResponse response = UserResponse.newBuilder()
-                .setUser(mapToUserInfo(user, roles))
+        UserRepresentation user = keycloakUserService.getUserById(request.getUserId());
+        List<String> roles = keycloakUserService.getUserRoles(request.getUserId());
+
+        UserResponse response = UserResponse.newBuilder()
+                .setUser(userGrpcMapper.toUserInfo(user, roles))
                 .build();
 
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-
-        } catch (UserNotFoundException e) {
-            responseObserver.onError(Status.NOT_FOUND
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        } catch (Exception e) {
-            log.error("GetUser failed", e);
-            responseObserver.onError(Status.INTERNAL
-                .withDescription("Failed to get user: " + e.getMessage())
-                .asRuntimeException());
-        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
     public void getUserByUsername(GetUserByUsernameRequest request, StreamObserver<UserResponse> responseObserver) {
         log.debug("gRPC GetUserByUsername request: {}", request.getUsername());
 
-        try {
-            UserRepresentation user = keycloakUserService.getUserByUsername(request.getUsername());
-            List<String> roles = keycloakUserService.getUserRoles(user.getId());
+        userValidator.validateUsername(request.getUsername());
 
-            UserResponse response = UserResponse.newBuilder()
-                .setUser(mapToUserInfo(user, roles))
+        UserRepresentation user = keycloakUserService.getUserByUsername(request.getUsername());
+        List<String> roles = keycloakUserService.getUserRoles(user.getId());
+
+        UserResponse response = UserResponse.newBuilder()
+                .setUser(userGrpcMapper.toUserInfo(user, roles))
                 .build();
 
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-
-        } catch (UserNotFoundException e) {
-            responseObserver.onError(Status.NOT_FOUND
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        } catch (Exception e) {
-            log.error("GetUserByUsername failed", e);
-            responseObserver.onError(Status.INTERNAL
-                .withDescription("Failed to get user: " + e.getMessage())
-                .asRuntimeException());
-        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
     public void getUserByEmail(GetUserByEmailRequest request, StreamObserver<UserResponse> responseObserver) {
         log.debug("gRPC GetUserByEmail request: {}", request.getEmail());
 
-        try {
-            UserRepresentation user = keycloakUserService.getUserByEmail(request.getEmail());
-            List<String> roles = keycloakUserService.getUserRoles(user.getId());
+        userValidator.validateEmail(request.getEmail());
 
-            UserResponse response = UserResponse.newBuilder()
-                .setUser(mapToUserInfo(user, roles))
+        UserRepresentation user = keycloakUserService.getUserByEmail(request.getEmail());
+        List<String> roles = keycloakUserService.getUserRoles(user.getId());
+
+        UserResponse response = UserResponse.newBuilder()
+                .setUser(userGrpcMapper.toUserInfo(user, roles))
                 .build();
 
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-
-        } catch (UserNotFoundException e) {
-            responseObserver.onError(Status.NOT_FOUND
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        } catch (Exception e) {
-            log.error("GetUserByEmail failed", e);
-            responseObserver.onError(Status.INTERNAL
-                .withDescription("Failed to get user: " + e.getMessage())
-                .asRuntimeException());
-        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
     }
 
     @Override
     public void updateUser(UpdateUserRequest request, StreamObserver<UserResponse> responseObserver) {
         log.info("gRPC UpdateUser request for ID: {}", request.getUserId());
 
-        try {
-            // Build attributes map from request
-            Map<String, String> attributes = new HashMap<>();
-            if (request.hasPhoneNumber()) {
-                attributes.put("phoneNumber", request.getPhoneNumber());
-            }
-            if (request.hasCountry()) {
-                attributes.put("country", request.getCountry());
-            }
-            if (request.hasPreferredLanguage()) {
-                attributes.put("preferredLanguage", request.getPreferredLanguage());
-            }
-            if (request.hasPreferredCurrency()) {
-                attributes.put("preferredCurrency", request.getPreferredCurrency());
-            }
-            if (request.hasTimezone()) {
-                attributes.put("timezone", request.getTimezone());
-            }
-            if (request.hasProfilePictureUrl()) {
-                attributes.put("profilePictureUrl", request.getProfilePictureUrl());
-            }
-            if (request.hasEmailNotifications()) {
-                attributes.put("emailNotifications", String.valueOf(request.getEmailNotifications()));
-            }
-            if (request.hasSmsNotifications()) {
-                attributes.put("smsNotifications", String.valueOf(request.getSmsNotifications()));
-            }
+        userValidator.validateUpdateUserRequest(request);
 
-            UserRepresentation user = keycloakUserService.updateUser(
+        Map<String, String> attributes = attributeMapper.fromUpdateRequest(request);
+
+        UserRepresentation user = keycloakUserService.updateUser(
                 request.getUserId(),
                 request.hasFirstName() ? request.getFirstName() : null,
                 request.hasLastName() ? request.getLastName() : null,
                 request.hasEmail() ? request.getEmail() : null,
                 attributes
-            );
+        );
 
-            List<String> roles = keycloakUserService.getUserRoles(request.getUserId());
+        List<String> roles = keycloakUserService.getUserRoles(request.getUserId());
 
-            UserResponse response = UserResponse.newBuilder()
-                .setUser(mapToUserInfo(user, roles))
+        UserResponse response = UserResponse.newBuilder()
+                .setUser(userGrpcMapper.toUserInfo(user, roles))
                 .build();
 
-            responseObserver.onNext(response);
-            responseObserver.onCompleted();
-            log.info("User updated successfully: {}", request.getUserId());
-
-        } catch (UserNotFoundException e) {
-            responseObserver.onError(Status.NOT_FOUND
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        } catch (Exception e) {
-            log.error("UpdateUser failed", e);
-            responseObserver.onError(Status.INTERNAL
-                .withDescription("Failed to update user: " + e.getMessage())
-                .asRuntimeException());
-        }
+        responseObserver.onNext(response);
+        responseObserver.onCompleted();
+        log.info("User updated successfully: {}", request.getUserId());
     }
 
     @Override
     public void searchUsers(SearchUsersRequest request, StreamObserver<SearchUsersResponse> responseObserver) {
         log.debug("gRPC SearchUsers request: query='{}', page={}, size={}",
-            request.hasQuery() ? request.getQuery() : "", request.getPage(), request.getPageSize());
+                request.hasQuery() ? request.getQuery() : "", request.getPage(), request.getPageSize());
 
-        try {
-            String query = request.hasQuery() ? request.getQuery() : null;
-            int page = request.getPage();
-            int pageSize = Math.min(Math.max(request.getPageSize(), 1), 100); // Clamp between 1-100
+        String query = request.hasQuery() ? request.getQuery() : null;
+        int page = request.getPage();
+        int pageSize = clampPageSize(request.getPageSize());
 
-            List<UserRepresentation> users = keycloakUserService.searchUsers(query, page, pageSize);
-            int totalCount = keycloakUserService.getUserCount(query);
-            int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        List<UserRepresentation> users = keycloakUserService.searchUsers(query, page, pageSize);
+        int totalCount = keycloakUserService.getUserCount(query);
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
 
-            SearchUsersResponse.Builder responseBuilder = SearchUsersResponse.newBuilder()
+        SearchUsersResponse.Builder responseBuilder = SearchUsersResponse.newBuilder()
                 .setTotalCount(totalCount)
                 .setPage(page)
                 .setPageSize(pageSize)
                 .setTotalPages(totalPages);
 
-            for (UserRepresentation user : users) {
-                List<String> roles = keycloakUserService.getUserRoles(user.getId());
-                responseBuilder.addUsers(mapToUserInfo(user, roles));
-            }
-
-            responseObserver.onNext(responseBuilder.build());
-            responseObserver.onCompleted();
-
-        } catch (Exception e) {
-            log.error("SearchUsers failed", e);
-            responseObserver.onError(Status.INTERNAL
-                .withDescription("Failed to search users: " + e.getMessage())
-                .asRuntimeException());
+        for (UserRepresentation user : users) {
+            List<String> roles = keycloakUserService.getUserRoles(user.getId());
+            responseBuilder.addUsers(userGrpcMapper.toUserInfo(user, roles));
         }
+
+        responseObserver.onNext(responseBuilder.build());
+        responseObserver.onCompleted();
     }
 
     // =========================================================================
-    // HELPER METHODS
+    // PRIVATE HELPER METHODS
     // =========================================================================
 
-    /**
-     * Maps a Keycloak UserRepresentation to our gRPC UserInfo message.
-     */
-    private UserInfo mapToUserInfo(UserRepresentation user, List<String> roles) {
-        UserInfo.Builder builder = UserInfo.newBuilder()
-            .setId(user.getId())
-            .setUsername(user.getUsername() != null ? user.getUsername() : "")
-            .setEmail(user.getEmail() != null ? user.getEmail() : "")
-            .setEmailVerified(user.isEmailVerified() != null ? user.isEmailVerified() : false)
-            .setEnabled(user.isEnabled() != null ? user.isEnabled() : false)
-            .setFirstName(user.getFirstName() != null ? user.getFirstName() : "")
-            .setLastName(user.getLastName() != null ? user.getLastName() : "")
-            .setCreatedAt(user.getCreatedTimestamp() != null
-                ? Instant.ofEpochMilli(user.getCreatedTimestamp()).toString()
-                : "")
-            .addAllRoles(roles);
-
-        // Map custom attributes
-        Map<String, List<String>> attrs = user.getAttributes();
-        if (attrs != null) {
-            setIfPresent(builder, attrs, "phoneNumber", UserInfo.Builder::setPhoneNumber);
-            setIfPresent(builder, attrs, "country", UserInfo.Builder::setCountry);
-            setIfPresent(builder, attrs, "preferredLanguage", UserInfo.Builder::setPreferredLanguage);
-            setIfPresent(builder, attrs, "preferredCurrency", UserInfo.Builder::setPreferredCurrency);
-            setIfPresent(builder, attrs, "timezone", UserInfo.Builder::setTimezone);
-            setIfPresent(builder, attrs, "profilePictureUrl", UserInfo.Builder::setProfilePictureUrl);
-
-            // Boolean attributes
-            if (attrs.containsKey("emailNotifications")) {
-                builder.setEmailNotifications(Boolean.parseBoolean(attrs.get("emailNotifications").get(0)));
-            }
-            if (attrs.containsKey("smsNotifications")) {
-                builder.setSmsNotifications(Boolean.parseBoolean(attrs.get("smsNotifications").get(0)));
-            }
-        }
-
-        return builder.build();
+    private AuthResponse buildAuthResponse(TokenResponse tokens, UserRepresentation user, List<String> roles) {
+        return AuthResponse.newBuilder()
+                .setAccessToken(tokens.access_token())
+                .setRefreshToken(tokens.refresh_token())
+                .setExpiresIn(tokens.expires_in())
+                .setRefreshExpiresIn(tokens.refresh_expires_in())
+                .setTokenType(tokens.token_type())
+                .setUser(userGrpcMapper.toUserInfo(user, roles))
+                .build();
     }
 
-    private void setIfPresent(UserInfo.Builder builder, Map<String, List<String>> attrs,
-                              String key, java.util.function.BiConsumer<UserInfo.Builder, String> setter) {
-        if (attrs.containsKey(key) && !attrs.get(key).isEmpty()) {
-            setter.accept(builder, attrs.get(key).get(0));
-        }
+    private int clampPageSize(int pageSize) {
+        return Math.min(Math.max(pageSize, 1), 100);
     }
 }

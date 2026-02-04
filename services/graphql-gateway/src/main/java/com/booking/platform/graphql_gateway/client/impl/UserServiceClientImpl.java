@@ -2,7 +2,7 @@ package com.booking.platform.graphql_gateway.client.impl;
 
 import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.graphql_gateway.client.UserOperationsClient;
-import com.booking.platform.graphql_gateway.util.consts.UserServiceConst;
+import com.booking.platform.graphql_gateway.constants.UserServiceConst;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;

@@ -1,4 +1,4 @@
-package com.booking.platform.graphql_gateway.util.consts;
+package com.booking.platform.graphql_gateway.constants;
 
 public interface UserServiceConst {
 
