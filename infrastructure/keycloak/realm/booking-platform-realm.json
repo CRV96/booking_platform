@@ -29,7 +29,7 @@
       "standardFlowEnabled": true,
       "redirectUris": ["http://localhost:*"],
       "webOrigins": ["http://localhost:3000", "http://localhost:8080"],
-      "defaultClientScopes": ["web-origins", "profile", "roles", "email"],
+      "defaultClientScopes": ["basic", "web-origins", "profile", "roles", "email"],
       "optionalClientScopes": ["phone", "address", "offline_access"],
       "protocolMappers": [
         {
