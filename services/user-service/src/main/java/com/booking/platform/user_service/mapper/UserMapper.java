@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @Mapper(componentModel = "spring")
 public interface UserMapper {
 
-    @Mapping(target = "profile", expression = "java(buildProfbuildProfileInfoileInfo(entity))")
+    @Mapping(target = "profile", expression = "java(buildProfileInfo(entity))")
     @Mapping(target = "preferences", expression = "java(buildPreferencesInfo(entity))")
     @Mapping(target = "roles", source = "roles")
     @Mapping(target = "createdAt", expression = "java(toInstant(entity.getCreatedTimestamp()))")
