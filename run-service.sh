@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # =============================================================================
 # Run a specific Spring Boot service
 # Usage: ./run-service.sh <service-name> [options]
@@ -15,9 +15,6 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Default debug port (same for all services)
-DEFAULT_DEBUG_PORT=5005
-
 # Valid services
 VALID_SERVICES=(
     "config-service"
@@ -32,24 +29,43 @@ VALID_SERVICES=(
     "analytics-service"
 )
 
+# Get debug port for a service (unique ports for simultaneous debugging)
+get_debug_port() {
+    case "$1" in
+        config-service)       echo 5005 ;;
+        eureka-service)       echo 5006 ;;
+        graphql-gateway)      echo 5007 ;;
+        user-service)         echo 5008 ;;
+        event-service)        echo 5009 ;;
+        booking-service)      echo 5010 ;;
+        payment-service)      echo 5011 ;;
+        ticket-service)       echo 5012 ;;
+        notification-service) echo 5013 ;;
+        analytics-service)    echo 5014 ;;
+        *)                    echo 5005 ;;
+    esac
+}
+
 show_usage() {
     echo "Usage: ./run-service.sh <service-name> [options]"
     echo ""
-    echo "Available services:"
+    echo "Available services (with default debug ports):"
     for service in "${VALID_SERVICES[@]}"; do
-        echo "  $service"
+        port=$(get_debug_port "$service")
+        echo "  $service (port $port)"
     done
     echo ""
     echo "Options:"
-    echo "  --debug, -d          Enable remote debugging (port $DEFAULT_DEBUG_PORT)"
-    echo "  --port, -p <port>    Custom debug port (default: $DEFAULT_DEBUG_PORT)"
+    echo "  --debug, -d          Enable remote debugging (uses service-specific port)"
+    echo "  --port, -p <port>    Custom debug port (overrides default)"
     echo "  --suspend, -s        Wait for debugger before starting"
     echo "  --help, -h           Show this help"
     echo ""
     echo "Examples:"
     echo "  ./run-service.sh user-service              # Run normally"
-    echo "  ./run-service.sh user-service --debug      # Run with debug on port $DEFAULT_DEBUG_PORT"
-    echo "  ./run-service.sh user-service -d -p 5006   # Run with debug on custom port"
+    echo "  ./run-service.sh user-service --debug      # Run with debug on port 5008"
+    echo "  ./run-service.sh graphql-gateway -d        # Run with debug on port 5007"
+    echo "  ./run-service.sh user-service -d -p 5099   # Run with debug on custom port"
     echo "  ./run-service.sh user-service -d -s        # Debug & wait for debugger"
 }
 
@@ -80,7 +96,7 @@ fi
 
 # Parse options
 DEBUG_MODE=false
-DEBUG_PORT=$DEFAULT_DEBUG_PORT
+DEBUG_PORT=$(get_debug_port "$SERVICE_NAME")
 SUSPEND="n"
 
 while [[ $# -gt 0 ]]; do
