@@ -55,7 +55,6 @@ public class AuthResolver {
         return AuthPayload.fromGrpc(authClient.refreshToken(refreshToken));
     }
 
-    @PublicEndpoint
     @MutationMapping
     public LogoutPayload logout(@Argument("refreshToken") String refreshToken) {
         log.debug("GraphQL mutation: logout");

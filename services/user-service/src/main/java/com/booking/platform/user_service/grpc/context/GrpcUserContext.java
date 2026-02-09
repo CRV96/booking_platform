@@ -2,6 +2,7 @@ package com.booking.platform.user_service.grpc.context;
 
 import io.grpc.Context;
 
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -24,6 +25,8 @@ public final class GrpcUserContext {
     public static final Context.Key<String> EMAIL = Context.key("jwt-email");
     public static final Context.Key<List<String>> ROLES = Context.key("jwt-roles");
     public static final Context.Key<String> JWT_TOKEN = Context.key("jwt-token");
+    public static final Context.Key<String> JWT_ID = Context.key("jwt-id");
+    public static final Context.Key<Instant> JWT_EXPIRY = Context.key("jwt-expiry");
 
     public static String getUserId() {
         return USER_ID.get();
@@ -44,6 +47,14 @@ public final class GrpcUserContext {
 
     public static String getJwtToken() {
         return JWT_TOKEN.get();
+    }
+
+    public static String getJwtId() {
+        return JWT_ID.get();
+    }
+
+    public static Instant getJwtExpiry() {
+        return JWT_EXPIRY.get();
     }
 
     public static boolean isAuthenticated() {

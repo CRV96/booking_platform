@@ -73,7 +73,9 @@ public class JwtContextInterceptor implements ServerInterceptor {
                         .withValue(GrpcUserContext.USERNAME, username)
                         .withValue(GrpcUserContext.EMAIL, email)
                         .withValue(GrpcUserContext.ROLES, roles)
-                        .withValue(GrpcUserContext.JWT_TOKEN, token);
+                        .withValue(GrpcUserContext.JWT_TOKEN, token)
+                        .withValue(GrpcUserContext.JWT_ID, jwt.getId())
+                        .withValue(GrpcUserContext.JWT_EXPIRY, jwt.getExpiresAt());
 
                 log.debug("JWT validated for user: {} ({}) on method: {}", username, userId, methodName);
                 return Contexts.interceptCall(context, call, headers, next);

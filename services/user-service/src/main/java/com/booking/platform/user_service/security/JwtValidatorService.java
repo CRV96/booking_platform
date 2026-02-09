@@ -22,6 +22,7 @@ import java.time.Duration;
  * - Signature (via JWKS public keys)
  * - Expiry (exp claim)
  * - Issuer (iss claim matches configured issuer)
+ * - Blacklist (token not revoked)
  *
  * This provides defense-in-depth: even though the gateway validates tokens,
  * the user-service independently verifies them before trusting claims.
@@ -32,10 +33,14 @@ import java.time.Duration;
 public class JwtValidatorService {
 
     private final JwtDecoder jwtDecoder;
+    private final TokenBlacklistService tokenBlacklistService;
 
     public JwtValidatorService(
             @Value("${security.jwt.jwk-set-uri}") String jwkSetUri,
-            @Value("${security.jwt.issuer-uri}") String issuerUri) {
+            @Value("${security.jwt.issuer-uri}") String issuerUri,
+            TokenBlacklistService tokenBlacklistService) {
+
+        this.tokenBlacklistService = tokenBlacklistService;
 
         log.debug("Initializing JWT validator with JWKS URI: {}", jwkSetUri);
 
@@ -58,11 +63,27 @@ public class JwtValidatorService {
     /**
      * Validates and decodes a JWT token.
      *
+     * Validation includes:
+     * 1. Signature verification (via JWKS)
+     * 2. Expiry check (exp claim)
+     * 3. Issuer check (iss claim)
+     * 4. Blacklist check (revoked tokens)
+     *
      * @param token the raw JWT token string (without "Bearer " prefix)
      * @return the validated and decoded JWT
-     * @throws JwtException if validation fails (invalid signature, expired, wrong issuer)
+     * @throws JwtException if validation fails
      */
     public Jwt validateAndDecode(String token) throws JwtException {
-        return jwtDecoder.decode(token);
+        // 1-3: Signature, expiry, issuer validation
+        Jwt jwt = jwtDecoder.decode(token);
+
+        // 4: Blacklist check
+        String jti = jwt.getId();
+        if (jti != null && tokenBlacklistService.isBlacklisted(jti)) {
+            log.warn("Token has been revoked: {}", jti);
+            throw new JwtException("Token has been revoked");
+        }
+
+        return jwt;
     }
 }

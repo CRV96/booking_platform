@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "booking-platform-graphql",
 		"name": "Booking Platform - GraphQL API",
-		"description": "GraphQL API for the Booking Platform microservices.\n\n## JWT Authentication Flow\n\n1. Call **Login** or **Register** to get an `accessToken` (JWT from Keycloak)\n2. The test scripts automatically save `accessToken`, `refreshToken`, and `userId` to collection variables\n3. Protected requests (me, updateProfile) automatically include `Authorization: Bearer {{accessToken}}`\n4. When the token expires, call **Refresh Token** to get a new one\n\n## Recommended Test Order\n\n1. Register or Login (saves tokens automatically)\n2. Get Current User (me) — uses JWT to identify the user\n3. Update Profile — modifies the authenticated user's profile\n4. Search/List Users — browse users\n5. Refresh Token — renew expired tokens\n6. Logout — invalidate tokens\n\n## Security Notes\n\n- Auth endpoints (register, login, refreshToken, logout) do NOT require a Bearer token\n- User endpoints (me, updateProfile) REQUIRE a valid Bearer token\n- user(id) and users() work with or without a token\n- If you get UNAUTHENTICATED errors, run Login first to populate the token",
+		"description": "GraphQL API for the Booking Platform microservices.\n\n## JWT Authentication Flow\n\n1. Call **Login** or **Register** to get an `accessToken` (JWT from Keycloak)\n2. The test scripts automatically save `accessToken`, `refreshToken`, and `userId` to collection variables\n3. Protected requests (me, updateProfile, logout) automatically include `Authorization: Bearer {{accessToken}}`\n4. When the token expires, call **Refresh Token** to get a new one\n\n## Recommended Test Order\n\n1. Register or Login (saves tokens automatically)\n2. Get Current User (me) — uses JWT to identify the user\n3. Update Profile — modifies the authenticated user's profile\n4. Search/List Users — browse users\n5. Refresh Token — renew expired tokens\n6. Logout — invalidate tokens (blacklists the access token)\n\n## Security Notes\n\n- Public endpoints: register, login, refreshToken (no Bearer token required)\n- Protected endpoints: me, updateProfile, user, users, logout (require Bearer token)\n- Logout requires authentication to blacklist the access token\n- If you get UNAUTHENTICATED errors, run Login first to populate the token",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -30,7 +30,7 @@
 	"item": [
 		{
 			"name": "Authentication",
-			"description": "Public endpoints — no Bearer token required.\nLogin and Register automatically save tokens to collection variables.",
+			"description": "Authentication endpoints.\nLogin and Register are public (no token required).\nLogout requires a valid Bearer token to blacklist it.\nTokens are automatically saved to collection variables.",
 			"item": [
 				{
 					"name": "1. Register New User",
@@ -242,6 +242,11 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
