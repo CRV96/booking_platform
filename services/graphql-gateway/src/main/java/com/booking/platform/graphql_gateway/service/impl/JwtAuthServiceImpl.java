@@ -18,7 +18,6 @@ public class JwtAuthServiceImpl implements AuthService {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication instanceof JwtAuthenticationToken jwtAuth) {
-            // Try Spring Security's parsed claims first
             String userId = jwtAuth.getToken().getSubject();
             if (userId != null) {
                 return userId;
@@ -29,5 +28,20 @@ public class JwtAuthServiceImpl implements AuthService {
             throw new GraphQLException(ErrorCode.UNAUTHENTICATED, "Token missing user identity");
         }
 
-        throw new GraphQLException(ErrorCode.UNAUTHENTICATED);    }
+        throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
+    }
+
+    @Override
+    public boolean isAuthenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication instanceof JwtAuthenticationToken jwtAuth
+                && jwtAuth.getToken().getSubject() != null;
+    }
+
+    @Override
+    public void requireAuthentication() {
+        if (!isAuthenticated()) {
+            throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
+        }
+    }
 }

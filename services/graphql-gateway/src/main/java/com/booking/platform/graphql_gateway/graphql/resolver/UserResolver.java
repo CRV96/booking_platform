@@ -2,28 +2,19 @@ package com.booking.platform.graphql_gateway.graphql.resolver;
 
 import com.booking.platform.common.grpc.user.SearchUsersResponse;
 import com.booking.platform.common.grpc.user.UserInfo;
-import com.booking.platform.graphql_gateway.grpc.client.UserOperationsClient;
 import com.booking.platform.graphql_gateway.dto.user.UpdateProfileInput;
 import com.booking.platform.graphql_gateway.dto.user.User;
 import com.booking.platform.graphql_gateway.dto.user.UserConnection;
-import com.booking.platform.graphql_gateway.exception.ErrorCode;
-import com.booking.platform.graphql_gateway.exception.GraphQLException;
+import com.booking.platform.graphql_gateway.grpc.client.UserOperationsClient;
 import com.booking.platform.graphql_gateway.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Controller;
 
-import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 
 /**
  * GraphQL resolver for user queries and profile mutations.
@@ -33,8 +24,6 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 public class UserResolver {
-
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     private final UserOperationsClient userOperationsClient;
     private final AuthService authService;

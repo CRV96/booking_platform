@@ -4,6 +4,7 @@ import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.user_service.dto.TokenResponseDTO;
 import com.booking.platform.user_service.mapper.AttributeMapper;
 import com.booking.platform.user_service.mapper.UserGrpcMapper;
+import com.booking.platform.user_service.security.PublicEndpoint;
 import com.booking.platform.user_service.service.AuthService;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.AuthValidator;
@@ -33,6 +34,7 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
     private final AttributeMapper attributeMapper;
     private final AuthValidator authValidator;
 
+    @PublicEndpoint
     @Override
     public void register(RegisterRequest request, StreamObserver<AuthResponse> responseObserver) {
         log.debug("gRPC Register request for email: {}", request.getEmail());
@@ -62,6 +64,7 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
         log.debug("User registered successfully: {}", userId);
     }
 
+    @PublicEndpoint
     @Override
     public void login(LoginRequest request, StreamObserver<AuthResponse> responseObserver) {
         log.debug("gRPC Login request for user: {}", request.getUsername());
@@ -80,6 +83,7 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
         log.debug("Login successful for user: {}", request.getUsername());
     }
 
+    @PublicEndpoint
     @Override
     public void refreshToken(RefreshTokenRequest request, StreamObserver<AuthResponse> responseObserver) {
         log.debug("gRPC RefreshToken request");
@@ -101,6 +105,7 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
         log.debug("Token refresh successful");
     }
 
+    @PublicEndpoint
     @Override
     public void logout(LogoutRequest request, StreamObserver<LogoutResponse> responseObserver) {
         log.debug("gRPC Logout request");
