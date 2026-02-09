@@ -1,10 +1,11 @@
 package com.booking.platform.graphql_gateway.graphql.resolver;
 
-import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
 import com.booking.platform.graphql_gateway.dto.auth.AuthPayload;
 import com.booking.platform.graphql_gateway.dto.auth.LoginInput;
 import com.booking.platform.graphql_gateway.dto.auth.LogoutPayload;
 import com.booking.platform.graphql_gateway.dto.auth.RegisterInput;
+import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
+import com.booking.platform.graphql_gateway.security.PublicEndpoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -22,6 +23,7 @@ public class AuthResolver {
 
     private final AuthClient authClient;
 
+    @PublicEndpoint
     @MutationMapping
     public AuthPayload register(@Argument("input") RegisterInput input) {
         log.info("GraphQL mutation: register for {}", input.email());
@@ -37,6 +39,7 @@ public class AuthResolver {
         ));
     }
 
+    @PublicEndpoint
     @MutationMapping
     public AuthPayload login(@Argument("input") LoginInput input) {
         log.info("GraphQL mutation: login for {}", input.username());
@@ -44,6 +47,7 @@ public class AuthResolver {
         return AuthPayload.fromGrpc(authClient.login(input.username(), input.password()));
     }
 
+    @PublicEndpoint
     @MutationMapping
     public AuthPayload refreshToken(@Argument("refreshToken") String refreshToken) {
         log.debug("GraphQL mutation: refreshToken");

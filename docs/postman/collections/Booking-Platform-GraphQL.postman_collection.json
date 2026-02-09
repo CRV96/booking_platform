@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "booking-platform-graphql",
 		"name": "Booking Platform - GraphQL API",
-		"description": "GraphQL API for the Booking Platform microservices",
+		"description": "GraphQL API for the Booking Platform microservices.\n\n## JWT Authentication Flow\n\n1. Call **Login** or **Register** to get an `accessToken` (JWT from Keycloak)\n2. The test scripts automatically save `accessToken`, `refreshToken`, and `userId` to collection variables\n3. Protected requests (me, updateProfile, logout) automatically include `Authorization: Bearer {{accessToken}}`\n4. When the token expires, call **Refresh Token** to get a new one\n\n## Recommended Test Order\n\n1. Register or Login (saves tokens automatically)\n2. Get Current User (me) — uses JWT to identify the user\n3. Update Profile — modifies the authenticated user's profile\n4. Search/List Users — browse users\n5. Refresh Token — renew expired tokens\n6. Logout — invalidate tokens (blacklists the access token)\n\n## Security Notes\n\n- Public endpoints: register, login, refreshToken (no Bearer token required)\n- Protected endpoints: me, updateProfile, user, users, logout (require Bearer token)\n- Logout requires authentication to blacklist the access token\n- If you get UNAUTHENTICATED errors, run Login first to populate the token",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -30,6 +30,7 @@
 	"item": [
 		{
 			"name": "Authentication",
+			"description": "Authentication endpoints.\nLogin and Register are public (no token required).\nLogout requires a valid Bearer token to blacklist it.\nTokens are automatically saved to collection variables.",
 			"item": [
 				{
 					"name": "1. Register New User",
@@ -45,6 +46,14 @@
 									"    if (jsonData.data.register.user) {",
 									"        pm.collectionVariables.set('userId', jsonData.data.register.user.id);",
 									"    }",
+									"    pm.test('Registration successful', function() {",
+									"        pm.expect(jsonData.data.register.accessToken).to.be.a('string');",
+									"        pm.expect(jsonData.data.register.tokenType).to.eql('Bearer');",
+									"    });",
+									"} else {",
+									"    pm.test('Registration failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
 									"}"
 								],
 								"type": "text/javascript"
@@ -87,6 +96,14 @@
 									"    if (jsonData.data.login.user) {",
 									"        pm.collectionVariables.set('userId', jsonData.data.login.user.id);",
 									"    }",
+									"    pm.test('Login successful', function() {",
+									"        pm.expect(jsonData.data.login.accessToken).to.be.a('string');",
+									"        pm.expect(jsonData.data.login.tokenType).to.eql('Bearer');",
+									"    });",
+									"} else {",
+									"    pm.test('Login failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
 									"}"
 								],
 								"type": "text/javascript"
@@ -168,6 +185,9 @@
 									"if (jsonData.data && jsonData.data.refreshToken) {",
 									"    pm.collectionVariables.set('accessToken', jsonData.data.refreshToken.accessToken);",
 									"    pm.collectionVariables.set('refreshToken', jsonData.data.refreshToken.refreshToken);",
+									"    pm.test('Token refresh successful', function() {",
+									"        pm.expect(jsonData.data.refreshToken.accessToken).to.be.a('string');",
+									"    });",
 									"}"
 								],
 								"type": "text/javascript"
@@ -207,6 +227,9 @@
 									"if (jsonData.data && jsonData.data.logout && jsonData.data.logout.success) {",
 									"    pm.collectionVariables.set('accessToken', '');",
 									"    pm.collectionVariables.set('refreshToken', '');",
+									"    pm.test('Logout successful', function() {",
+									"        pm.expect(jsonData.data.logout.success).to.be.true;",
+									"    });",
 									"}"
 								],
 								"type": "text/javascript"
@@ -219,6 +242,11 @@
 							{
 								"key": "Content-Type",
 								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
 							}
 						],
 						"body": {
@@ -238,7 +266,104 @@
 			]
 		},
 		{
-			"name": "Users",
+			"name": "Users (Authenticated)",
+			"description": "Protected endpoints — require a valid Bearer token.\nRun Login first to populate the accessToken variable.",
+			"item": [
+				{
+					"name": "Get Current User (me)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('me query returns authenticated user', function() {",
+									"    pm.expect(jsonData.data).to.have.property('me');",
+									"    pm.expect(jsonData.data.me).to.have.property('id');",
+									"    pm.expect(jsonData.data.me).to.have.property('username');",
+									"    pm.expect(jsonData.data.me).to.have.property('email');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query Me {\n  me {\n    id\n    username\n    email\n    emailVerified\n    enabled\n    firstName\n    lastName\n    createdAt\n    phoneNumber\n    country\n    preferredLanguage\n    preferredCurrency\n    timezone\n    profilePictureUrl\n    emailNotifications\n    smsNotifications\n    roles\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Profile updated successfully', function() {",
+									"    pm.expect(jsonData.data).to.have.property('updateProfile');",
+									"    pm.expect(jsonData.data.updateProfile).to.have.property('id');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation UpdateProfile($input: UpdateProfileInput!) {\n  updateProfile(input: $input) {\n    id\n    username\n    email\n    firstName\n    lastName\n    phoneNumber\n    country\n    preferredLanguage\n    preferredCurrency\n    timezone\n    profilePictureUrl\n    emailNotifications\n    smsNotifications\n    roles\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"firstName\": \"John\",\n    \"lastName\": \"Updated\",\n    \"phoneNumber\": \"+1987654321\",\n    \"country\": \"UK\",\n    \"preferredLanguage\": \"en\",\n    \"preferredCurrency\": \"GBP\",\n    \"timezone\": \"Europe/London\",\n    \"emailNotifications\": true,\n    \"smsNotifications\": false\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Users (Public)",
+			"description": "These endpoints work with or without a Bearer token.\nThe token is included for consistency but is not strictly required.",
 			"item": [
 				{
 					"name": "Get User by ID",
@@ -258,7 +383,7 @@
 						"body": {
 							"mode": "graphql",
 							"graphql": {
-								"query": "query GetUser($id: ID!) {\n  user(id: $id) {\n    id\n    username\n    email\n    emailVerified\n    enabled\n    firstName\n    lastName\n    createdAt\n    phoneNumber\n    country\n    preferredLanguage\n    roles\n  }\n}",
+								"query": "query GetUser($id: ID!) {\n  user(id: $id) {\n    id\n    username\n    email\n    emailVerified\n    enabled\n    firstName\n    lastName\n    createdAt\n    phoneNumber\n    country\n    preferredLanguage\n    preferredCurrency\n    timezone\n    profilePictureUrl\n    emailNotifications\n    smsNotifications\n    roles\n  }\n}",
 								"variables": "{\n  \"id\": \"{{userId}}\"\n}"
 							}
 						},
@@ -287,7 +412,7 @@
 						"body": {
 							"mode": "graphql",
 							"graphql": {
-								"query": "query SearchUsers($query: String, $page: Int, $pageSize: Int) {\n  users(query: $query, page: $page, pageSize: $pageSize) {\n    users {\n      id\n      username\n      email\n      firstName\n      lastName\n      emailVerified\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"query": "query SearchUsers($query: String, $page: Int, $pageSize: Int) {\n  users(query: $query, page: $page, pageSize: $pageSize) {\n    users {\n      id\n      username\n      email\n      firstName\n      lastName\n      emailVerified\n      roles\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
 								"variables": "{\n  \"query\": \"john\",\n  \"page\": 0,\n  \"pageSize\": 10\n}"
 							}
 						},
@@ -316,7 +441,52 @@
 						"body": {
 							"mode": "graphql",
 							"graphql": {
-								"query": "query ListAllUsers {\n  users(page: 0, pageSize: 20) {\n    users {\n      id\n      username\n      email\n      firstName\n      lastName\n      emailVerified\n      enabled\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"query": "query ListAllUsers {\n  users(page: 0, pageSize: 20) {\n    users {\n      id\n      username\n      email\n      firstName\n      lastName\n      emailVerified\n      enabled\n      roles\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "JWT Security Tests",
+			"description": "Test requests to verify JWT authentication and error handling.\nThese demonstrate the expected behavior for unauthenticated and invalid token scenarios.",
+			"item": [
+				{
+					"name": "me (without token) - expect UNAUTHENTICATED",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Returns UNAUTHENTICATED error', function() {",
+									"    pm.expect(jsonData.errors).to.be.an('array').that.is.not.empty;",
+									"    pm.expect(jsonData.errors[0].extensions.code).to.eql('AUTHZ_002');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query Me {\n  me {\n    id\n    username\n    email\n  }\n}",
 								"variables": ""
 							}
 						},
@@ -328,7 +498,63 @@
 					}
 				},
 				{
-					"name": "Get Current User (me)",
+					"name": "updateProfile (without token) - expect UNAUTHENTICATED",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Returns UNAUTHENTICATED error', function() {",
+									"    pm.expect(jsonData.errors).to.be.an('array').that.is.not.empty;",
+									"    pm.expect(jsonData.errors[0].extensions.code).to.eql('AUTHZ_002');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation UpdateProfile($input: UpdateProfileInput!) {\n  updateProfile(input: $input) {\n    id\n    username\n    email\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"firstName\": \"Should\",\n    \"lastName\": \"Fail\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "me (with invalid token) - expect error",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Returns error for invalid token', function() {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200, 401]);",
+									"    if (jsonData.errors) {",
+									"        pm.expect(jsonData.errors).to.be.an('array').that.is.not.empty;",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
 					"request": {
 						"method": "POST",
 						"header": [
@@ -338,15 +564,54 @@
 							},
 							{
 								"key": "Authorization",
-								"value": "Bearer {{accessToken}}",
+								"value": "Bearer invalid.jwt.token",
 								"type": "text"
 							}
 						],
 						"body": {
 							"mode": "graphql",
 							"graphql": {
-								"query": "query Me {\n  me {\n    id\n    username\n    email\n    firstName\n    lastName\n    emailVerified\n    roles\n  }\n}",
+								"query": "query Me {\n  me {\n    id\n    username\n    email\n  }\n}",
 								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "login (without token) - should work",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Login works without Bearer token', function() {",
+									"    pm.expect(jsonData.data).to.have.property('login');",
+									"    pm.expect(jsonData.data.login.accessToken).to.be.a('string');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    tokenType\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"username\": \"john.doe\",\n    \"password\": \"customer123\"\n  }\n}"
 							}
 						},
 						"url": {

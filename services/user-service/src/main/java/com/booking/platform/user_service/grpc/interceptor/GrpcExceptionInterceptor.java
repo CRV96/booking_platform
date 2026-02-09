@@ -4,6 +4,9 @@ import com.booking.platform.user_service.exception.UserServiceException;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
+import org.springframework.core.annotation.Order;
+
+import java.security.AccessControlException;
 
 /**
  * Global gRPC interceptor for centralized exception handling.
@@ -11,6 +14,7 @@ import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
  */
 @Slf4j
 @GrpcGlobalServerInterceptor
+@Order(InterceptorOrder.EXCEPTION_HANDLING)
 public class GrpcExceptionInterceptor implements ServerInterceptor {
 
     @Override
@@ -54,6 +58,10 @@ public class GrpcExceptionInterceptor implements ServerInterceptor {
 
         if (e instanceof IllegalArgumentException) {
             return Status.INVALID_ARGUMENT.withDescription(e.getMessage());
+        }
+
+        if (e instanceof AccessControlException) {
+            return Status.PERMISSION_DENIED.withDescription(e.getMessage());
         }
 
         // Default to INTERNAL for unknown exceptions

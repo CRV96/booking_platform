@@ -8,6 +8,8 @@ import io.grpc.StatusRuntimeException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.execution.DataFetcherExceptionResolverAdapter;
 import org.springframework.graphql.execution.ErrorType;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -21,6 +23,16 @@ public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter
     protected GraphQLError resolveToSingleError(Throwable ex, DataFetchingEnvironment env) {
         if (ex instanceof GraphQLException gqlEx) {
             return buildError(env, gqlEx.getMessage(), gqlEx.getCode(), mapErrorType(gqlEx.getErrorCode()));
+        }
+
+        if (ex instanceof AuthenticationException) {
+            return buildError(env, ErrorCode.UNAUTHENTICATED.getDefaultMessage(),
+                             ErrorCode.UNAUTHENTICATED.getCode(), ErrorType.UNAUTHORIZED);
+        }
+
+        if (ex instanceof AccessDeniedException) {
+            return buildError(env, ErrorCode.FORBIDDEN.getDefaultMessage(),
+                             ErrorCode.FORBIDDEN.getCode(), ErrorType.FORBIDDEN);
         }
 
         if (ex instanceof StatusRuntimeException grpcEx) {

@@ -2,12 +2,11 @@ package com.booking.platform.graphql_gateway.graphql.resolver;
 
 import com.booking.platform.common.grpc.user.SearchUsersResponse;
 import com.booking.platform.common.grpc.user.UserInfo;
-import com.booking.platform.graphql_gateway.grpc.client.UserOperationsClient;
 import com.booking.platform.graphql_gateway.dto.user.UpdateProfileInput;
 import com.booking.platform.graphql_gateway.dto.user.User;
 import com.booking.platform.graphql_gateway.dto.user.UserConnection;
-import com.booking.platform.graphql_gateway.exception.ErrorCode;
-import com.booking.platform.graphql_gateway.exception.GraphQLException;
+import com.booking.platform.graphql_gateway.grpc.client.UserOperationsClient;
+import com.booking.platform.graphql_gateway.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;
@@ -27,12 +26,15 @@ import java.util.List;
 public class UserResolver {
 
     private final UserOperationsClient userOperationsClient;
+    private final AuthService authService;
 
     @QueryMapping
     public User me() {
-        // TODO: Get user ID from JWT token in security context
-        log.warn("me() query called but authentication not yet implemented");
-        return null;
+        String userId = authService.getAuthenticatedUserId();
+        log.debug("GraphQL query: me() for user {}", userId);
+
+        UserInfo userInfo = userOperationsClient.getUser(userId);
+        return User.fromGrpc(userInfo);
     }
 
     @QueryMapping
@@ -71,8 +73,25 @@ public class UserResolver {
 
     @MutationMapping
     public User updateProfile(@Argument("input") UpdateProfileInput input) {
-        // TODO: Get user ID from JWT token in security context
-        log.warn("updateProfile() called but authentication not yet implemented");
-        throw new GraphQLException(ErrorCode.NOT_IMPLEMENTED);
+        String userId = authService.getAuthenticatedUserId();
+        log.info("GraphQL mutation: updateProfile for user {}", userId);
+
+        UserInfo userInfo = userOperationsClient.updateUser(
+                userId,
+                input.firstName(),
+                input.lastName(),
+                input.email(),
+                input.phoneNumber(),
+                input.country(),
+                input.preferredLanguage(),
+                input.preferredCurrency(),
+                input.timezone(),
+                input.profilePictureUrl(),
+                input.emailNotifications(),
+                input.smsNotifications()
+        );
+
+        return User.fromGrpc(userInfo);
     }
+
 }
