@@ -1,8 +1,8 @@
-package com.booking.platform.user_service.grpc.interceptor;
+package com.booking.platform.common.grpc.interceptor;
 
-import com.booking.platform.user_service.grpc.context.GrpcUserContext;
-import com.booking.platform.user_service.security.JwtValidatorService;
-import com.booking.platform.user_service.security.PublicEndpointRegistry;
+import com.booking.platform.common.grpc.context.GrpcUserContext;
+import com.booking.platform.common.security.JwtValidatorService;
+import com.booking.platform.common.security.PublicEndpointRegistry;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
@@ -25,6 +25,7 @@ import java.util.Map;
  * - Validates signature (via Keycloak's JWKS public keys)
  * - Validates expiry (exp claim)
  * - Validates issuer (iss claim)
+ * - Checks Redis blacklist (revoked tokens)
  * - Populates {@link GrpcUserContext} with user claims
  */
 @Slf4j
@@ -42,6 +43,7 @@ public class JwtContextInterceptor implements ServerInterceptor {
     public JwtContextInterceptor(JwtValidatorService jwtValidator, PublicEndpointRegistry publicEndpointRegistry) {
         this.jwtValidator = jwtValidator;
         this.publicEndpointRegistry = publicEndpointRegistry;
+        log.info("JwtContextInterceptor initialized — gRPC JWT authentication is ACTIVE");
     }
 
     @Override

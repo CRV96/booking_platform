@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.booking.platform</groupId>
+        <artifactId>common</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>common-grpc-security</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Common gRPC Security</name>
+    <description>Shared gRPC server security infrastructure: JWT validation, interceptors, mTLS, token blacklist</description>
+
+    <dependencies>
+        <!-- Sibling modules -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-core</artifactId>
+        </dependency>
+
+        <!--
+            gRPC server interceptor support.
+
+            IMPORTANT: We exclude spring-boot-starter-security to prevent the library's
+            GrpcServerSecurityAutoConfiguration from activating. That auto-config registers
+            its own auth interceptors (DefaultAuthenticatingServerInterceptor, etc.) which
+            conflict with our custom JwtContextInterceptor.
+
+            We handle gRPC auth ourselves — Spring Security's servlet filter chain is not
+            needed for pure gRPC services.
+        -->
+        <dependency>
+            <groupId>net.devh</groupId>
+            <artifactId>grpc-server-spring-boot-starter</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-security</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-api</artifactId>
+        </dependency>
+
+        <!--
+            JWT validation via Keycloak JWKS endpoint.
+
+            We need spring-security-oauth2-jose (provides NimbusJwtDecoder) but NOT
+            the full spring-boot-starter-security (which brings SecurityAutoConfiguration,
+            AuthenticationManager, servlet filters, etc.).
+
+            spring-boot-starter-oauth2-resource-server transitively brings
+            spring-boot-starter-security, so we exclude it here and only keep the
+            OAuth2 JWT library we actually use.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-security</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <!-- Explicit dependency on the JWT library we actually use -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
+        <!-- Required by spring-security-oauth2-jose at runtime -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-resource-server</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-core</artifactId>
+        </dependency>
+
+        <!-- Redis for token blacklist -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+    </dependencies>
+
+</project>

@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.security;
+package com.booking.platform.common.security;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +16,8 @@ import java.time.Instant;
  * matching the token's remaining lifetime.
  *
  * Redis automatically removes expired entries, so no cleanup is needed.
+ *
+ * Redis key format: jwt:blacklist:{jti}
  */
 @Slf4j
 @Service

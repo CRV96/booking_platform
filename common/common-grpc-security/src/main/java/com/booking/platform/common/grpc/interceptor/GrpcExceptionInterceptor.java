@@ -1,6 +1,6 @@
-package com.booking.platform.user_service.grpc.interceptor;
+package com.booking.platform.common.grpc.interceptor;
 
-import com.booking.platform.user_service.exception.UserServiceException;
+import com.booking.platform.common.exception.ServiceException;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
@@ -11,6 +11,10 @@ import java.security.AccessControlException;
 /**
  * Global gRPC interceptor for centralized exception handling.
  * Converts application exceptions to appropriate gRPC Status codes.
+ *
+ * Recognizes any exception extending {@link ServiceException} and uses its
+ * declared gRPC status code. This works across all services (UserServiceException,
+ * EventServiceException, etc.) since they all extend ServiceException.
  */
 @Slf4j
 @GrpcGlobalServerInterceptor
@@ -50,9 +54,9 @@ public class GrpcExceptionInterceptor implements ServerInterceptor {
     }
 
     private Status mapExceptionToStatus(Exception e) {
-        // Use the exception hierarchy for mapping
-        if (e instanceof UserServiceException userServiceException) {
-            return Status.fromCode(userServiceException.getGrpcStatusCode())
+        // Use the common exception hierarchy for mapping
+        if (e instanceof ServiceException serviceException) {
+            return Status.fromCode(serviceException.getGrpcStatusCode())
                     .withDescription(e.getMessage());
         }
 
