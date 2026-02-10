@@ -71,6 +71,78 @@ export DB_POSTGRES_PASSWORD=admin
 
 Or add them to your `.env` file if using the `run-service.sh` script.
 
+## 5. Generate mTLS Certificates (Optional)
+
+mTLS (mutual TLS) secures gRPC communication between services. Both client and server authenticate each other using certificates.
+
+### When to Use mTLS
+
+- **Development**: Optional (disabled by default for easier debugging)
+- **Production**: Recommended for service-to-service security
+
+### Generate Certificates
+
+```bash
+cd infrastructure/certs
+./generate-certs.sh
+```
+
+This script generates:
+
+| File | Purpose |
+|------|---------|
+| `ca.crt` / `ca.key` | Root Certificate Authority (signs all certs) |
+| `user-service.crt` / `user-service.key` | gRPC server certificate |
+| `graphql-gateway.crt` / `graphql-gateway.key` | gRPC client certificate |
+
+The script automatically copies certificates to each service's `src/main/resources/certs/` directory.
+
+### Enable/Disable mTLS
+
+mTLS is **enabled by default**. To disable it (e.g., for debugging):
+
+```bash
+# Disable mTLS for both services
+export GRPC_MTLS_ENABLED=false
+```
+
+Or set in config properties:
+
+```properties
+# user-service (server)
+grpc.server.security.enabled=false
+
+# graphql-gateway (client)
+grpc.client.security.enabled=false
+```
+
+**Note**: Both services must have matching mTLS settings - either both enabled or both disabled.
+
+### Regenerate Certificates
+
+To regenerate all certificates:
+
+```bash
+cd infrastructure/certs
+rm -f *.crt *.key *.csr *.pem *.srl
+./generate-certs.sh
+```
+
+**Note**: After regenerating, restart all services that use mTLS.
+
+### Certificate Validity
+
+Certificates are valid for **365 days** by default. Set a reminder to regenerate before expiry.
+
+### Troubleshooting mTLS
+
+| Issue | Solution |
+|-------|----------|
+| `UNAVAILABLE: io exception` | Certificates not copied to service resources |
+| `CERTIFICATE_VERIFY_FAILED` | CA mismatch - regenerate all certs together |
+| `handshake failed` | Check both services have mTLS enabled |
+| Service works without mTLS | Set `grpc.*.security.enabled=true` |
+
 ### PostgreSQL Credentials
 
 By default, PostgreSQL uses `admin` / `admin` as credentials. These are configured in two places:
@@ -98,7 +170,7 @@ export EUREKA_URL=http://your-eureka-url/eureka/
 export ZIPKIN_URL=http://your-zipkin-url
 ```
 
-## 5. Start Services
+## 6. Start Services
 
 Start in this order:
 
@@ -121,7 +193,7 @@ By default, services run with the `dev` profile. To run with production config:
 SPRING_PROFILES_ACTIVE=prod ./run-service.sh user-service
 ```
 
-## 6. SonarQube (Optional)
+## 7. SonarQube (Optional)
 
 For code quality analysis:
 
