@@ -2,11 +2,11 @@ package com.booking.platform.user_service.grpc.server;
 
 import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.user_service.dto.TokenResponseDTO;
-import com.booking.platform.user_service.grpc.context.GrpcUserContext;
+import com.booking.platform.common.grpc.context.GrpcUserContext;
+import com.booking.platform.common.security.PublicEndpoint;
+import com.booking.platform.common.security.TokenBlacklistService;
 import com.booking.platform.user_service.mapper.AttributeMapper;
 import com.booking.platform.user_service.mapper.UserGrpcMapper;
-import com.booking.platform.user_service.security.PublicEndpoint;
-import com.booking.platform.user_service.security.TokenBlacklistService;
 import com.booking.platform.user_service.service.AuthService;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.AuthValidator;
@@ -24,7 +24,7 @@ import java.util.Map;
  * gRPC service implementation for authentication operations.
  * Handles user registration, login, token refresh, and logout via Keycloak.
  *
- * Exception handling is delegated to {@link com.booking.platform.user_service.grpc.interceptor.GrpcExceptionInterceptor}
+ * Exception handling is delegated to {@link com.booking.platform.common.grpc.interceptor.GrpcExceptionInterceptor}
  */
 @GrpcService
 @Slf4j

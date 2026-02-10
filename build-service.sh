@@ -23,7 +23,10 @@ show_usage() {
     echo "Usage: ./build-service.sh <module-name> [options]"
     echo ""
     echo "Modules:"
-    echo "  common              - Shared gRPC definitions and utilities"
+    echo "  common              - All common modules (proto, core, grpc-security)"
+    echo "  common-proto        - Shared protobuf definitions and gRPC stubs"
+    echo "  common-core         - Shared base classes and utilities"
+    echo "  common-grpc-security - Shared gRPC server security infrastructure"
     echo "  config-service      - Configuration server"
     echo "  eureka-service      - Service discovery"
     echo "  graphql-gateway     - GraphQL API gateway"
@@ -48,7 +51,10 @@ show_usage() {
     echo "  ./build-service.sh user-service              # Build user-service only"
     echo "  ./build-service.sh user-service --with-deps  # Build with dependencies"
     echo "  ./build-service.sh user-service --clean      # Clean and build"
+    echo "  ./build-service.sh common                    # Build all common modules"
+    echo "  ./build-service.sh common-proto              # Build only proto stubs"
     echo "  ./build-service.sh all                       # Build all app services (no infra)"
+    echo "  ./build-service.sh all --clean               # Clean and build all app services"
     echo "  ./build-service.sh all-with-infra            # Build everything including infra"
 }
 
@@ -92,14 +98,26 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Common sub-modules
+COMMON_MODULES="common/common-proto,common/common-core,common/common-grpc-security"
+
 # Services lists
 INFRA_SERVICES="services/config-service,services/eureka-service"
-APP_SERVICES="common,services/graphql-gateway,services/user-service,services/event-service,services/booking-service,services/payment-service,services/ticket-service,services/notification-service,services/analytics-service"
+APP_SERVICES="$COMMON_MODULES,services/graphql-gateway,services/user-service,services/event-service,services/booking-service,services/payment-service,services/ticket-service,services/notification-service,services/analytics-service"
 
 # Determine module path
 case $MODULE_NAME in
     common)
-        MODULE_PATH="common"
+        MODULE_PATH="$COMMON_MODULES"
+        ;;
+    common-proto)
+        MODULE_PATH="common/common-proto"
+        ;;
+    common-core)
+        MODULE_PATH="common/common-core"
+        ;;
+    common-grpc-security)
+        MODULE_PATH="common/common-grpc-security"
         ;;
     config-service|eureka-service|graphql-gateway|user-service|event-service|booking-service|payment-service|ticket-service|notification-service|analytics-service)
         MODULE_PATH="services/$MODULE_NAME"

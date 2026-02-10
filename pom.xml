@@ -172,10 +172,20 @@
                 <version>${mapstruct.version}</version>
             </dependency>
 
-            <!-- Common module (shared protos, DTOs, utils) -->
+            <!-- Common modules -->
             <dependency>
                 <groupId>com.booking.platform</groupId>
-                <artifactId>common</artifactId>
+                <artifactId>common-proto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.booking.platform</groupId>
+                <artifactId>common-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.booking.platform</groupId>
+                <artifactId>common-grpc-security</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>

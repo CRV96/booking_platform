@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.config;
+package com.booking.platform.common.config;
 
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
@@ -24,6 +24,11 @@ import java.io.IOException;
  * - Verifies client certificates against the trusted CA
  *
  * Enable with: grpc.server.security.enabled=true
+ *
+ * Each service provides its own certificate via properties:
+ * - grpc.server.security.certificate-chain
+ * - grpc.server.security.private-key
+ * - grpc.server.security.trust-certificate
  */
 @Slf4j
 @Configuration

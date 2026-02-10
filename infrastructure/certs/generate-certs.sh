@@ -151,6 +151,7 @@ copy_certs_to_service() {
 }
 
 copy_certs_to_service "user-service" "server"
+copy_certs_to_service "event-service" "server"
 copy_certs_to_service "graphql-gateway" "client"
 
 # =============================================================================

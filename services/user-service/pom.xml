@@ -16,28 +16,14 @@
     <description>User profiles, preferences, and booking history management</description>
 
     <dependencies>
-        <!-- Common module (shared gRPC definitions) -->
+        <!-- Common modules: proto stubs + gRPC security infrastructure -->
         <dependency>
             <groupId>com.booking.platform</groupId>
-            <artifactId>common</artifactId>
-        </dependency>
-
-        <!-- gRPC Server -->
-        <dependency>
-            <groupId>net.devh</groupId>
-            <artifactId>grpc-server-spring-boot-starter</artifactId>
+            <artifactId>common-proto</artifactId>
         </dependency>
         <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-netty-shaded</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-api</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.grpc</groupId>
-            <artifactId>grpc-core</artifactId>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-grpc-security</artifactId>
         </dependency>
 
         <!-- Service Discovery -->
@@ -78,18 +64,6 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
-        </dependency>
-
-        <!-- JWT validation via Keycloak JWKS -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-        </dependency>
-
-        <!-- Redis for token blacklist -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
     </dependencies>
 

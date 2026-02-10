@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.security;
+package com.booking.platform.common.security;
 
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;

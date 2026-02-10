@@ -16,6 +16,16 @@
     <description>Events, venues, ticket types, and availability management</description>
 
     <dependencies>
+        <!-- Common modules: proto stubs + gRPC security infrastructure -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-proto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-grpc-security</artifactId>
+        </dependency>
+
         <!-- Service Discovery -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -26,6 +36,18 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
+
+        <!-- MongoDB -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
+
+        <!-- MapStruct for object mapping -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
         </dependency>
     </dependencies>
 

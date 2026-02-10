@@ -16,10 +16,10 @@
     <description>API Gateway - GraphQL endpoint with JWT validation via Keycloak</description>
 
     <dependencies>
-        <!-- Common module (shared gRPC definitions) -->
+        <!-- Common module: proto stubs only (gateway is a gRPC client, not server) -->
         <dependency>
             <groupId>com.booking.platform</groupId>
-            <artifactId>common</artifactId>
+            <artifactId>common-proto</artifactId>
         </dependency>
 
         <!-- GraphQL -->

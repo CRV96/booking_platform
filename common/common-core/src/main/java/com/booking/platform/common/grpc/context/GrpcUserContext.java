@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.grpc.context;
+package com.booking.platform.common.grpc.context;
 
 import io.grpc.Context;
 
@@ -7,13 +7,14 @@ import java.util.List;
 
 /**
  * Holds gRPC Context keys for authenticated user claims.
- * Populated by {@link com.booking.platform.user_service.grpc.interceptor.JwtContextInterceptor}
+ * Populated by {@link com.booking.platform.common.grpc.interceptor.JwtContextInterceptor}
  * from the JWT token forwarded by the gateway.
  *
  * Usage in gRPC service methods:
  * <pre>
  *     String userId = GrpcUserContext.getUserId();
- *     String username = GrpcUserContext.getUsername();
+ *     List&lt;String&gt; roles = GrpcUserContext.getRoles();
+ *     boolean isEmployee = GrpcUserContext.hasRole("employee");
  * </pre>
  */
 public final class GrpcUserContext {
@@ -59,5 +60,15 @@ public final class GrpcUserContext {
 
     public static boolean isAuthenticated() {
         return USER_ID.get() != null;
+    }
+
+    /**
+     * Checks if the authenticated user has the specified role.
+     *
+     * @param role the role to check (e.g., "employee", "customer")
+     * @return true if the user has the role
+     */
+    public static boolean hasRole(String role) {
+        return getRoles().contains(role);
     }
 }

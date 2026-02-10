@@ -18,7 +18,7 @@ import java.util.Map;
  * gRPC service implementation for user profile operations.
  * Handles user retrieval, updates, and search functionality.
  *
- * Exception handling is delegated to {@link com.booking.platform.user_service.grpc.interceptor.GrpcExceptionInterceptor}
+ * Exception handling is delegated to {@link com.booking.platform.common.grpc.interceptor.GrpcExceptionInterceptor}
  */
 @GrpcService
 @Slf4j

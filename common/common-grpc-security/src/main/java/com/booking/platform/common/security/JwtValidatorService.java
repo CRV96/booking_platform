@@ -1,4 +1,4 @@
-package com.booking.platform.user_service.security;
+package com.booking.platform.common.security;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,7 +25,7 @@ import java.time.Duration;
  * - Blacklist (token not revoked)
  *
  * This provides defense-in-depth: even though the gateway validates tokens,
- * the user-service independently verifies them before trusting claims.
+ * each downstream service independently verifies them before trusting claims.
  */
 @Slf4j
 @Service
@@ -42,7 +42,7 @@ public class JwtValidatorService {
 
         this.tokenBlacklistService = tokenBlacklistService;
 
-        log.debug("Initializing JWT validator with JWKS URI: {}", jwkSetUri);
+        log.info("Initializing JWT validator with JWKS URI: {}", jwkSetUri);
 
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
@@ -57,7 +57,7 @@ public class JwtValidatorService {
         decoder.setJwtValidator(validator);
         this.jwtDecoder = decoder;
 
-        log.debug("JWT validator initialized successfully");
+        log.info("JWT validator initialized successfully");
     }
 
     /**
