@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package booking.event;
+
+import "event/common.proto";
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.event";
+option java_outer_classname = "EventServiceProto";
+
+// ============================================================================
+// EVENT SERVICE
+// ============================================================================
+// Handles event lifecycle: creation, publishing, updating, searching,
+// and seat availability management for the booking flow.
+
+service EventService {
+  // Create a new event in DRAFT status. Requires employee role.
+  rpc CreateEvent(CreateEventRequest) returns (EventResponse);
+
+  // Get a single event by ID. Public endpoint.
+  rpc GetEvent(GetEventRequest) returns (EventResponse);
+
+  // Update an existing event. Requires employee role.
+  rpc UpdateEvent(UpdateEventRequest) returns (EventResponse);
+
+  // Transition event from DRAFT to PUBLISHED. Requires employee role.
+  rpc PublishEvent(PublishEventRequest) returns (EventResponse);
+
+  // Cancel a DRAFT or PUBLISHED event. Requires employee role.
+  rpc CancelEvent(CancelEventRequest) returns (EventResponse);
+
+  // Search events with filters and pagination. Public endpoint.
+  rpc SearchEvents(SearchEventsRequest) returns (SearchEventsResponse);
+
+  // Atomically decrement or increment available seats.
+  // Called internally by booking-service — not exposed via GraphQL.
+  rpc UpdateSeatAvailability(UpdateSeatAvailabilityRequest) returns (UpdateSeatAvailabilityResponse);
+}
+
+// ============================================================================
+// CREATE EVENT
+// ============================================================================
+
+message CreateEventRequest {
+  string title = 1;
+  string description = 2;
+  string category = 3;  // EventCategory enum value as string
+
+  VenueInfo venue = 4;
+
+  string date_time = 5;      // ISO 8601
+  string end_date_time = 6;  // ISO 8601
+  string timezone = 7;
+
+  repeated SeatCategoryInfo seat_categories = 8;
+
+  repeated string images = 9;
+  repeated string tags = 10;
+}
+
+// ============================================================================
+// GET EVENT
+// ============================================================================
+
+message GetEventRequest {
+  string event_id = 1;
+}
+
+// ============================================================================
+// UPDATE EVENT
+// ============================================================================
+
+message UpdateEventRequest {
+  string event_id = 1;
+
+  // Only non-null fields will be updated
+  optional string title = 2;
+  optional string description = 3;
+  optional string category = 4;
+
+  optional VenueInfo venue = 5;
+
+  optional string date_time = 6;
+  optional string end_date_time = 7;
+  optional string timezone = 8;
+
+  repeated SeatCategoryInfo seat_categories = 9;  // Replaces entire list if provided
+  repeated string images = 10;                     // Replaces entire list if provided
+  repeated string tags = 11;                       // Replaces entire list if provided
+}
+
+// ============================================================================
+// PUBLISH EVENT
+// ============================================================================
+
+message PublishEventRequest {
+  string event_id = 1;
+}
+
+// ============================================================================
+// CANCEL EVENT
+// ============================================================================
+
+message CancelEventRequest {
+  string event_id = 1;
+  optional string reason = 2;
+}
+
+// ============================================================================
+// SEARCH EVENTS
+// ============================================================================
+
+message SearchEventsRequest {
+  // Filters (all optional — omitting returns all PUBLISHED events)
+  optional string query = 1;       // Full-text search on title + description
+  optional string category = 2;    // EventCategory enum value as string
+  optional string city = 3;
+  optional string date_from = 4;   // ISO 8601 — events starting on or after
+  optional string date_to = 5;     // ISO 8601 — events starting on or before
+
+  // Pagination
+  int32 page = 6;       // 0-indexed, default 0
+  int32 page_size = 7;  // Default 20, max 100
+}
+
+message SearchEventsResponse {
+  repeated EventInfo events = 1;
+  PaginationInfo pagination = 2;
+}
+
+// ============================================================================
+// SHARED RESPONSE
+// ============================================================================
+
+message EventResponse {
+  EventInfo event = 1;
+}
+
+// ============================================================================
+// SEAT AVAILABILITY
+// ============================================================================
+
+message UpdateSeatAvailabilityRequest {
+  string event_id = 1;
+  string seat_category_name = 2;
+  int32 delta = 3;  // Negative to decrement (book), positive to increment (release)
+}
+
+message UpdateSeatAvailabilityResponse {
+  bool success = 1;
+  int32 remaining_seats = 2;
+}
