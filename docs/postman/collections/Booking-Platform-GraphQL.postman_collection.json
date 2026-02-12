@@ -25,6 +25,12 @@
 			"key": "userId",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "eventId",
+			"value": "",
+			"type": "string",
+			"description": "Populated automatically after createEvent. Used in subsequent event requests."
 		}
 	],
 	"item": [
@@ -83,7 +89,7 @@
 					}
 				},
 				{
-					"name": "2. Login",
+					"name": "2. Login (customer)",
 					"event": [
 						{
 							"listen": "test",
@@ -133,7 +139,62 @@
 					}
 				},
 				{
-					"name": "3. Login (with email)",
+					"name": "3. Login (employee) ★",
+					"description": "Login as an employee to get a token with the 'employee' role.\nRequired before calling createEvent, updateEvent, publishEvent, cancelEvent.\nToken is saved automatically to {{accessToken}}.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.login) {",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.login.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', jsonData.data.login.refreshToken);",
+									"    if (jsonData.data.login.user) {",
+									"        pm.collectionVariables.set('userId', jsonData.data.login.user.id);",
+									"    }",
+									"    pm.test('Employee login successful', function() {",
+									"        pm.expect(jsonData.data.login.accessToken).to.be.a('string');",
+									"        pm.expect(jsonData.data.login.tokenType).to.eql('Bearer');",
+									"    });",
+									"    pm.test('User has employee role', function() {",
+									"        var roles = jsonData.data.login.user.roles;",
+									"        pm.expect(roles).to.include('employee');",
+									"    });",
+									"} else {",
+									"    pm.test('Employee login failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    expiresIn\n    refreshExpiresIn\n    tokenType\n    user {\n      id\n      username\n      email\n      firstName\n      lastName\n      roles\n    }\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"username\": \"jane.organizer\",\n    \"password\": \"employee123\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "4. Login (with email)",
 					"event": [
 						{
 							"listen": "test",
@@ -175,7 +236,7 @@
 					}
 				},
 				{
-					"name": "4. Refresh Token",
+					"name": "5. Refresh Token",
 					"event": [
 						{
 							"listen": "test",
@@ -217,7 +278,7 @@
 					}
 				},
 				{
-					"name": "5. Logout",
+					"name": "6. Logout",
 					"event": [
 						{
 							"listen": "test",
@@ -455,6 +516,487 @@
 			]
 		},
 		{
+			"name": "Events (Public)",
+			"description": "Public event queries — no Bearer token required.\nThese work for any visitor, authenticated or not.",
+			"item": [
+				{
+					"name": "Get Event by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Event returned successfully', function() {",
+									"    pm.expect(jsonData.data).to.have.property('event');",
+									"    pm.expect(jsonData.data.event).to.have.property('id');",
+									"    pm.expect(jsonData.data.event).to.have.property('title');",
+									"    pm.expect(jsonData.data.event).to.have.property('status');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query GetEvent($id: ID!) {\n  event(id: $id) {\n    id\n    title\n    description\n    category\n    status\n    dateTime\n    venue {\n      name\n      address\n      city\n      country\n      latitude\n      longitude\n      capacity\n    }\n    organizer {\n      userId\n      name\n      email\n    }\n    seatCategories {\n      name\n      price\n      currency\n      totalSeats\n      availableSeats\n    }\n    createdAt\n    updatedAt\n  }\n}",
+								"variables": "{\n  \"id\": \"{{eventId}}\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "List All Published Events",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Events list returned', function() {",
+									"    pm.expect(jsonData.data).to.have.property('events');",
+									"    pm.expect(jsonData.data.events).to.have.property('events');",
+									"    pm.expect(jsonData.data.events.events).to.be.an('array');",
+									"    pm.expect(jsonData.data.events).to.have.property('totalCount');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query ListEvents($page: Int, $pageSize: Int) {\n  events(page: $page, pageSize: $pageSize) {\n    events {\n      id\n      title\n      category\n      status\n      dateTime\n      venue {\n        name\n        city\n        country\n      }\n      seatCategories {\n        name\n        price\n        currency\n        availableSeats\n      }\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Search Events by Text",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Search results returned', function() {",
+									"    pm.expect(jsonData.data).to.have.property('events');",
+									"    pm.expect(jsonData.data.events.events).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query SearchEvents($query: String, $page: Int, $pageSize: Int) {\n  events(query: $query, page: $page, pageSize: $pageSize) {\n    events {\n      id\n      title\n      category\n      status\n      dateTime\n      venue {\n        name\n        city\n        country\n      }\n      seatCategories {\n        name\n        price\n        currency\n        availableSeats\n      }\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"query\": \"concert\",\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Filter Events by Category",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query FilterEventsByCategory($category: EventCategory, $page: Int, $pageSize: Int) {\n  events(category: $category, page: $page, pageSize: $pageSize) {\n    events {\n      id\n      title\n      category\n      dateTime\n      venue {\n        name\n        city\n        country\n      }\n      seatCategories {\n        name\n        price\n        currency\n        availableSeats\n      }\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"category\": \"CONCERT\",\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Filter Events by City",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query FilterEventsByCity($city: String, $page: Int, $pageSize: Int) {\n  events(city: $city, page: $page, pageSize: $pageSize) {\n    events {\n      id\n      title\n      category\n      dateTime\n      venue {\n        name\n        city\n        country\n      }\n      seatCategories {\n        name\n        price\n        currency\n        availableSeats\n      }\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"city\": \"London\",\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Filter Events by Date Range",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query FilterEventsByDate($dateFrom: String, $dateTo: String, $page: Int, $pageSize: Int) {\n  events(dateFrom: $dateFrom, dateTo: $dateTo, page: $page, pageSize: $pageSize) {\n    events {\n      id\n      title\n      category\n      dateTime\n      venue {\n        name\n        city\n        country\n      }\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"dateFrom\": \"2025-01-01T00:00:00Z\",\n  \"dateTo\": \"2025-12-31T23:59:59Z\",\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Filter Events (Combined)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query FilterEventsCombined($query: String, $category: EventCategory, $city: String, $dateFrom: String, $dateTo: String, $page: Int, $pageSize: Int) {\n  events(\n    query: $query\n    category: $category\n    city: $city\n    dateFrom: $dateFrom\n    dateTo: $dateTo\n    page: $page\n    pageSize: $pageSize\n  ) {\n    events {\n      id\n      title\n      category\n      status\n      dateTime\n      venue {\n        name\n        city\n        country\n      }\n      seatCategories {\n        name\n        price\n        currency\n        availableSeats\n      }\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"query\": \"rock\",\n  \"category\": \"CONCERT\",\n  \"city\": \"London\",\n  \"dateFrom\": \"2025-01-01T00:00:00Z\",\n  \"dateTo\": \"2025-12-31T23:59:59Z\",\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Events (Employee)",
+			"description": "Protected event mutations — require an employee JWT token.\n\nRecommended test flow:\n1. Run 'Login (employee)' from the Authentication folder to get an employee token\n2. Create Event — saves eventId automatically\n3. Get Event by ID — verify it was created as DRAFT\n4. Update Event — modify title/venue/seats etc\n5. Publish Event — transition DRAFT → PUBLISHED\n6. (Optional) Cancel Event — transition to CANCELLED",
+			"item": [
+				{
+					"name": "1. Create Event",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.createEvent) {",
+									"    var event = jsonData.data.createEvent;",
+									"    pm.collectionVariables.set('eventId', event.id);",
+									"    pm.test('Event created successfully', function() {",
+									"        pm.expect(event.id).to.be.a('string');",
+									"        pm.expect(event.title).to.be.a('string');",
+									"        pm.expect(event.status).to.eql('DRAFT');",
+									"    });",
+									"    pm.test('Event has venue', function() {",
+									"        pm.expect(event.venue).to.have.property('name');",
+									"        pm.expect(event.venue).to.have.property('city');",
+									"    });",
+									"    pm.test('Event has seat categories', function() {",
+									"        pm.expect(event.seatCategories).to.be.an('array').that.is.not.empty;",
+									"    });",
+									"    console.log('Created event ID:', event.id);",
+									"} else {",
+									"    pm.test('Create event failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateEvent($input: CreateEventInput!) {\n  createEvent(input: $input) {\n    id\n    title\n    description\n    category\n    status\n    dateTime\n    venue {\n      name\n      address\n      city\n      country\n      capacity\n    }\n    organizer {\n      userId\n      name\n      email\n    }\n    seatCategories {\n      name\n      price\n      currency\n      totalSeats\n      availableSeats\n    }\n    createdAt\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"title\": \"Summer Rock Festival 2025\",\n    \"description\": \"The biggest rock festival of the summer featuring top international bands.\",\n    \"category\": \"CONCERT\",\n    \"dateTime\": \"2025-08-15T18:00:00Z\",\n    \"venue\": {\n      \"name\": \"Hyde Park Arena\",\n      \"address\": \"Hyde Park, London W2 2UH\",\n      \"city\": \"London\",\n      \"country\": \"UK\",\n      \"latitude\": 51.5074,\n      \"longitude\": -0.1657,\n      \"capacity\": 5000\n    },\n    \"seatCategories\": [\n      {\n        \"name\": \"General Admission\",\n        \"price\": 49.99,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 3000\n      },\n      {\n        \"name\": \"VIP\",\n        \"price\": 149.99,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 500\n      },\n      {\n        \"name\": \"Backstage Pass\",\n        \"price\": 299.99,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 50\n      }\n    ]\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "2. Update Event",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Event updated successfully', function() {",
+									"    pm.expect(jsonData.data).to.have.property('updateEvent');",
+									"    pm.expect(jsonData.data.updateEvent).to.have.property('id');",
+									"    pm.expect(jsonData.data.updateEvent.title).to.eql('Summer Rock Festival 2025 (Updated)');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation UpdateEvent($id: ID!, $input: UpdateEventInput!) {\n  updateEvent(id: $id, input: $input) {\n    id\n    title\n    description\n    category\n    status\n    dateTime\n    venue {\n      name\n      address\n      city\n      country\n      capacity\n    }\n    seatCategories {\n      name\n      price\n      currency\n      totalSeats\n      availableSeats\n    }\n    updatedAt\n  }\n}",
+								"variables": "{\n  \"id\": \"{{eventId}}\",\n  \"input\": {\n    \"title\": \"Summer Rock Festival 2025 (Updated)\",\n    \"description\": \"Updated: The biggest rock festival of the summer — now with two extra stages!\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "3. Publish Event",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Event published successfully', function() {",
+									"    pm.expect(jsonData.data).to.have.property('publishEvent');",
+									"    pm.expect(jsonData.data.publishEvent.status).to.eql('PUBLISHED');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation PublishEvent($id: ID!) {\n  publishEvent(id: $id) {\n    id\n    title\n    status\n    dateTime\n    venue {\n      name\n      city\n      country\n    }\n    seatCategories {\n      name\n      price\n      currency\n      totalSeats\n      availableSeats\n    }\n    updatedAt\n  }\n}",
+								"variables": "{\n  \"id\": \"{{eventId}}\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "4. Cancel Event",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Event cancelled successfully', function() {",
+									"    pm.expect(jsonData.data).to.have.property('cancelEvent');",
+									"    pm.expect(jsonData.data.cancelEvent.status).to.eql('CANCELLED');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CancelEvent($id: ID!) {\n  cancelEvent(id: $id) {\n    id\n    title\n    status\n    updatedAt\n  }\n}",
+								"variables": "{\n  \"id\": \"{{eventId}}\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Create Sports Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateEvent($input: CreateEventInput!) {\n  createEvent(input: $input) {\n    id\n    title\n    category\n    status\n    dateTime\n    venue {\n      name\n      city\n      country\n      capacity\n    }\n    seatCategories {\n      name\n      price\n      currency\n      totalSeats\n      availableSeats\n    }\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"title\": \"Premier League: Arsenal vs Chelsea\",\n    \"description\": \"North London Derby — one of the most anticipated fixtures of the season.\",\n    \"category\": \"SPORTS\",\n    \"dateTime\": \"2025-09-20T15:00:00Z\",\n    \"venue\": {\n      \"name\": \"Emirates Stadium\",\n      \"address\": \"Hornsey Rd, London N7 7AJ\",\n      \"city\": \"London\",\n      \"country\": \"UK\",\n      \"capacity\": 60000\n    },\n    \"seatCategories\": [\n      {\n        \"name\": \"North Stand\",\n        \"price\": 35.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 10000\n      },\n      {\n        \"name\": \"East Stand\",\n        \"price\": 55.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 15000\n      },\n      {\n        \"name\": \"Club Level\",\n        \"price\": 150.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 2000\n      }\n    ]\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Create Conference Event",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateEvent($input: CreateEventInput!) {\n  createEvent(input: $input) {\n    id\n    title\n    category\n    status\n    dateTime\n    venue {\n      name\n      city\n      country\n    }\n    seatCategories {\n      name\n      price\n      currency\n      totalSeats\n      availableSeats\n    }\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"title\": \"Spring Boot & Microservices Summit 2025\",\n    \"description\": \"A two-day conference covering the latest in Java, Spring Boot, and cloud-native microservices.\",\n    \"category\": \"CONFERENCE\",\n    \"dateTime\": \"2025-10-10T09:00:00Z\",\n    \"venue\": {\n      \"name\": \"ExCeL London\",\n      \"address\": \"1 Western Gateway, London E16 1XL\",\n      \"city\": \"London\",\n      \"country\": \"UK\",\n      \"capacity\": 1000\n    },\n    \"seatCategories\": [\n      {\n        \"name\": \"Standard\",\n        \"price\": 299.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 800\n      },\n      {\n        \"name\": \"Early Bird\",\n        \"price\": 199.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 100\n      },\n      {\n        \"name\": \"Workshop Pass\",\n        \"price\": 499.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 50\n      }\n    ]\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				}
+			]
+		},
+		{
 			"name": "JWT Security Tests",
 			"description": "Test requests to verify JWT authentication and error handling.\nThese demonstrate the expected behavior for unauthenticated and invalid token scenarios.",
 			"item": [
@@ -612,6 +1154,129 @@
 							"graphql": {
 								"query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    tokenType\n  }\n}",
 								"variables": "{\n  \"input\": {\n    \"username\": \"john.doe\",\n    \"password\": \"customer123\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "createEvent (without token) - expect UNAUTHENTICATED",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Returns UNAUTHENTICATED error', function() {",
+									"    pm.expect(jsonData.errors).to.be.an('array').that.is.not.empty;",
+									"    pm.expect(jsonData.errors[0].extensions.code).to.eql('AUTHZ_002');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateEvent($input: CreateEventInput!) {\n  createEvent(input: $input) {\n    id\n    title\n    status\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"title\": \"Should Fail\",\n    \"category\": \"CONCERT\",\n    \"dateTime\": \"2025-08-15T18:00:00Z\",\n    \"venue\": {\n      \"name\": \"Test Venue\",\n      \"city\": \"London\",\n      \"country\": \"UK\"\n    },\n    \"seatCategories\": [\n      { \"name\": \"GA\", \"price\": 10.00, \"currency\": \"GBP\", \"totalSeats\": 100 }\n    ]\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "createEvent (customer token) - expect FORBIDDEN",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Returns FORBIDDEN error for customer token', function() {",
+									"    pm.expect(jsonData.errors).to.be.an('array').that.is.not.empty;",
+									"    pm.expect(jsonData.errors[0].extensions.code).to.eql('AUTHZ_001');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text",
+								"description": "Use a customer token (not employee). Login as john.doe first."
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateEvent($input: CreateEventInput!) {\n  createEvent(input: $input) {\n    id\n    title\n    status\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"title\": \"Should Be Forbidden\",\n    \"category\": \"CONCERT\",\n    \"dateTime\": \"2025-08-15T18:00:00Z\",\n    \"venue\": {\n      \"name\": \"Test Venue\",\n      \"city\": \"London\",\n      \"country\": \"UK\"\n    },\n    \"seatCategories\": [\n      { \"name\": \"GA\", \"price\": 10.00, \"currency\": \"GBP\", \"totalSeats\": 100 }\n    ]\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "event (without token) - should work (public)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Public event query works without token', function() {",
+									"    pm.expect(jsonData.data).to.have.property('event');",
+									"    pm.expect(jsonData.errors).to.be.undefined;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query GetEvent($id: ID!) {\n  event(id: $id) {\n    id\n    title\n    status\n  }\n}",
+								"variables": "{\n  \"id\": \"{{eventId}}\"\n}"
 							}
 						},
 						"url": {
