@@ -9,6 +9,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
+import java.util.Collection;
+
 @Service
 @Slf4j
 public class JwtAuthServiceImpl implements AuthService {
@@ -42,6 +44,28 @@ public class JwtAuthServiceImpl implements AuthService {
     public void requireAuthentication() {
         if (!isAuthenticated()) {
             throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
+        }
+    }
+
+    @Override
+    public boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(authentication instanceof JwtAuthenticationToken)) {
+            return false;
+        }
+        String authorityName = "ROLE_" + role;
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals(authorityName));
+    }
+
+    @Override
+    public void requireRole(String role) {
+        if (!isAuthenticated()) {
+            throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
+        }
+        if (!hasRole(role)) {
+            log.warn("Access denied: user does not have required role '{}'", role);
+            throw new GraphQLException(ErrorCode.FORBIDDEN);
         }
     }
 }
