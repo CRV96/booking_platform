@@ -1,0 +1,148 @@
+# ============================================================================
+# BOOKING PLATFORM - EVENT GRAPHQL SCHEMA
+# ============================================================================
+
+extend type Query {
+    """Get an event by ID (public)"""
+    event(id: ID!): Event
+
+    """Search and list published events with optional filters (public)"""
+    events(
+        query: String
+        category: EventCategory
+        city: String
+        dateFrom: String
+        dateTo: String
+        page: Int = 0
+        pageSize: Int = 20
+    ): EventConnection!
+}
+
+extend type Mutation {
+    """Create a new event (employee only)"""
+    createEvent(input: CreateEventInput!): Event!
+
+    """Update an existing event (employee only)"""
+    updateEvent(id: ID!, input: UpdateEventInput!): Event!
+
+    """Publish a draft event (employee only)"""
+    publishEvent(id: ID!): Event!
+
+    """Cancel an event (employee only)"""
+    cancelEvent(id: ID!): Event!
+}
+
+# ============================================================================
+# EVENT TYPES
+# ============================================================================
+
+type Event {
+    id: ID!
+    title: String!
+    description: String
+    category: EventCategory!
+    status: EventStatus!
+    dateTime: String!
+
+    venue: VenueInfo!
+    organizer: OrganizerInfo!
+    seatCategories: [SeatCategoryInfo!]!
+
+    createdAt: String
+    updatedAt: String
+}
+
+type VenueInfo {
+    name: String!
+    address: String
+    city: String!
+    country: String!
+    latitude: Float
+    longitude: Float
+    capacity: Int
+}
+
+type OrganizerInfo {
+    userId: String!
+    name: String!
+    email: String!
+}
+
+type SeatCategoryInfo {
+    name: String!
+    price: Float!
+    currency: String!
+    totalSeats: Int!
+    availableSeats: Int!
+}
+
+# ============================================================================
+# ENUMS
+# ============================================================================
+
+enum EventCategory {
+    CONCERT
+    SPORTS
+    THEATRE
+    CONFERENCE
+    FESTIVAL
+    OTHER
+}
+
+enum EventStatus {
+    DRAFT
+    PUBLISHED
+    CANCELLED
+    COMPLETED
+}
+
+# ============================================================================
+# INPUTS
+# ============================================================================
+
+input CreateEventInput {
+    title: String!
+    description: String
+    category: EventCategory!
+    dateTime: String!
+    venue: VenueInput!
+    seatCategories: [SeatCategoryInput!]!
+}
+
+input UpdateEventInput {
+    title: String
+    description: String
+    category: EventCategory
+    dateTime: String
+    venue: VenueInput
+    seatCategories: [SeatCategoryInput!]
+}
+
+input VenueInput {
+    name: String!
+    address: String
+    city: String!
+    country: String!
+    latitude: Float
+    longitude: Float
+    capacity: Int
+}
+
+input SeatCategoryInput {
+    name: String!
+    price: Float!
+    currency: String!
+    totalSeats: Int!
+}
+
+# ============================================================================
+# PAGINATION
+# ============================================================================
+
+type EventConnection {
+    events: [Event!]!
+    totalCount: Int!
+    page: Int!
+    pageSize: Int!
+    totalPages: Int!
+}
