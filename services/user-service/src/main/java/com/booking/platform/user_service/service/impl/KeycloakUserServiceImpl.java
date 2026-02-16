@@ -17,6 +17,7 @@ import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 
@@ -97,6 +98,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         return usersResource.count();
     }
 
+    @Cacheable(value = CacheConfig.CACHE_USER_BY_ID, key = "#a0")
     @Override
     public UserRepresentation getUserById(String userId) {
         log.debug("Fetching user by ID: {}", userId);
@@ -109,6 +111,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         }
     }
 
+    @Cacheable(value = CacheConfig.CACHE_USER_BY_USERNAME, key = "#a0")
     @Override
     public UserRepresentation getUserByUsername(String username) {
         log.debug("Fetching user by username: {}", username);
@@ -120,6 +123,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         return users.get(0);
     }
 
+    @Cacheable(value = CacheConfig.CACHE_USER_BY_EMAIL, key = "#a0")
     @Override
     public UserRepresentation getUserByEmail(String email) {
         log.debug("Fetching user by email: {}", email);
