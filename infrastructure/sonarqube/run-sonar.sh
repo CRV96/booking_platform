@@ -18,15 +18,15 @@ echo ""
 # Run Maven with SonarQube using 1Password to inject env vars
 op run --env-file=".env" -- mvn clean verify sonar:sonar \
   -DskipTests \
-  -Dsonar.projectKey=Booking-Platform \
-  -Dsonar.projectName='Booking Platform' \
+  -Dsonar.projectKey=Booking \
+  -Dsonar.projectName='Booking' \
   -Dsonar.host.url=http://localhost:9000 \
   -Dsonar.token="${SONAR_QUBE_TOKEN}"
 
 # Run without 1Password, replace the "${SONAR_QUBE_TOKEN}" with the one from the SonarQube portal and uncomment the below block and comment the above one
 # mvn clean verify sonar:sonar \
-#  -Dsonar.projectKey=Booking-Platform \
-#  -Dsonar.projectName='Booking Platform' \
+#  -Dsonar.projectKey=Booking \
+#  -Dsonar.projectName='Booking' \
 #  -Dsonar.host.url=http://localhost:9000 \
 #  -Dsonar.token="${SONAR_QUBE_TOKEN}"
 
@@ -34,4 +34,4 @@ echo ""
 echo "=========================================="
 echo "  Analysis Complete!"
 echo "=========================================="
-echo "View results at: http://localhost:9000/dashboard?id=Booking-Platform"
+echo "View results at: http://localhost:9000/dashboard?id=Booking"
