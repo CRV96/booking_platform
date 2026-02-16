@@ -210,27 +210,20 @@ public class EventServiceImpl implements EventService {
         log.debug("Updating seat availability: event='{}', category='{}', delta={}",
                 eventId, seatCategoryName, delta);
 
+        // Build the atomic query. For decrements, embed the seat-availability guard
+        // directly in the filter so the check and the update are a single MongoDB
+        // operation — this eliminates the TOCTOU race that causes overselling.
+        Criteria queryCriteria = Criteria.where("_id").is(eventId);
         if (delta < 0) {
-            Query checkQuery = new Query(
-                    Criteria.where("_id").is(eventId)
-                            .and("seatCategories")
-                            .elemMatch(
-                                    Criteria.where("name").is(seatCategoryName)
-                                            .and("availableSeats").gte(-delta)
-                            )
+            queryCriteria = queryCriteria.and("seatCategories").elemMatch(
+                    Criteria.where("name").is(seatCategoryName)
+                            .and("availableSeats").gte(-delta)
             );
-
-            boolean hasEnoughSeats = mongoTemplate.exists(checkQuery, EventDocument.class);
-            if (!hasEnoughSeats) {
-                throw new InsufficientSeatsException(eventId, seatCategoryName, -delta, 0);
-            }
+        } else {
+            queryCriteria = queryCriteria.and("seatCategories.name").is(seatCategoryName);
         }
 
-        Query query = new Query(
-                Criteria.where("_id").is(eventId)
-                        .and("seatCategories.name").is(seatCategoryName)
-        );
-
+        Query query = new Query(queryCriteria);
         Update update = new Update().inc("seatCategories.$.availableSeats", delta);
 
         EventDocument updated = mongoTemplate.findAndModify(
@@ -241,7 +234,11 @@ public class EventServiceImpl implements EventService {
         );
 
         if (updated == null) {
-            throw new EventNotFoundException(eventId);
+            // Distinguish between unknown event and insufficient seats (cold error path only).
+            if (!eventRepository.existsById(eventId)) {
+                throw new EventNotFoundException(eventId);
+            }
+            throw new InsufficientSeatsException(eventId, seatCategoryName, -delta, 0);
         }
 
         log.info("Seat availability updated: event='{}', category='{}', delta={}",
