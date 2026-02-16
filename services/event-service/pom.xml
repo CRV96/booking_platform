@@ -44,6 +44,18 @@
             <artifactId>spring-boot-starter-data-mongodb</artifactId>
         </dependency>
 
+        <!-- Redis — used for token blacklist and application-level caching -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Spring Cache abstraction — enables @Cacheable, @CacheEvict, @CachePut -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
         <!-- MapStruct for object mapping -->
         <dependency>
             <groupId>org.mapstruct</groupId>

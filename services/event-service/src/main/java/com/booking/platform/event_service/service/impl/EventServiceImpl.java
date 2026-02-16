@@ -4,17 +4,21 @@ import com.booking.platform.common.grpc.event.CreateEventRequest;
 import com.booking.platform.common.grpc.event.SearchEventsRequest;
 import com.booking.platform.common.grpc.event.SeatCategoryInfo;
 import com.booking.platform.common.grpc.event.UpdateEventRequest;
+import com.booking.platform.event_service.config.CacheConfig;
 import com.booking.platform.event_service.document.*;
 import com.booking.platform.event_service.dto.OrganizerDto;
 import com.booking.platform.event_service.exception.EventNotFoundException;
 import com.booking.platform.event_service.exception.InsufficientSeatsException;
 import com.booking.platform.event_service.exception.InvalidEventStateException;
-import com.booking.platform.event_service.exception.ValidationException;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.service.EventService;
 import com.booking.platform.event_service.validator.EventValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -36,29 +40,45 @@ public class EventServiceImpl implements EventService {
     private final MongoTemplate mongoTemplate;
     private final EventValidator eventValidator;
 
+    // =========================================================================
+    // CREATE — no cache on creation, event starts as DRAFT (not publicly cached)
+    // =========================================================================
+
     @Override
     public EventDocument createEvent(CreateEventRequest request, OrganizerDto organizer) {
-
         log.debug("Creating event '{}' for organizer '{}'", request.getTitle(), organizer.userId());
 
         eventValidator.validateCreateRequest(request);
-        
+
         EventDocument saved = eventRepository.save(getEventDocument(request, organizer));
 
         log.info("Event created: id='{}', title='{}'", saved.getId(), saved.getTitle());
-
         return saved;
     }
 
+    // =========================================================================
+    // GET — cache individual event details for 5 minutes
+    // =========================================================================
+
     @Override
+    @Cacheable(value = CacheConfig.CACHE_EVENT_DETAIL, key = "#a0")
     public EventDocument getEvent(String eventId) {
-        log.debug("Fetching event by ID: {}", eventId);
+        log.debug("Fetching event by ID: {} (cache miss)", eventId);
 
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));
     }
 
+    // =========================================================================
+    // UPDATE — evict detail cache + search cache on any update
+    // =========================================================================
+
     @Override
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_EVENT_DETAIL, key = "#a0"),
+            @CacheEvict(value = CacheConfig.CACHE_EVENTS_SEARCH, allEntries = true),
+            @CacheEvict(value = CacheConfig.CACHE_EVENTS_FEATURED, allEntries = true)
+    })
     public EventDocument updateEvent(String eventId, UpdateEventRequest request) {
         log.debug("Updating event '{}'", eventId);
 
@@ -93,7 +113,20 @@ public class EventServiceImpl implements EventService {
         return saved;
     }
 
+    // =========================================================================
+    // PUBLISH — put updated document into cache immediately after publishing
+    // =========================================================================
+
     @Override
+    @Caching(
+            put = {
+                    @CachePut(value = CacheConfig.CACHE_EVENT_DETAIL, key = "#a0")
+            },
+            evict = {
+                    @CacheEvict(value = CacheConfig.CACHE_EVENTS_SEARCH, allEntries = true),
+                    @CacheEvict(value = CacheConfig.CACHE_EVENTS_FEATURED, allEntries = true)
+            }
+    )
     public EventDocument publishEvent(String eventId) {
         log.debug("Publishing event '{}'", eventId);
 
@@ -114,7 +147,16 @@ public class EventServiceImpl implements EventService {
         return saved;
     }
 
+    // =========================================================================
+    // CANCEL — evict all related caches
+    // =========================================================================
+
     @Override
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_EVENT_DETAIL, key = "#a0"),
+            @CacheEvict(value = CacheConfig.CACHE_EVENTS_SEARCH, allEntries = true),
+            @CacheEvict(value = CacheConfig.CACHE_EVENTS_FEATURED, allEntries = true)
+    })
     public EventDocument cancelEvent(String eventId, String reason) {
         log.debug("Cancelling event '{}', reason: {}", eventId, reason);
 
@@ -133,16 +175,20 @@ public class EventServiceImpl implements EventService {
         return saved;
     }
 
+    // =========================================================================
+    // SEARCH — cached by a hash of the request filters
+    // =========================================================================
+
     @Override
+    @Cacheable(value = CacheConfig.CACHE_EVENTS_SEARCH, key = "#a0.hashCode()")
     public List<EventDocument> searchEvents(SearchEventsRequest request) {
-        log.debug("Searching events: query='{}', category='{}', city='{}', page={}",
+        log.debug("Searching events: query='{}', category='{}', city='{}', page={} (cache miss)",
                 request.getQuery(), request.getCategory(), request.getCity(), request.getPage());
 
         List<Criteria> criteriaList = getCriteriaList(request);
 
         Query query = new Query(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
 
-        // Full-text search — applied separately via TextCriteria when a query string is present
         if (request.hasQuery() && !request.getQuery().isBlank()) {
             query.addCriteria(TextCriteria.forDefaultLanguage().matchingAny(request.getQuery()));
         }
@@ -154,13 +200,16 @@ public class EventServiceImpl implements EventService {
         return mongoTemplate.find(query, EventDocument.class);
     }
 
+    // =========================================================================
+    // UPDATE SEAT AVAILABILITY — evict detail cache since seat counts changed
+    // =========================================================================
+
     @Override
+    @CacheEvict(value = CacheConfig.CACHE_EVENT_DETAIL, key = "#a0")
     public EventDocument updateSeatAvailability(String eventId, String seatCategoryName, int delta) {
         log.debug("Updating seat availability: event='{}', category='{}', delta={}",
                 eventId, seatCategoryName, delta);
 
-        // Atomically apply delta to availableSeats using $inc.
-        // For decrements (delta < 0) we first check there are enough seats.
         if (delta < 0) {
             Query checkQuery = new Query(
                     Criteria.where("_id").is(eventId)
@@ -200,6 +249,10 @@ public class EventServiceImpl implements EventService {
         return updated;
     }
 
+    // =========================================================================
+    // Private helpers
+    // =========================================================================
+
     private EventDocument getEventDocument(CreateEventRequest request, OrganizerDto organizer) {
         return EventDocument.builder()
                 .title(request.getTitle())
@@ -232,7 +285,7 @@ public class EventServiceImpl implements EventService {
                         .price(sc.getPrice())
                         .currency(sc.getCurrency())
                         .totalSeats(sc.getTotalSeats())
-                        .availableSeats(sc.getTotalSeats()) // available starts equal to total
+                        .availableSeats(sc.getTotalSeats())
                         .build())
                 .toList();
     }
@@ -252,7 +305,6 @@ public class EventServiceImpl implements EventService {
     private List<Criteria> getCriteriaList(SearchEventsRequest request) {
         List<Criteria> criteriaList = new ArrayList<>();
 
-        // Always restrict to PUBLISHED events for public search
         criteriaList.add(Criteria.where("status").is(EventStatus.PUBLISHED));
 
         if (request.hasCategory() && !request.getCategory().isBlank()) {
@@ -273,5 +325,4 @@ public class EventServiceImpl implements EventService {
 
         return criteriaList;
     }
-
 }
