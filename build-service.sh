@@ -5,6 +5,7 @@
 # Example: ./build-service.sh user-service
 # Example: ./build-service.sh user-service --with-deps
 # Example: ./build-service.sh all
+# Example: ./build-service.sh all --clean --tests
 # ./build-service.sh user-service --clean      # Clean and build
 # =============================================================================
 
@@ -14,10 +15,16 @@ set -e
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # Set Java 21
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
+
+# Services that have integration tests — extend this list as new test suites are added
+TESTABLE_SERVICES="services/user-service services/event-service"
 
 show_usage() {
     echo "Usage: ./build-service.sh <module-name> [options]"
@@ -44,6 +51,7 @@ show_usage() {
     echo "  --with-deps, -d     Also build dependencies (mvn -am)"
     echo "  --clean, -c         Clean before building"
     echo "  --tests, -t         Run tests (default: skip tests)"
+    echo "                      With 'all': builds everything, then runs tests per service"
     echo "  --quick, -q         Quick build (skip tests, skip javadoc)"
     echo "  --help, -h          Show this help"
     echo ""
@@ -51,11 +59,15 @@ show_usage() {
     echo "  ./build-service.sh user-service              # Build user-service only"
     echo "  ./build-service.sh user-service --with-deps  # Build with dependencies"
     echo "  ./build-service.sh user-service --clean      # Clean and build"
+    echo "  ./build-service.sh user-service --tests      # Build and run tests"
     echo "  ./build-service.sh common                    # Build all common modules"
     echo "  ./build-service.sh common-proto              # Build only proto stubs"
     echo "  ./build-service.sh all                       # Build all app services (no infra)"
     echo "  ./build-service.sh all --clean               # Clean and build all app services"
+    echo "  ./build-service.sh all --clean --tests       # Build all + run integration tests"
     echo "  ./build-service.sh all-with-infra            # Build everything including infra"
+    echo ""
+    echo "Services with integration tests: $TESTABLE_SERVICES"
 }
 
 if [ -z "$1" ] || [ "$1" == "--help" ] || [ "$1" == "-h" ]; then
@@ -123,11 +135,9 @@ case $MODULE_NAME in
         MODULE_PATH="services/$MODULE_NAME"
         ;;
     all)
-        # Build all except infrastructure services (config-service, eureka-service)
         MODULE_PATH="$APP_SERVICES"
         ;;
     all-with-infra)
-        # Build everything including infrastructure services
         MODULE_PATH=""
         ;;
     *)
@@ -136,6 +146,119 @@ case $MODULE_NAME in
         exit 1
         ;;
 esac
+
+# =============================================================================
+# Helper: print a section banner
+# =============================================================================
+print_banner() {
+    local title="$1"
+    local color="${2:-$YELLOW}"
+    echo ""
+    echo -e "${color}${BOLD}=======================================${NC}"
+    echo -e "${color}${BOLD}  $title${NC}"
+    echo -e "${color}${BOLD}=======================================${NC}"
+    echo ""
+}
+
+# =============================================================================
+# Helper: run a single Maven command and print its result
+# =============================================================================
+run_mvn() {
+    local label="$1"
+    local cmd="$2"
+
+    echo -e "${CYAN}Command:  ${NC}$cmd"
+    echo -e "${CYAN}Java:     ${NC}$JAVA_HOME"
+    echo ""
+
+    if eval "$cmd"; then
+        echo ""
+        echo -e "${GREEN}${BOLD}✔  $label — PASSED${NC}"
+        return 0
+    else
+        echo ""
+        echo -e "${RED}${BOLD}✘  $label — FAILED${NC}"
+        return 1
+    fi
+}
+
+# =============================================================================
+# BUILD + TEST: "all" or "all-with-infra" with --tests
+#
+# Strategy:
+#   1. Build the entire project skipping tests (fast, validates compilation)
+#   2. Run tests per-service (only services in TESTABLE_SERVICES), one at a time
+#      so failures are isolated and each service gets its own clear result line
+# =============================================================================
+if [[ ("$MODULE_NAME" == "all" || "$MODULE_NAME" == "all-with-infra") && "$SKIP_TESTS" == "false" ]]; then
+
+    # --- Phase 1: full build, tests skipped ---
+    print_banner "Phase 1/2 — Build all modules (tests skipped)" "$YELLOW"
+
+    BUILD_CMD="mvn"
+    [ "$CLEAN" = true ] && BUILD_CMD="$BUILD_CMD clean"
+    BUILD_CMD="$BUILD_CMD install -DskipTests"
+    [ "$QUICK" = true ] && BUILD_CMD="$BUILD_CMD -Dmaven.javadoc.skip=true -Dmaven.source.skip=true"
+    [ -n "$MODULE_PATH" ] && BUILD_CMD="$BUILD_CMD -pl $MODULE_PATH"
+
+    if ! run_mvn "Full build" "$BUILD_CMD"; then
+        print_banner "Build failed — tests not run" "$RED"
+        exit 1
+    fi
+
+    # --- Phase 2: run tests per testable service ---
+    print_banner "Phase 2/2 — Integration tests" "$BLUE"
+
+    PASSED=()
+    FAILED=()
+
+    for SERVICE_PATH in $TESTABLE_SERVICES; do
+        SERVICE_NAME=$(basename "$SERVICE_PATH")
+
+        echo -e "${YELLOW}--- Testing: ${GREEN}${BOLD}$SERVICE_NAME${NC}${YELLOW} ---${NC}"
+
+        TEST_CMD="mvn test -pl $SERVICE_PATH"
+
+        if run_mvn "$SERVICE_NAME tests" "$TEST_CMD"; then
+            PASSED+=("$SERVICE_NAME")
+        else
+            FAILED+=("$SERVICE_NAME")
+        fi
+        echo ""
+    done
+
+    # --- Summary ---
+    print_banner "Test Results Summary" "$BOLD"
+
+    echo -e "  Services built:  ${GREEN}$MODULE_NAME${NC}"
+    echo -e "  Services tested: ${CYAN}$(echo $TESTABLE_SERVICES | tr ' ' '\n' | xargs -I{} basename {} | tr '\n' ' ')${NC}"
+    echo ""
+
+    if [ ${#PASSED[@]} -gt 0 ]; then
+        for s in "${PASSED[@]}"; do
+            echo -e "  ${GREEN}${BOLD}✔  $s${NC}"
+        done
+    fi
+
+    if [ ${#FAILED[@]} -gt 0 ]; then
+        for s in "${FAILED[@]}"; do
+            echo -e "  ${RED}${BOLD}✘  $s${NC}"
+        done
+        echo ""
+        echo -e "${RED}${BOLD}Some tests failed. See output above for details.${NC}"
+        echo ""
+        exit 1
+    fi
+
+    echo ""
+    echo -e "${GREEN}${BOLD}All tests passed.${NC}"
+    echo ""
+    exit 0
+fi
+
+# =============================================================================
+# STANDARD FLOW: single service or "all" without --tests
+# =============================================================================
 
 # Build Maven command
 MVN_CMD="mvn"
@@ -163,26 +286,11 @@ if [ "$QUICK" = true ]; then
 fi
 
 # Print build info
-echo -e "${YELLOW}=======================================${NC}"
-echo -e "${YELLOW}Building: ${GREEN}$MODULE_NAME${NC}"
-echo -e "${YELLOW}Command:  ${NC}$MVN_CMD"
-echo -e "${YELLOW}Java:     ${NC}$JAVA_HOME"
-echo -e "${YELLOW}=======================================${NC}"
-echo ""
+print_banner "Building: $MODULE_NAME" "$YELLOW"
 
-# Execute build
-$MVN_CMD
-
-# Print result
-if [ $? -eq 0 ]; then
-    echo ""
-    echo -e "${GREEN}=======================================${NC}"
-    echo -e "${GREEN}Build successful: $MODULE_NAME${NC}"
-    echo -e "${GREEN}=======================================${NC}"
-else
-    echo ""
-    echo -e "${RED}=======================================${NC}"
-    echo -e "${RED}Build failed: $MODULE_NAME${NC}"
-    echo -e "${RED}=======================================${NC}"
+if ! run_mvn "$MODULE_NAME" "$MVN_CMD"; then
+    print_banner "Build failed: $MODULE_NAME" "$RED"
     exit 1
 fi
+
+print_banner "Build successful: $MODULE_NAME" "$GREEN"
