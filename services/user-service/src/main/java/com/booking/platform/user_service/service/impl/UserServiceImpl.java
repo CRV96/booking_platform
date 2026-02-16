@@ -1,5 +1,6 @@
 package com.booking.platform.user_service.service.impl;
 
+import com.booking.platform.user_service.config.CacheConfig;
 import com.booking.platform.user_service.entity.UserAttributeEntity;
 import com.booking.platform.user_service.entity.UserEntity;
 import com.booking.platform.user_service.exception.user.UserNotFoundException;
@@ -8,6 +9,7 @@ import com.booking.platform.user_service.repository.UserRepository;
 import com.booking.platform.user_service.service.DatabaseUserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,7 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
     private final UserRepository userRepository;
     private final UserAttributeRepository userAttributeRepository;
 
+    @Cacheable(value = CacheConfig.CACHE_USER_BY_ID, key = "#a0")
     @Override
     public UserEntity getUserById(String userId) {
         log.debug("Fetching user by ID: {}", userId);
@@ -32,6 +35,7 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
     }
 
+    @Cacheable(value = CacheConfig.CACHE_USER_BY_USERNAME, key = "#a0")
     @Override
     public UserEntity getUserByUsername(String username) {
         log.debug("Fetching user by username: {}", username);
@@ -40,6 +44,7 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
                 .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
     }
 
+    @Cacheable(value = CacheConfig.CACHE_USER_BY_EMAIL, key = "#a0")
     @Override
     public UserEntity getUserByEmail(String email) {
         log.debug("Fetching user by email: {}", email);
