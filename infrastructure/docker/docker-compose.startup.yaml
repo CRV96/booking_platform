@@ -159,6 +159,17 @@ services:
     networks:
       - booking-network
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: booking-redisinsight
+    ports:
+      - "5540:5540"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - booking-network
+
   mailhog:
     image: mailhog/mailhog:latest
     container_name: booking-mailhog
