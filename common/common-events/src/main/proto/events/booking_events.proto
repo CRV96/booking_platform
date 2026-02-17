@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package booking.events;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.events";
+option java_outer_classname = "BookingEventsProto";
+
+// ============================================================================
+// BOOKING DOMAIN EVENTS
+// ============================================================================
+// Published by booking-service to Kafka as a booking moves through its lifecycle.
+// Consumers: payment-service (BookingCreatedEvent → initiate charge),
+//            ticket-service  (BookingConfirmedEvent → generate tickets),
+//            notification-service (all events → email / push),
+//            analytics-service    (all events → metrics).
+
+// ── BookingCreatedEvent ──────────────────────────────────────────────────────
+// Fired when a user initiates a booking (status: PENDING).
+// Triggers payment-service to attempt the charge.
+
+message BookingCreatedEvent {
+  string booking_id     = 1;
+  string event_id       = 2;
+  string user_id        = 3;
+  string seat_category  = 4;
+  int32  quantity       = 5;
+  double total_price    = 6;
+  string currency       = 7;
+  string timestamp      = 8;  // ISO 8601
+}
+
+// ── BookingConfirmedEvent ────────────────────────────────────────────────────
+// Fired when payment succeeds and the booking is confirmed (status: CONFIRMED).
+// Triggers ticket-service to generate tickets and notification-service to send
+// the confirmation email.
+
+message BookingConfirmedEvent {
+  string booking_id          = 1;
+  string event_id            = 2;
+  string user_id             = 3;
+  repeated string ticket_ids = 4;  // IDs of the generated tickets
+  string timestamp           = 5;  // ISO 8601
+}
+
+// ── BookingCancelledEvent ────────────────────────────────────────────────────
+// Fired when a booking is cancelled by the user or by the system (e.g. payment
+// timeout).  Triggers seat availability release in event-service.
+
+message BookingCancelledEvent {
+  string booking_id = 1;
+  string event_id   = 2;
+  string user_id    = 3;
+  string reason     = 4;
+  string timestamp  = 5;  // ISO 8601
+}

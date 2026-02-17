@@ -15,12 +15,13 @@
     <packaging>pom</packaging>
 
     <name>Common</name>
-    <description>Parent aggregator for shared modules: proto definitions, core utilities, and gRPC security</description>
+    <description>Parent aggregator for shared modules: proto definitions, core utilities, gRPC security, and domain event contracts</description>
 
     <modules>
         <module>common-proto</module>
         <module>common-core</module>
         <module>common-grpc-security</module>
+        <module>common-events</module>
     </modules>
 
 </project>

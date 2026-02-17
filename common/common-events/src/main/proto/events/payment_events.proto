@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package booking.events;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.events";
+option java_outer_classname = "PaymentEventsProto";
+
+// ============================================================================
+// PAYMENT DOMAIN EVENTS
+// ============================================================================
+// Published by payment-service to Kafka when a payment attempt settles.
+// Consumers: booking-service (to transition booking status),
+//            notification-service (to send receipt / failure email),
+//            analytics-service    (revenue metrics).
+
+// ── PaymentCompletedEvent ────────────────────────────────────────────────────
+// Fired when a payment charge succeeds.
+// Triggers booking-service to confirm the booking and emit BookingConfirmedEvent.
+
+message PaymentCompletedEvent {
+  string payment_id  = 1;
+  string booking_id  = 2;
+  double amount      = 3;
+  string currency    = 4;
+  string timestamp   = 5;  // ISO 8601
+}
+
+// ── PaymentFailedEvent ───────────────────────────────────────────────────────
+// Fired when a payment charge fails (card declined, timeout, etc.).
+// Triggers booking-service to cancel the booking and emit BookingCancelledEvent,
+// which in turn triggers seat release in event-service.
+
+message PaymentFailedEvent {
+  string payment_id  = 1;
+  string booking_id  = 2;
+  string reason      = 3;
+  string timestamp   = 4;  // ISO 8601
+}
