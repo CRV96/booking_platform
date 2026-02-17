@@ -10,6 +10,7 @@ import com.booking.platform.event_service.dto.OrganizerDto;
 import com.booking.platform.event_service.exception.EventNotFoundException;
 import com.booking.platform.event_service.exception.InsufficientSeatsException;
 import com.booking.platform.event_service.exception.InvalidEventStateException;
+import com.booking.platform.event_service.messaging.publisher.EventPublisher;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.service.EventService;
 import com.booking.platform.event_service.validator.EventValidator;
@@ -39,6 +40,7 @@ public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final MongoTemplate mongoTemplate;
     private final EventValidator eventValidator;
+    private final EventPublisher eventPublisher;
 
     // =========================================================================
     // CREATE — no cache on creation, event starts as DRAFT (not publicly cached)
@@ -52,6 +54,7 @@ public class EventServiceImpl implements EventService {
 
         EventDocument saved = eventRepository.save(getEventDocument(request, organizer));
 
+        eventPublisher.publishEventCreated(saved);
         log.info("Event created: id='{}', title='{}'", saved.getId(), saved.getTitle());
         return saved;
     }
@@ -90,25 +93,30 @@ public class EventServiceImpl implements EventService {
                     "Cannot update event in status: " + event.getStatus());
         }
 
-        if (request.hasTitle())       event.setTitle(request.getTitle());
-        if (request.hasDescription()) event.setDescription(request.getDescription());
-        if (request.hasCategory())    event.setCategory(EventCategory.valueOf(request.getCategory()));
-        if (request.hasDateTime())    event.setDateTime(Instant.parse(request.getDateTime()));
-        if (request.hasEndDateTime()) event.setEndDateTime(Instant.parse(request.getEndDateTime()));
-        if (request.hasTimezone())    event.setTimezone(request.getTimezone());
+        List<String> changedFields = new ArrayList<>();
+
+        if (request.hasTitle())       { event.setTitle(request.getTitle());                                    changedFields.add("title"); }
+        if (request.hasDescription()) { event.setDescription(request.getDescription());                        changedFields.add("description"); }
+        if (request.hasCategory())    { event.setCategory(EventCategory.valueOf(request.getCategory()));       changedFields.add("category"); }
+        if (request.hasDateTime())    { event.setDateTime(Instant.parse(request.getDateTime()));               changedFields.add("dateTime"); }
+        if (request.hasEndDateTime()) { event.setEndDateTime(Instant.parse(request.getEndDateTime()));         changedFields.add("endDateTime"); }
+        if (request.hasTimezone())    { event.setTimezone(request.getTimezone());                              changedFields.add("timezone"); }
 
         if (request.hasVenue()) {
             event.setVenue(getVenueInfo(request.getVenue()));
+            changedFields.add("venue");
         }
 
         if (!request.getSeatCategoriesList().isEmpty()) {
             event.setSeatCategories(getSeatCategories(request.getSeatCategoriesList()));
+            changedFields.add("seatCategories");
         }
 
-        if (!request.getImagesList().isEmpty()) event.setImages(new ArrayList<>(request.getImagesList()));
-        if (!request.getTagsList().isEmpty())   event.setTags(new ArrayList<>(request.getTagsList()));
+        if (!request.getImagesList().isEmpty()) { event.setImages(new ArrayList<>(request.getImagesList())); changedFields.add("images"); }
+        if (!request.getTagsList().isEmpty())   { event.setTags(new ArrayList<>(request.getTagsList()));     changedFields.add("tags"); }
 
         EventDocument saved = eventRepository.save(event);
+        eventPublisher.publishEventUpdated(saved, changedFields);
         log.info("Event updated: id='{}'", saved.getId());
         return saved;
     }
@@ -143,6 +151,7 @@ public class EventServiceImpl implements EventService {
         event.setStatus(EventStatus.PUBLISHED);
 
         EventDocument saved = eventRepository.save(event);
+        eventPublisher.publishEventPublished(saved);
         log.info("Event published: id='{}', title='{}'", saved.getId(), saved.getTitle());
         return saved;
     }
@@ -171,6 +180,7 @@ public class EventServiceImpl implements EventService {
         event.setStatus(EventStatus.CANCELLED);
 
         EventDocument saved = eventRepository.save(event);
+        eventPublisher.publishEventCancelled(saved, reason);
         log.info("Event cancelled: id='{}', reason='{}'", saved.getId(), reason);
         return saved;
     }

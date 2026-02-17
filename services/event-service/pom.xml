@@ -56,6 +56,18 @@
             <artifactId>spring-boot-starter-cache</artifactId>
         </dependency>
 
+        <!-- Kafka producer — publishes domain events to Kafka topics -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Domain event contracts (protobuf messages + KafkaTopics constants) -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-events</artifactId>
+        </dependency>
+
         <!-- MapStruct for object mapping -->
         <dependency>
             <groupId>org.mapstruct</groupId>
