@@ -6,12 +6,14 @@ import com.booking.platform.event_service.document.OrganizerInfo;
 import com.booking.platform.event_service.document.SeatCategory;
 import com.booking.platform.event_service.document.VenueInfo;
 import com.booking.platform.event_service.dto.OrganizerDto;
+import com.booking.platform.event_service.messaging.publisher.EventPublisher;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.document.EventDocument;
 import com.redis.testcontainers.RedisContainer;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -61,6 +63,10 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.data.mongodb.uri", MONGO::getReplicaSetUrl);
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
+        // EventPublisher is @MockBean so no real Kafka connection is made in tests.
+        // This dummy value satisfies @Value("${spring.kafka.bootstrap-servers}") in
+        // KafkaProducerConfig and KafkaTopicConfig so the application context loads.
+        registry.add("spring.kafka.bootstrap-servers", () -> "localhost:9092");
     }
 
     // =========================================================================
@@ -76,6 +82,18 @@ public abstract class BaseIntegrationTest {
     @Autowired
     protected CacheManager cacheManager;
 
+    /**
+     * Replaces the real KafkaEventPublisher with a Mockito mock for all integration tests.
+     *
+     * <p>This prevents tests from needing a live Kafka broker. Subclasses can call
+     * {@code Mockito.verify(eventPublisher, ...)} to assert publishing behaviour,
+     * or simply ignore it when testing unrelated concerns.
+     *
+     * <p>The mock is reset automatically before each test via {@link #cleanState()}.
+     */
+    @MockBean
+    protected EventPublisher eventPublisher;
+
     // =========================================================================
     // Setup — clean state before every test
     // =========================================================================
@@ -87,6 +105,7 @@ public abstract class BaseIntegrationTest {
             var cache = cacheManager.getCache(name);
             if (cache != null) cache.clear();
         });
+        org.mockito.Mockito.reset(eventPublisher);
     }
 
     // =========================================================================

@@ -18,9 +18,16 @@ import org.springframework.cache.Cache;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 /**
  * Integration tests for EventService — covers CRUD lifecycle, state machine,
@@ -312,6 +319,98 @@ class EventServiceIntegrationTest extends BaseIntegrationTest {
 
             assertThatThrownBy(() -> eventService.cancelEvent(cancelled.getId(), "double cancel"))
                     .isInstanceOf(InvalidEventStateException.class);
+        }
+    }
+
+    // =========================================================================
+    // KAFKA PUBLISHING — verifies publisher is called at each lifecycle step
+    // =========================================================================
+
+    @Nested
+    @DisplayName("Kafka publishing")
+    class KafkaPublishing {
+
+        @Test
+        @DisplayName("publishEventCreated is called after createEvent")
+        void createEvent_publishesCreatedEvent() {
+            eventService.createEvent(buildCreateRequest("Kafka Concert"), defaultOrganizer());
+
+            verify(eventPublisher).publishEventCreated(any(EventDocument.class));
+        }
+
+        @Test
+        @DisplayName("publishEventUpdated is called with correct changedFields after updateEvent")
+        void updateEvent_publishesUpdatedEventWithChangedFields() {
+            EventDocument saved = buildAndSaveEvent("Original Title", EventCategory.CONCERT,
+                    EventStatus.DRAFT, futureDate(5));
+
+            UpdateEventRequest request = UpdateEventRequest.newBuilder()
+                    .setTitle("Updated Title")
+                    .setDescription("Updated description")
+                    .build();
+
+            eventService.updateEvent(saved.getId(), request);
+
+            verify(eventPublisher).publishEventUpdated(
+                    any(EventDocument.class),
+                    eq(List.of("title", "description"))
+            );
+        }
+
+        @Test
+        @DisplayName("publishEventPublished is called after publishEvent")
+        void publishEvent_publishesPublishedEvent() {
+            EventDocument draft = buildAndSaveEvent("Upcoming Concert", EventCategory.CONCERT,
+                    EventStatus.DRAFT, futureDate(5));
+
+            eventService.publishEvent(draft.getId());
+
+            verify(eventPublisher).publishEventPublished(any(EventDocument.class));
+        }
+
+        @Test
+        @DisplayName("publishEventCancelled is called with reason after cancelEvent")
+        void cancelEvent_publishesCancelledEventWithReason() {
+            EventDocument published = buildAndSaveEvent("Going Away", EventCategory.CONCERT,
+                    EventStatus.PUBLISHED, futureDate(5));
+
+            eventService.cancelEvent(published.getId(), "Venue unavailable");
+
+            verify(eventPublisher).publishEventCancelled(
+                    any(EventDocument.class),
+                    eq("Venue unavailable")
+            );
+        }
+
+        @Test
+        @DisplayName("no event is published when createEvent validation fails")
+        void createEvent_validationFailure_doesNotPublish() {
+            CreateEventRequest invalidRequest = CreateEventRequest.newBuilder()
+                    .setTitle("") // blank title — validation will reject
+                    .setCategory("CONCERT")
+                    .setDateTime(Instant.now().plus(5, ChronoUnit.DAYS).toString())
+                    .setTimezone("UTC")
+                    .setVenue(com.booking.platform.common.grpc.event.VenueInfo.newBuilder()
+                            .setName("Arena").setCity("Bucharest").setCountry("Romania").build())
+                    .addSeatCategories(SeatCategoryInfo.newBuilder()
+                            .setName("General").setPrice(50.0).setCurrency("USD").setTotalSeats(100).build())
+                    .build();
+
+            assertThatThrownBy(() -> eventService.createEvent(invalidRequest, defaultOrganizer()));
+
+            verify(eventPublisher, never()).publishEventCreated(any());
+        }
+
+        @Test
+        @DisplayName("no event is published when cancelEvent throws InvalidEventStateException")
+        void cancelEvent_invalidState_doesNotPublish() {
+            EventDocument cancelled = buildAndSaveEvent("Already Done", EventCategory.CONCERT,
+                    EventStatus.CANCELLED, futureDate(5));
+
+            assertThatThrownBy(() -> eventService.cancelEvent(cancelled.getId(), "reason"))
+                    .isInstanceOf(InvalidEventStateException.class);
+
+            verify(eventPublisher, never()).publishEventCancelled(any(), anyString());
         }
     }
 }
