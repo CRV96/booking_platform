@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.booking.platform</groupId>
+        <artifactId>common</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>common-events</artifactId>
+    <packaging>jar</packaging>
+
+    <name>Common Events</name>
+    <description>
+        Shared domain event contracts for Kafka-based async communication.
+        Defines protobuf messages for all domain events (event lifecycle, booking
+        lifecycle, and payment lifecycle) plus KafkaTopics constants.
+        Any service that publishes or consumes Kafka messages depends on this module.
+    </description>
+
+    <dependencies>
+        <!--
+            Protobuf runtime — needed to compile and use the generated message classes.
+            grpc-protobuf transitively brings protobuf-java; we only need pure message
+            serialisation here (no gRPC transport), so protobuf-java is sufficient.
+        -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+        </dependency>
+
+        <!--
+            Required for the @Generated annotation in code produced by protoc.
+            Scope is "provided" because it only needs to be on the compile classpath,
+            not bundled into the jar.
+        -->
+        <dependency>
+            <groupId>org.apache.tomcat</groupId>
+            <artifactId>annotations-api</artifactId>
+            <version>6.0.53</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!--
+                Protobuf code generation.
+                We reuse the exact same plugin configuration defined in the root
+                pluginManagement (protoc version, os-classifier, output directories).
+                Only compile goal is needed — no gRPC stubs (compile-custom) because
+                domain events are pure messages, not service RPCs.
+            -->
+            <plugin>
+                <groupId>org.xolstice.maven.plugins</groupId>
+                <artifactId>protobuf-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>compile</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
