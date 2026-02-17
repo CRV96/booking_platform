@@ -104,6 +104,24 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
+            <!--
+                Mockito inline mock-maker requires deep reflection access on Java 17+.
+                The add-opens flags below grant the necessary access so that Mockito
+                can instrument bytecode at test time (e.g. to mock KafkaTemplate).
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                        -Dnet.bytebuddy.experimental=true
+                    </argLine>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 
