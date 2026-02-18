@@ -4,32 +4,43 @@ import com.booking.platform.common.events.BookingCancelledEvent;
 import com.booking.platform.common.events.BookingConfirmedEvent;
 import com.booking.platform.common.events.BookingCreatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.notification_service.email.EmailService;
+import com.booking.platform.notification_service.constants.EmailTemplatesConst;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 /**
  * Kafka consumer for booking-domain lifecycle messages.
  *
- * <p>Each method listens to a single booking topic and logs the incoming event.
- * Full email sending (booking confirmation, cancellation notices) will be wired
- * in P2-05 (Email Templates and Sending).
- *
- * <p>These are the highest-priority notifications from the user's perspective:
+ * <p>Listens to the three booking topics and triggers email notifications
+ * for each state transition in the booking lifecycle:
  * <ul>
- *   <li>Booking created → "Your booking is being processed"</li>
- *   <li>Booking confirmed → "Your booking is confirmed" + ticket info</li>
- *   <li>Booking cancelled → "Your booking was cancelled" + refund info</li>
+ *   <li>{@code BOOKING_CREATED}   → log only (no email — user sees UI feedback immediately)</li>
+ *   <li>{@code BOOKING_CONFIRMED} → sends a confirmation email with ticket IDs</li>
+ *   <li>{@code BOOKING_CANCELLED} → sends a cancellation email with refund information</li>
  * </ul>
+ *
+ * <p>The recipient email is derived from the userId as a placeholder because
+ * the user's real email is owned by user-service (not yet integrated here).
+ * In P3+, this will be replaced by a gRPC lookup to user-service, or the email
+ * will be denormalized into the Protobuf event payload.
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class BookingNotificationConsumer {
+
+    private final EmailService emailService;
 
     /**
      * Receives notification when a booking is first created (status: PENDING).
-     * Future: send "booking received, payment processing" email.
+     * No email sent here — user already sees immediate UI feedback,
+     * and payment has not yet completed so confirmation would be premature.
      */
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CREATED,
@@ -47,12 +58,15 @@ public class BookingNotificationConsumer {
                 event.getCurrency(),
                 record.partition(),
                 record.offset());
-        // TODO P2-05: send "booking received" email to customer
+        // No email — wait for BOOKING_CONFIRMED (payment success) before notifying user.
     }
 
     /**
-     * Receives notification when a booking is confirmed (payment succeeded).
-     * Future: send booking confirmation email with ticket IDs and QR codes.
+     * Sends a booking confirmation email when payment succeeds and the booking
+     * transitions to CONFIRMED status.
+     *
+     * <p>Recipient address is stubbed from userId. In production, fetch the real
+     * email from user-service via gRPC.
      */
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CONFIRMED,
@@ -67,12 +81,33 @@ public class BookingNotificationConsumer {
                 event.getTicketIdsList(),
                 record.partition(),
                 record.offset());
-        // TODO P2-05: send booking confirmation email with ticket details
+
+        // TODO P3+: replace stub with real email from user-service gRPC lookup
+        String recipientEmail = "user-" + event.getUserId() + "@booking-platform.dev";
+
+        emailService.sendHtml(
+                recipientEmail,
+                EmailTemplatesConst.BookingConfirmation.SUBJECT,
+                EmailTemplatesConst.BookingConfirmation.TEMPLATE,
+                Map.of(
+                        EmailTemplatesConst.BookingConfirmation.Vars.BOOKING_ID,    event.getBookingId(),
+                        EmailTemplatesConst.BookingConfirmation.Vars.EVENT_ID,      event.getEventId(),
+                        EmailTemplatesConst.BookingConfirmation.Vars.TICKET_IDS,    event.getTicketIdsList(),
+                        EmailTemplatesConst.BookingConfirmation.Vars.TIMESTAMP,     event.getTimestamp(),
+                        // seatCategory / quantity / price not in BookingConfirmedEvent payload.
+                        // They belong to BookingCreatedEvent. Stubbed until booking-service
+                        // denormalizes these fields into the confirmed event.
+                        EmailTemplatesConst.BookingConfirmation.Vars.SEAT_CATEGORY, "—",
+                        EmailTemplatesConst.BookingConfirmation.Vars.QUANTITY,      "—",
+                        EmailTemplatesConst.BookingConfirmation.Vars.TOTAL_PRICE,   "—",
+                        EmailTemplatesConst.BookingConfirmation.Vars.CURRENCY,      "—"
+                )
+        );
     }
 
     /**
-     * Receives notification when a booking is cancelled (by user or system).
-     * Future: send cancellation email with refund information.
+     * Sends a cancellation + refund notice email when a booking is cancelled
+     * by the user or by the system (e.g. payment timeout, hold expired).
      */
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CANCELLED,
@@ -87,6 +122,20 @@ public class BookingNotificationConsumer {
                 event.getReason(),
                 record.partition(),
                 record.offset());
-        // TODO P2-05: send cancellation + refund notice email to customer
+
+        // TODO P3+: replace stub with real email from user-service gRPC lookup
+        String recipientEmail = "user-" + event.getUserId() + "@booking-platform.dev";
+
+        emailService.sendHtml(
+                recipientEmail,
+                EmailTemplatesConst.BookingCancellation.SUBJECT,
+                EmailTemplatesConst.BookingCancellation.TEMPLATE,
+                Map.of(
+                        EmailTemplatesConst.BookingCancellation.Vars.BOOKING_ID, event.getBookingId(),
+                        EmailTemplatesConst.BookingCancellation.Vars.EVENT_ID,   event.getEventId(),
+                        EmailTemplatesConst.BookingCancellation.Vars.REASON,     event.getReason(),
+                        EmailTemplatesConst.BookingCancellation.Vars.TIMESTAMP,  event.getTimestamp()
+                )
+        );
     }
 }

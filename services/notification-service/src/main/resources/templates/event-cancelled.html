@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Event Cancelled</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color: #f57c00; color: #ffffff; padding: 32px 40px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .header p { margin: 8px 0 0; opacity: 0.9; font-size: 14px; }
+        .body { padding: 32px 40px; }
+        .body h2 { color: #333333; font-size: 20px; margin-top: 0; }
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eeeeee; }
+        .detail-row:last-child { border-bottom: none; }
+        .label { color: #666666; font-size: 14px; }
+        .value { color: #333333; font-size: 14px; font-weight: bold; }
+        .reason-box { background: #fff8e1; border-left: 4px solid #f57c00; padding: 16px; margin: 24px 0; border-radius: 4px; }
+        .reason-box p { margin: 0; font-size: 13px; color: #444; }
+        .refund-box { background: #f0fff4; border-left: 4px solid #34a853; padding: 16px; margin: 16px 0; border-radius: 4px; }
+        .refund-box p { margin: 0; font-size: 13px; color: #444; }
+        .footer { background-color: #f8f8f8; padding: 20px 40px; text-align: center; font-size: 12px; color: #999999; border-top: 1px solid #eeeeee; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>&#x26A0; Event Cancelled</h1>
+        <p>An event you booked tickets for has been cancelled by the organiser.</p>
+    </div>
+
+    <div class="body">
+        <h2>Event Details</h2>
+
+        <div class="detail-row">
+            <span class="label">Event ID</span>
+            <span class="value" th:text="${eventId}">EVT-000000</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Cancelled At</span>
+            <span class="value" th:text="${timestamp}">2024-01-01T12:00:00Z</span>
+        </div>
+
+        <div class="reason-box">
+            <p><strong>Cancellation Reason</strong></p>
+            <p th:text="${reason != null and !#strings.isEmpty(reason) ? reason : 'No reason provided by the organiser.'}">
+                Venue unavailable due to unforeseen circumstances.
+            </p>
+        </div>
+
+        <div class="refund-box">
+            <p><strong>Automatic Refund</strong></p>
+            <p>All bookings for this event will be automatically refunded within 5-10 business days.
+               No action is required from you. We apologise for the inconvenience.</p>
+        </div>
+
+        <p style="color:#555; font-size:14px;">
+            We're sorry this event was cancelled. We hope you find another event to enjoy soon.
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>You received this email because you had a booking for this event.</p>
+        <p>&copy; 2024 Booking Platform. All rights reserved.</p>
+    </div>
+
+</div>
+</body>
+</html>

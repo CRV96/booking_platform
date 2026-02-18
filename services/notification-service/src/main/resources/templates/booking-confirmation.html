@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Booking Confirmation</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .header { background-color: #1a73e8; color: #ffffff; padding: 32px 40px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .header p { margin: 8px 0 0; opacity: 0.9; font-size: 14px; }
+        .body { padding: 32px 40px; }
+        .body h2 { color: #333333; font-size: 20px; margin-top: 0; }
+        .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eeeeee; }
+        .detail-row:last-child { border-bottom: none; }
+        .label { color: #666666; font-size: 14px; }
+        .value { color: #333333; font-size: 14px; font-weight: bold; }
+        .ticket-box { background: #f0f7ff; border-left: 4px solid #1a73e8; padding: 16px; margin: 24px 0; border-radius: 4px; }
+        .ticket-box p { margin: 0; font-size: 13px; color: #444; }
+        .qr-placeholder { text-align: center; margin: 24px 0; padding: 24px; border: 2px dashed #cccccc; border-radius: 8px; color: #999999; font-size: 13px; }
+        .footer { background-color: #f8f8f8; padding: 20px 40px; text-align: center; font-size: 12px; color: #999999; border-top: 1px solid #eeeeee; }
+        .btn { display: inline-block; background-color: #1a73e8; color: #ffffff; padding: 12px 28px; border-radius: 4px; text-decoration: none; font-size: 14px; margin-top: 16px; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <div class="header">
+        <h1>&#10003; Booking Confirmed!</h1>
+        <p>Your tickets are secured. Get ready for a great experience.</p>
+    </div>
+
+    <div class="body">
+        <h2>Booking Details</h2>
+
+        <div class="detail-row">
+            <span class="label">Booking ID</span>
+            <span class="value" th:text="${bookingId}">BK-000000</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Event ID</span>
+            <span class="value" th:text="${eventId}">EVT-000000</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Seat Category</span>
+            <span class="value" th:text="${seatCategory}">VIP</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Quantity</span>
+            <span class="value" th:text="${quantity}">2</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Total Paid</span>
+            <span class="value" th:text="${totalPrice + ' ' + currency}">250.00 USD</span>
+        </div>
+        <div class="detail-row">
+            <span class="label">Confirmed At</span>
+            <span class="value" th:text="${timestamp}">2024-01-01T12:00:00Z</span>
+        </div>
+
+        <div class="ticket-box">
+            <p><strong>Your Tickets</strong></p>
+            <p th:if="${ticketIds != null and !#lists.isEmpty(ticketIds)}">
+                Ticket IDs: <span th:text="${#strings.listJoin(ticketIds, ', ')}">TKT-001, TKT-002</span>
+            </p>
+            <p th:if="${ticketIds == null or #lists.isEmpty(ticketIds)}">
+                Your ticket IDs will be available shortly.
+            </p>
+        </div>
+
+        <div class="qr-placeholder">
+            &#x25A2; QR Code placeholder — ticket scanning coming soon
+        </div>
+
+        <p style="color:#555; font-size:14px;">
+            Please bring this confirmation or your ticket IDs to the venue entrance.
+            Have a wonderful time!
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>You received this email because you made a booking on our platform.</p>
+        <p>&copy; 2024 Booking Platform. All rights reserved.</p>
+    </div>
+
+</div>
+</body>
+</html>
