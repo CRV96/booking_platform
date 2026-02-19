@@ -25,9 +25,19 @@ import java.util.Map;
  * In dev, MailHog intercepts every outgoing message — nothing is delivered to real
  * inboxes. View sent emails at {@code http://localhost:8025}.
  *
- * <p>Sending failures are logged and swallowed rather than propagated. This keeps
- * the Kafka consumer healthy — a transient SMTP error should not cause the consumer
- * to crash or retry the same message indefinitely. Retry + DLT logic is added in P2-06.
+ * <h2>Exception strategy</h2>
+ * <ul>
+ *   <li>{@link MessagingException} — thrown when the MIME message cannot be constructed
+ *       (bad address format, encoding issue). This is a <b>code bug</b>, not a transient
+ *       infrastructure failure — retrying will not help, so it is caught, logged, and
+ *       swallowed.</li>
+ *   <li>{@link MailException} — thrown when the SMTP server is unreachable or rejects
+ *       the message (e.g. MailHog down, network error). This is a <b>transient</b>
+ *       infrastructure failure — it is re-thrown so the {@code DefaultErrorHandler} in
+ *       {@code KafkaConsumerConfig} can retry the Kafka message up to 3 times with
+ *       exponential backoff, then forward it to the Dead Letter Topic if all retries
+ *       fail.</li>
+ * </ul>
  */
 @Slf4j
 @Service
@@ -70,11 +80,12 @@ public class JavaMailSenderService implements EmailService {
             log.info("[EMAIL_SENT] to='{}', subject='{}', template='{}'", to, subject, templateName);
 
         } catch (MessagingException e) {
-            log.error("[EMAIL_FAILED] Failed to build email for to='{}', template='{}': {}",
-                    to, templateName, e.getMessage(), e);
-        } catch (MailException e) {
-            log.error("[EMAIL_FAILED] Failed to send email to='{}', template='{}': {}",
+            // Code bug (bad address, encoding) — not retryable, log and swallow.
+            log.error("[EMAIL_FAILED] Failed to build MIME message for to='{}', template='{}': {}",
                     to, templateName, e.getMessage(), e);
         }
+        // MailException (SMTP down, connection refused) is intentionally NOT caught here.
+        // It propagates to the @KafkaListener method, which lets DefaultErrorHandler
+        // retry the message with exponential backoff, then route it to the DLT.
     }
 }
