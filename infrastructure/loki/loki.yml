@@ -1,0 +1,58 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+# How Loki receives logs from Promtail
+ingester:
+  wal:
+    # Store WAL inside the mounted volume so Loki has write permission
+    dir: /loki/wal
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: inmemory
+      replication_factor: 1
+    final_sleep: 0s
+  chunk_idle_period: 5m
+  chunk_retain_period: 30s
+
+# Where Loki stores logs — filesystem for dev, S3/GCS in production
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  tsdb_shipper:
+    active_index_directory: /loki/index
+    cache_location: /loki/index_cache
+  filesystem:
+    directory: /loki/chunks
+
+# Keep 7 days of logs in dev
+limits_config:
+  retention_period: 168h
+  allow_structured_metadata: true
+  # Allow ingesting logs with older timestamps (needed for host service log files
+  # that were written before Loki/Promtail started)
+  reject_old_samples: false
+
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem
+
+# No alerting rules needed for dev
+ruler:
+  storage:
+    type: local
+    local:
+      directory: /loki/rules

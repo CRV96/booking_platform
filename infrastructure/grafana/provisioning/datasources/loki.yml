@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    type: loki
+    url: http://booking-loki:3100
+    access: proxy
+    isDefault: false
+    editable: true
+    jsonData:
+      # Link Loki logs to Zipkin traces by traceId
+      # When a log line contains a traceId, Grafana shows a link to the Zipkin trace
+      derivedFields:
+        - datasourceUid: zipkin
+          matcherRegex: "traceId=([a-f0-9]+)"
+          name: TraceID
+          url: "$${__value.raw}"
