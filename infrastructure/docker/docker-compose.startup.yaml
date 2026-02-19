@@ -144,6 +144,91 @@ services:
     networks:
       - booking-network
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: booking-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    extra_hosts:
+      # Allows Prometheus (inside Docker) to reach services running on the host machine
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-network
+
+  loki:
+    image: grafana/loki:3.3.0
+    container_name: booking-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ../loki/loki.yml:/etc/loki/loki.yml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki.yml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-network
+
+  promtail:
+    image: grafana/promtail:3.3.0
+    container_name: booking-promtail
+    volumes:
+      - ../promtail/promtail.yml:/etc/promtail/promtail.yml
+      # Docker socket — allows Promtail to read container logs directly
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Host microservice log files — services write JSON logs here via logback
+      # Promtail tails these files and ships them to Loki
+      # LOG_PATH must be exported before running docker-compose (see docs/initialization_READ_ME.md)
+      - ${LOG_PATH}/logs:/logs:ro
+    command: -config.file=/etc/promtail/promtail.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - booking-network
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: booking-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_EMAIL: admin@booking-platform.com
+    volumes:
+      # Auto-provisions Prometheus, Loki and Zipkin datasources on first start
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - booking-network
+
+
 # ==================== DEV TOOLS ====================
   mongo-express:
     image: mongo-express:latest
@@ -231,6 +316,12 @@ volumes:
     name: booking-sonarqube-extensions
   sonarqube_logs:
     name: booking-sonarqube-logs
+  prometheus_data:
+    name: booking-prometheus-data
+  grafana_data:
+    name: booking-grafana-data
+  loki_data:
+    name: booking-loki-data
 
 # ==================== NETWORKS ====================
 networks:

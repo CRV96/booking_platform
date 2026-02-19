@@ -56,6 +56,7 @@
         <lombok.version>1.18.38</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
 
+
         <!-- Code Quality -->
         <jacoco.version>0.8.13</jacoco.version>
         <sonar.projectKey>Booking-Platform</sonar.projectKey>
@@ -231,6 +232,34 @@
             <artifactId>spring-boot-devtools</artifactId>
             <scope>runtime</scope>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Prometheus metrics endpoint (/actuator/prometheus) -->
+        <!-- Exposes all Micrometer metrics in the format Prometheus can scrape -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Structured JSON logging (Loki-friendly log output) -->
+        <!-- Produces one JSON object per log line: {"@timestamp":...,"level":...,"message":...,"traceId":...} -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>7.4</version>
+        </dependency>
+
+        <!-- Distributed Tracing (Zipkin via Micrometer + Brave) -->
+        <!-- micrometer-tracing-bridge-brave: creates spans for every HTTP request/response -->
+        <!-- zipkin-reporter-brave: ships those spans to the Zipkin server over HTTP -->
+        <!-- Both are required — properties alone (management.zipkin.tracing.endpoint) do nothing without these JARs -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-reporter-brave</artifactId>
         </dependency>
 
         <!-- Testing -->

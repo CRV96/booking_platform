@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- ── Spring Boot passes logging.file.name here ──────────────────────── -->
+    <springProperty name="LOG_FILE" source="logging.file.name" defaultValue="logs/app.log"/>
+    <springProperty name="APP_NAME" source="spring.application.name" defaultValue="app"/>
+
+    <!-- ── Console appender (human-readable, no %clr — works in all contexts) -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <pattern>%d{HH:mm:ss.SSS} %5p [%X{traceId:-},${spanId:-}] %-40.40logger{39} : %m%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- ── JSON file appender (Loki-friendly) ─────────────────────────────── -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_FILE}</file>
+
+        <!-- Roll daily, keep 7 days / 500 MB max -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.gz</fileNamePattern>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+        </rollingPolicy>
+
+        <!-- JSON encoder — each log line is one JSON object for Loki -->
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <!-- Embeds the service name so Promtail can use it as a Loki label -->
+            <customFields>{"service":"${APP_NAME}"}</customFields>
+            <!-- MDC fields (traceId, spanId) are included automatically by LogstashEncoder -->
+        </encoder>
+    </appender>
+
+    <!-- ── Root logger: INFO to both console and file ─────────────────────── -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="FILE"/>
+    </root>
+
+    <!-- ── Reduce noise from chatty frameworks ────────────────────────────── -->
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.hibernate" level="WARN"/>
+    <logger name="io.grpc" level="WARN"/>
+    <logger name="com.netflix.eureka" level="WARN"/>
+    <logger name="com.netflix.discovery" level="WARN"/>
+    <logger name="org.apache.kafka" level="WARN"/>
+
+    <!-- ── Your services: full DEBUG visibility ──────────────────────────── -->
+    <logger name="com.booking" level="DEBUG"/>
+
+</configuration>
