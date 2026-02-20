@@ -16,6 +16,12 @@
     <description>Notifications - email, SMS, and push notification delivery</description>
 
     <dependencies>
+        <!-- Common Core — shared logging (LevelColourConverter) -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-core</artifactId>
+        </dependency>
+
         <!-- Service Discovery -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>

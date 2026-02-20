@@ -16,6 +16,12 @@
     <description>API Gateway - GraphQL endpoint with JWT validation via Keycloak</description>
 
     <dependencies>
+        <!-- Common Core — shared logging (LevelColourConverter) -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-core</artifactId>
+        </dependency>
+
         <!-- Common module: proto stubs only (gateway is a gRPC client, not server) -->
         <dependency>
             <groupId>com.booking.platform</groupId>

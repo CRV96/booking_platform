@@ -3,9 +3,9 @@ apiVersion: 1
 datasources:
   - name: Prometheus
     type: prometheus
-    # booking-prometheus is the Docker container name — Grafana resolves it
-    # via the shared booking-network Docker network
-    url: http://booking-prometheus:9090
+    # bkg-prometheus is the Docker container name — Grafana resolves it
+    # via the shared bkg-network Docker network
+    url: http://bkg-prometheus:9090
     access: proxy
     isDefault: true
     editable: true

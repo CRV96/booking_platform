@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package booking.booking;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.booking";
+option java_outer_classname = "BookingServiceProto";
+
+// ============================================================================
+// BOOKING SERVICE
+// ============================================================================
+// Handles the full booking lifecycle: creating bookings with seat holds,
+// querying booking state, and cancellations.
+//
+// Called internally by graphql-gateway — not exposed directly to the internet.
+// All mutations go through the choreography saga:
+//   booking-service → Kafka (BookingCreatedEvent) → payment-service
+//   payment-service → Kafka (PaymentCompletedEvent) → booking-service (CONFIRMED)
+
+service BookingService {
+  // Initiate a booking: reserves seats, creates a PENDING record, starts the hold timer.
+  // Idempotent — repeated requests with the same idempotencyKey return the existing booking.
+  rpc CreateBooking(CreateBookingRequest) returns (BookingResponse);
+
+  // Retrieve a single booking by ID.
+  rpc GetBooking(GetBookingRequest) returns (BookingResponse);
+
+  // List all bookings for a user, with optional status filter and pagination.
+  rpc GetUserBookings(GetUserBookingsRequest) returns (GetUserBookingsResponse);
+
+  // Cancel a booking. Allowed transitions: PENDING → CANCELLED, CONFIRMED → CANCELLED.
+  rpc CancelBooking(CancelBookingRequest) returns (BookingResponse);
+}
+
+// ============================================================================
+// CREATE BOOKING
+// ============================================================================
+
+message CreateBookingRequest {
+  string event_id = 1;            // MongoDB ObjectId from event-service
+  string seat_category = 2;       // Matches SeatCategoryInfo.name in event-service
+  int32 quantity = 3;             // Number of seats to reserve (must be > 0)
+  string idempotency_key = 4;     // Client-generated UUID — prevents duplicate submissions
+}
+
+// ============================================================================
+// GET BOOKING
+// ============================================================================
+
+message GetBookingRequest {
+  string booking_id = 1;   // UUID string
+}
+
+// ============================================================================
+// GET USER BOOKINGS
+// ============================================================================
+
+message GetUserBookingsRequest {
+  string user_id = 1;           // Keycloak subject (sub claim)
+  int32 page = 2;               // 0-indexed, default 0
+  int32 page_size = 3;          // Default 20, max 100
+  optional string status_filter = 4;  // BookingStatus enum value as string; omit for all
+}
+
+message GetUserBookingsResponse {
+  repeated BookingInfo bookings = 1;
+  PaginationInfo pagination = 2;
+}
+
+// ============================================================================
+// CANCEL BOOKING
+// ============================================================================
+
+message CancelBookingRequest {
+  string booking_id = 1;          // UUID string
+  optional string reason = 2;     // Human-readable cancellation reason
+}
+
+// ============================================================================
+// SHARED RESPONSE
+// ============================================================================
+
+message BookingResponse {
+  BookingInfo booking = 1;
+}
+
+// ============================================================================
+// SHARED MESSAGES
+// ============================================================================
+
+message BookingInfo {
+  string id = 1;                  // UUID string
+  string user_id = 2;             // Keycloak subject
+  string event_id = 3;            // MongoDB ObjectId
+  string event_title = 4;         // Denormalized — avoids extra gRPC call on reads
+  string status = 5;              // BookingStatus enum value as string
+  string seat_category = 6;
+  int32 quantity = 7;
+  string unit_price = 8;          // Decimal as string (e.g. "49.99") — avoids float precision loss
+  string total_price = 9;         // Decimal as string
+  string currency = 10;           // ISO 4217 (e.g. "USD")
+  string idempotency_key = 11;
+  string hold_expires_at = 12;    // ISO 8601 — null/empty once booking leaves PENDING
+  optional string cancellation_reason = 13;
+  string created_at = 14;         // ISO 8601
+  string updated_at = 15;         // ISO 8601
+}
+
+message PaginationInfo {
+  int32 total_count = 1;
+  int32 page = 2;        // 0-indexed
+  int32 page_size = 3;
+  int32 total_pages = 4;
+}

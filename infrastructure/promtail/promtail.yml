@@ -9,7 +9,7 @@ positions:
 
 # Where to send logs — our Loki container
 clients:
-  - url: http://booking-loki:3100/loki/api/v1/push
+  - url: http://bkg-loki:3100/loki/api/v1/push
 
 scrape_configs:
 
@@ -22,9 +22,9 @@ scrape_configs:
       - host: unix:///var/run/docker.sock
         refresh_interval: 5s
         filters:
-          # Only collect logs from containers in our booking-network
+          # Only collect logs from containers in our bkg-network
           - name: network
-            values: [ booking-network ]
+            values: [ bkg-network ]
 
     relabel_configs:
       # Use the Docker container name as the "container" label
