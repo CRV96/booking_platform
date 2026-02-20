@@ -3,7 +3,7 @@ apiVersion: 1
 datasources:
   - name: Loki
     type: loki
-    url: http://booking-loki:3100
+    url: http://bkg-loki:3100
     access: proxy
     isDefault: false
     editable: true

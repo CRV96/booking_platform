@@ -4,7 +4,7 @@ datasources:
   - name: Zipkin
     type: zipkin
     uid: zipkin
-    url: http://booking-zipkin:9411
+    url: http://bkg-zipkin:9411
     access: proxy
     isDefault: false
     editable: true

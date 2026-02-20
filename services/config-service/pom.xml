@@ -16,6 +16,12 @@
     <description>Spring Cloud Config Server - Centralized Configuration Management</description>
 
     <dependencies>
+        <!-- Common Core — shared logging (LevelColourConverter) -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-core</artifactId>
+        </dependency>
+
         <!-- Spring Cloud Config Server -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>

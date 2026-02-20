@@ -1,17 +1,17 @@
-name: booking-platform
+name: bkg-platform
 
 services:
 
 # ==================== DATABASES ====================
   postgres:
     image: postgres:16-alpine
-    container_name: booking-postgres
+    container_name: bkg-postgres
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
-      POSTGRES_MULTIPLE_DATABASES: userdb
+      POSTGRES_MULTIPLE_DATABASES: userdb,bookingdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
@@ -22,11 +22,11 @@ services:
       retries: 10
       start_period: 30s
     networks:
-      - booking-network
+      - bkg-network
 
   mongodb:
     image: mongo:7
-    container_name: booking-mongodb
+    container_name: bkg-mongodb
     ports:
       - "27017:27017"
     environment:
@@ -40,11 +40,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
 
   redis:
     image: redis:7-alpine
-    container_name: booking-redis
+    container_name: bkg-redis
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -56,12 +56,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
 
 # ==================== MESSAGING ====================
   kafka:
     image: apache/kafka:3.9.0
-    container_name: booking-kafka
+    container_name: bkg-kafka
     ports:
       - "9092:9092"
     environment:
@@ -72,9 +72,9 @@ services:
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       # Listeners
       # PLAINTEXT      → used by host-machine clients (your app, CLI tools) via localhost:9092
-      # PLAINTEXT_INTERNAL → used by Docker-internal clients (Kafka UI) via booking-kafka:29092
+      # PLAINTEXT_INTERNAL → used by Docker-internal clients (Kafka UI) via bkg-kafka:29092
       KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_INTERNAL://:29092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://booking-kafka:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://bkg-kafka:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       # Topics
@@ -95,12 +95,12 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - booking-network
+      - bkg-network
 
 # ==================== SECURITY ====================
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
-    container_name: booking-keycloak
+    container_name: bkg-keycloak
     command: start-dev --import-realm
     ports:
       - "8180:8080"
@@ -109,7 +109,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
 
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://booking-postgres:5432/userdb
+      KC_DB_URL: jdbc:postgresql://bkg-postgres:5432/userdb
       KC_DB_USERNAME: admin
       KC_DB_PASSWORD: admin
 
@@ -127,11 +127,11 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - booking-network
+      - bkg-network
 # ==================== OBSERVABILITY ====================
   zipkin:
     image: openzipkin/zipkin:3
-    container_name: booking-zipkin
+    container_name: bkg-zipkin
     ports:
       - "9411:9411"
     environment:
@@ -142,11 +142,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
 
   prometheus:
     image: prom/prometheus:v2.54.1
-    container_name: booking-prometheus
+    container_name: bkg-prometheus
     ports:
       - "9090:9090"
     volumes:
@@ -165,11 +165,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
 
   loki:
     image: grafana/loki:3.3.0
-    container_name: booking-loki
+    container_name: bkg-loki
     ports:
       - "3100:3100"
     volumes:
@@ -182,11 +182,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
 
   promtail:
     image: grafana/promtail:3.3.0
-    container_name: booking-promtail
+    container_name: bkg-promtail
     volumes:
       - ../promtail/promtail.yml:/etc/promtail/promtail.yml
       # Docker socket — allows Promtail to read container logs directly
@@ -194,17 +194,17 @@ services:
       # Host microservice log files — services write JSON logs here via logback
       # Promtail tails these files and ships them to Loki
       # LOG_PATH must be exported before running docker-compose (see docs/initialization_READ_ME.md)
-      - ${LOG_PATH}/logs:/logs:ro
+      - ${LOG_PATH:-/tmp}/logs:/logs:ro
     command: -config.file=/etc/promtail/promtail.yml
     depends_on:
       loki:
         condition: service_healthy
     networks:
-      - booking-network
+      - bkg-network
 
   grafana:
     image: grafana/grafana:11.3.0
-    container_name: booking-grafana
+    container_name: bkg-grafana
     ports:
       - "3000:3000"
     environment:
@@ -226,63 +226,63 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
 
 
 # ==================== DEV TOOLS ====================
   mongo-express:
     image: mongo-express:latest
-    container_name: booking-mongo-express
+    container_name: bkg-mongo-express
     ports:
       - "8090:8081"
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: admin
       ME_CONFIG_MONGODB_ADMINPASSWORD: admin
-      ME_CONFIG_MONGODB_URL: mongodb://admin:admin@booking-mongodb:27017/
+      ME_CONFIG_MONGODB_URL: mongodb://admin:admin@bkg-mongodb:27017/
       ME_CONFIG_BASICAUTH: false
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
-      - booking-network
+      - bkg-network
 
   redisinsight:
     image: redis/redisinsight:latest
-    container_name: booking-redisinsight
+    container_name: bkg-redisinsight
     ports:
       - "5540:5540"
     depends_on:
       redis:
         condition: service_healthy
     networks:
-      - booking-network
+      - bkg-network
 
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: booking-mailhog
+    container_name: bkg-mailhog
     ports:
       - "1025:1025"   # SMTP
       - "8025:8025"   # Web UI
     networks:
-      - booking-network
+      - bkg-network
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    container_name: booking-kafka-ui
+    container_name: bkg-kafka-ui
     ports:
       - "8085:8080"
     environment:
       KAFKA_CLUSTERS_0_NAME: booking-platform
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: booking-kafka:29092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: bkg-kafka:29092
     depends_on:
       kafka:
         condition: service_healthy
     networks:
-      - booking-network
+      - bkg-network
 
   sonarqube:
     image: sonarqube:10-community
-    container_name: booking-sonarqube
+    container_name: bkg-sonarqube
     ports:
       - "9000:9000"
     environment:
@@ -298,33 +298,33 @@ services:
       retries: 5
       start_period: 120s
     networks:
-      - booking-network
+      - bkg-network
 
 # ==================== VOLUMES ====================
 volumes:
   postgres_data:
-    name: booking-postgres-data
+    name: bkg-postgres-data
   mongodb_data:
-    name: booking-mongodb-data
+    name: bkg-mongodb-data
   redis_data:
-    name: booking-redis-data
+    name: bkg-redis-data
   kafka_data:
-    name: booking-kafka-data
+    name: bkg-kafka-data
   sonarqube_data:
-    name: booking-sonarqube-data
+    name: bkg-sonarqube-data
   sonarqube_extensions:
-    name: booking-sonarqube-extensions
+    name: bkg-sonarqube-extensions
   sonarqube_logs:
-    name: booking-sonarqube-logs
+    name: bkg-sonarqube-logs
   prometheus_data:
-    name: booking-prometheus-data
+    name: bkg-prometheus-data
   grafana_data:
-    name: booking-grafana-data
+    name: bkg-grafana-data
   loki_data:
-    name: booking-loki-data
+    name: bkg-loki-data
 
 # ==================== NETWORKS ====================
 networks:
-  booking-network:
-    name: booking-network
+  bkg-network:
+    name: bkg-network
     driver: bridge
