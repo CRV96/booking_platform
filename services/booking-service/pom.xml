@@ -74,10 +74,16 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
-        <!-- gRPC server (server impl comes in P3-03, stubs needed to compile) -->
+        <!-- gRPC server + client (stubs, service impl, and outgoing calls to event-service) -->
         <dependency>
             <groupId>net.devh</groupId>
             <artifactId>grpc-spring-boot-starter</artifactId>
+        </dependency>
+
+        <!-- Netty transport for gRPC client mTLS (GrpcClientTlsConfig → NettyChannelBuilder) -->
+        <dependency>
+            <groupId>io.grpc</groupId>
+            <artifactId>grpc-netty-shaded</artifactId>
         </dependency>
 
         <!-- MapStruct for object mapping -->
