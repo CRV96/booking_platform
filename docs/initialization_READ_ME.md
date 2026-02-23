@@ -283,6 +283,44 @@ For code quality analysis:
 ./infrastructure/sonarqube/run-sonar.sh <your-token>
 ```
 
+## 9. Redis Connection (RedisInsight)
+
+RedisInsight is included in the Docker Compose stack for browsing and monitoring Redis data.
+
+| Setting | Value |
+|---------|-------|
+| **URL** | http://localhost:5540 |
+| **Host** | `bkg-redis` |
+| **Port** | `6379` |
+| **Password** | *(none)* |
+| **Database** | `0` (default) |
+
+### Setup
+
+1. Open **http://localhost:5540**
+2. Click **Add Redis database**
+3. Enter:
+   - **Host**: `bkg-redis`
+   - **Port**: `6379`
+   - **Database Alias**: `Booking Platform`
+   - Leave password empty
+4. Click **Add Redis Database**
+
+> **Note:** Use `bkg-redis` as the host (not `localhost`) because RedisInsight runs inside
+> the same Docker network as Redis. If you connect from a Redis client on your host machine
+> (outside Docker), use `localhost:6379` instead.
+
+### What to Expect
+
+Once connected you can browse keys created by the booking-service:
+
+| Key Pattern | Purpose |
+|-------------|---------|
+| `booking:lock:{eventId}:{seatCategory}` | Distributed lock held during seat reservation |
+| `booking:idempotency:{idempotencyKey}` | Idempotency guard (prevents duplicate bookings) |
+
+---
+
 ## Test Users
 
 | Username | Password | Role | Group |
