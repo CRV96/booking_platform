@@ -31,6 +31,12 @@
 			"value": "",
 			"type": "string",
 			"description": "Populated automatically after createEvent. Used in subsequent event requests."
+		},
+		{
+			"key": "bookingId",
+			"value": "",
+			"type": "string",
+			"description": "Populated automatically after createBooking. Used in subsequent booking requests."
 		}
 	],
 	"item": [
@@ -985,6 +991,404 @@
 							"graphql": {
 								"query": "mutation CreateEvent($input: CreateEventInput!) {\n  createEvent(input: $input) {\n    id\n    title\n    category\n    status\n    dateTime\n    venue {\n      name\n      city\n      country\n    }\n    seatCategories {\n      name\n      price\n      currency\n      totalSeats\n      availableSeats\n    }\n  }\n}",
 								"variables": "{\n  \"input\": {\n    \"title\": \"Spring Boot & Microservices Summit 2025\",\n    \"description\": \"A two-day conference covering the latest in Java, Spring Boot, and cloud-native microservices.\",\n    \"category\": \"CONFERENCE\",\n    \"dateTime\": \"2025-10-10T09:00:00Z\",\n    \"venue\": {\n      \"name\": \"ExCeL London\",\n      \"address\": \"1 Western Gateway, London E16 1XL\",\n      \"city\": \"London\",\n      \"country\": \"UK\",\n      \"capacity\": 1000\n    },\n    \"seatCategories\": [\n      {\n        \"name\": \"Standard\",\n        \"price\": 299.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 800\n      },\n      {\n        \"name\": \"Early Bird\",\n        \"price\": 199.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 100\n      },\n      {\n        \"name\": \"Workshop Pass\",\n        \"price\": 499.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 50\n      }\n    ]\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Bookings",
+			"description": "Booking operations — all require a valid Bearer token (customer or employee).\n\nRecommended test flow:\n1. Login as employee → Create Event → Publish Event (saves {{eventId}})\n2. Login as customer (john.doe)\n3. Create Booking — saves {{bookingId}} automatically\n4. Get Booking by ID\n5. List My Bookings (with/without status filter)\n6. Cancel Booking\n7. List My Bookings (status: CANCELLED) — verify it shows cancelled\n\nNote: The booking requires a PUBLISHED event with available seats.",
+			"item": [
+				{
+					"name": "1. Create Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.createBooking) {",
+									"    var booking = jsonData.data.createBooking;",
+									"    pm.collectionVariables.set('bookingId', booking.id);",
+									"    pm.test('Booking created successfully', function() {",
+									"        pm.expect(booking.id).to.be.a('string');",
+									"        pm.expect(booking.status).to.eql('PENDING');",
+									"        pm.expect(booking.eventTitle).to.be.a('string');",
+									"    });",
+									"    pm.test('Booking has correct pricing', function() {",
+									"        pm.expect(booking.unitPrice).to.be.a('string');",
+									"        pm.expect(booking.totalPrice).to.be.a('string');",
+									"        pm.expect(booking.currency).to.be.a('string');",
+									"    });",
+									"    pm.test('Booking has hold expiry', function() {",
+									"        pm.expect(booking.holdExpiresAt).to.be.a('string');",
+									"    });",
+									"    console.log('Created booking ID:', booking.id);",
+									"} else {",
+									"    pm.test('Create booking failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateBooking($input: CreateBookingInput!) {\n  createBooking(input: $input) {\n    id\n    userId\n    eventId\n    eventTitle\n    status\n    seatCategory\n    quantity\n    unitPrice\n    totalPrice\n    currency\n    idempotencyKey\n    holdExpiresAt\n    createdAt\n    updatedAt\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"eventId\": \"{{eventId}}\",\n    \"seatCategory\": \"VIP\",\n    \"quantity\": 2,\n    \"idempotencyKey\": \"{{$guid}}\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "2. Create Booking (idempotent retry)",
+					"description": "Sending the same idempotencyKey should return the same booking without creating a duplicate.\nCopy the idempotencyKey from the previous request's response to test this.",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.createBooking) {",
+									"    var booking = jsonData.data.createBooking;",
+									"    pm.test('Idempotent: returns same booking ID', function() {",
+									"        pm.expect(booking.id).to.eql(pm.collectionVariables.get('bookingId'));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateBooking($input: CreateBookingInput!) {\n  createBooking(input: $input) {\n    id\n    status\n    eventTitle\n    seatCategory\n    quantity\n    totalPrice\n    currency\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"eventId\": \"{{eventId}}\",\n    \"seatCategory\": \"VIP\",\n    \"quantity\": 2,\n    \"idempotencyKey\": \"test-idempotency-key-001\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "3. Get Booking by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Booking returned successfully', function() {",
+									"    pm.expect(jsonData.data).to.have.property('booking');",
+									"    pm.expect(jsonData.data.booking).to.have.property('id');",
+									"    pm.expect(jsonData.data.booking).to.have.property('status');",
+									"    pm.expect(jsonData.data.booking).to.have.property('eventTitle');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query GetBooking($id: ID!) {\n  booking(id: $id) {\n    id\n    userId\n    eventId\n    eventTitle\n    status\n    seatCategory\n    quantity\n    unitPrice\n    totalPrice\n    currency\n    idempotencyKey\n    holdExpiresAt\n    cancellationReason\n    createdAt\n    updatedAt\n  }\n}",
+								"variables": "{\n  \"id\": \"{{bookingId}}\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "4. List My Bookings (all)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Bookings list returned', function() {",
+									"    pm.expect(jsonData.data).to.have.property('myBookings');",
+									"    pm.expect(jsonData.data.myBookings).to.have.property('bookings');",
+									"    pm.expect(jsonData.data.myBookings.bookings).to.be.an('array');",
+									"    pm.expect(jsonData.data.myBookings).to.have.property('totalCount');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query MyBookings($page: Int, $pageSize: Int) {\n  myBookings(page: $page, pageSize: $pageSize) {\n    bookings {\n      id\n      eventTitle\n      status\n      seatCategory\n      quantity\n      totalPrice\n      currency\n      holdExpiresAt\n      createdAt\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "5. List My Bookings (PENDING only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Only PENDING bookings returned', function() {",
+									"    var bookings = jsonData.data.myBookings.bookings;",
+									"    bookings.forEach(function(b) {",
+									"        pm.expect(b.status).to.eql('PENDING');",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query MyBookings($page: Int, $pageSize: Int, $status: BookingStatus) {\n  myBookings(page: $page, pageSize: $pageSize, status: $status) {\n    bookings {\n      id\n      eventTitle\n      status\n      seatCategory\n      quantity\n      totalPrice\n      currency\n      holdExpiresAt\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"page\": 0,\n  \"pageSize\": 10,\n  \"status\": \"PENDING\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "6. Cancel Booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.cancelBooking) {",
+									"    var booking = jsonData.data.cancelBooking;",
+									"    pm.test('Booking cancelled successfully', function() {",
+									"        pm.expect(booking.status).to.eql('CANCELLED');",
+									"    });",
+									"    pm.test('Cancellation reason is set', function() {",
+									"        pm.expect(booking.cancellationReason).to.eql('Changed my mind');",
+									"    });",
+									"} else {",
+									"    pm.test('Cancel booking failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CancelBooking($id: ID!, $reason: String) {\n  cancelBooking(id: $id, reason: $reason) {\n    id\n    status\n    eventTitle\n    seatCategory\n    quantity\n    totalPrice\n    currency\n    cancellationReason\n    updatedAt\n  }\n}",
+								"variables": "{\n  \"id\": \"{{bookingId}}\",\n  \"reason\": \"Changed my mind\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "7. List My Bookings (CANCELLED only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Only CANCELLED bookings returned', function() {",
+									"    var bookings = jsonData.data.myBookings.bookings;",
+									"    bookings.forEach(function(b) {",
+									"        pm.expect(b.status).to.eql('CANCELLED');",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query MyBookings($page: Int, $pageSize: Int, $status: BookingStatus) {\n  myBookings(page: $page, pageSize: $pageSize, status: $status) {\n    bookings {\n      id\n      eventTitle\n      status\n      cancellationReason\n      createdAt\n      updatedAt\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"page\": 0,\n  \"pageSize\": 10,\n  \"status\": \"CANCELLED\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Create Booking (General Admission)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.createBooking) {",
+									"    pm.test('GA booking created', function() {",
+									"        pm.expect(jsonData.data.createBooking.status).to.eql('PENDING');",
+									"        pm.expect(jsonData.data.createBooking.seatCategory).to.eql('General Admission');",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateBooking($input: CreateBookingInput!) {\n  createBooking(input: $input) {\n    id\n    eventTitle\n    status\n    seatCategory\n    quantity\n    unitPrice\n    totalPrice\n    currency\n    holdExpiresAt\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"eventId\": \"{{eventId}}\",\n    \"seatCategory\": \"General Admission\",\n    \"quantity\": 4,\n    \"idempotencyKey\": \"{{$guid}}\"\n  }\n}"
 							}
 						},
 						"url": {

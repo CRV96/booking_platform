@@ -86,9 +86,14 @@ basicConstraints=CA:FALSE
 keyUsage = digitalSignature, keyEncipherment
 EOF
 
-    if [ "$IS_SERVER" = "server" ]; then
+    if [ "$IS_SERVER" = "server" ] || [ "$IS_SERVER" = "both" ]; then
+        if [ "$IS_SERVER" = "both" ]; then
+            EXTENDED_KEY_USAGE="extendedKeyUsage = serverAuth, clientAuth"
+        else
+            EXTENDED_KEY_USAGE="extendedKeyUsage = serverAuth"
+        fi
         cat >> "${SERVICE_NAME}.ext" << EOF
-extendedKeyUsage = serverAuth
+${EXTENDED_KEY_USAGE}
 subjectAltName = @alt_names
 
 [alt_names]
@@ -115,7 +120,7 @@ EOF
 # gRPC server certificates
 generate_cert "user-service"      "server"
 generate_cert "event-service"     "server"
-generate_cert "booking-service"   "server"
+generate_cert "booking-service"   "both"    # both server (receives from gateway) and client (calls event-service)
 generate_cert "payment-service"   "server"
 generate_cert "ticket-service"    "server"
 generate_cert "analytics-service" "server"
