@@ -26,4 +26,13 @@ public interface BookingService {
                                         int pageSize, String statusFilter);
 
     BookingEntity cancelBooking(UUID bookingId, String userId, String reason);
+
+    /**
+     * System-level expiration of a PENDING booking whose hold timer has elapsed.
+     * Unlike {@link #cancelBooking}, this does not require a userId — it is called
+     * by the scheduled expiration job, not by a user action.
+     *
+     * <p>Idempotent: silently skips bookings that no longer exist or are no longer PENDING.</p>
+     */
+    void expireBooking(UUID bookingId);
 }
