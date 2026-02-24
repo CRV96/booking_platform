@@ -189,6 +189,42 @@ public class BookingServiceImpl implements BookingService {
         return saved;
     }
 
+    @Override
+    @Transactional
+    public void expireBooking(UUID bookingId) {
+        Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
+        if (optional.isEmpty()) {
+            log.debug("Booking '{}' no longer exists, skipping expiration", bookingId);
+            return;
+        }
+
+        BookingEntity booking = optional.get();
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            log.debug("Booking '{}' is no longer PENDING (status={}), skipping expiration",
+                    bookingId, booking.getStatus());
+            return;
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationReason("HOLD_EXPIRED");
+        bookingRepository.save(booking);
+
+        // Release seats back to event-service (best-effort)
+        try {
+            eventServiceClient.updateSeatAvailability(
+                    booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
+        } catch (Exception e) {
+            log.error("Failed to release seats for expired booking '{}': {}",
+                    bookingId, e.getMessage());
+        }
+
+        log.info("Booking expired: id='{}', event='{}', category='{}', qty={}",
+                bookingId, booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
+
+        // (Future P3-05: publish BookingCancelledEvent with reason HOLD_EXPIRED)
+    }
+
     // ─── Private helpers ─────────────────────────────────────────────
 
     private BookingServiceException mapGrpcException(String eventId, StatusRuntimeException e) {

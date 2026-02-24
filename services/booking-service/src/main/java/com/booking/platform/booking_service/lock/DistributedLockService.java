@@ -81,6 +81,29 @@ public class DistributedLockService {
     }
 
     /**
+     * Attempts a single lock acquisition without retries.
+     * Suitable for scheduler-type locks where a missed tick is acceptable —
+     * if the lock is held by another instance, this run is simply skipped.
+     *
+     * @param key the full Redis key (no prefix applied)
+     * @param ttl how long the lock lives before auto-expiry
+     * @return a {@link LockHandle} if acquired, or {@code null} if already held
+     */
+    public LockHandle tryAcquireOnce(String key, Duration ttl) {
+        String lockValue = UUID.randomUUID().toString();
+        Boolean acquired = redisTemplate.opsForValue()
+                .setIfAbsent(key, lockValue, ttl);
+
+        if (Boolean.TRUE.equals(acquired)) {
+            log.debug("Lock acquired: key='{}', value='{}'", key, lockValue);
+            return new LockHandle(key, lockValue);
+        }
+
+        log.debug("Lock already held, skipping: key='{}'", key);
+        return null;
+    }
+
+    /**
      * Releases the lock only if still owned by this handle.
      * Uses a Lua script for atomic compare-and-delete to prevent
      * accidentally releasing another owner's lock.
