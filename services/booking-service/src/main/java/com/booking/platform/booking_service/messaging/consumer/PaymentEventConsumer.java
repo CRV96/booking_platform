@@ -3,6 +3,7 @@ package com.booking.platform.booking_service.messaging.consumer;
 import com.booking.platform.booking_service.service.BookingService;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentCompletedEvent;
+import com.booking.platform.common.events.PaymentFailedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -12,12 +13,13 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 /**
- * Kafka consumer for payment-domain lifecycle messages.
+ * Kafka consumer for payment lifecycle events.
  *
- * <p>Listens to {@code events.payment.completed} and triggers booking confirmation.
- * When a {@link PaymentCompletedEvent} arrives, it calls
- * {@link BookingService#confirmBooking(UUID)} which transitions the booking
- * from PENDING → CONFIRMED and publishes a {@code BookingConfirmedEvent}.
+ * <p>Handles both the happy path (P3-06) and compensation (P3-07):
+ * <ul>
+ *   <li>{@code PAYMENT_COMPLETED} → confirms the booking (PENDING → CONFIRMED)</li>
+ *   <li>{@code PAYMENT_FAILED}    → cancels the booking, releases seats (PENDING → CANCELLED)</li>
+ * </ul>
  */
 @Slf4j
 @Component
@@ -27,14 +29,8 @@ public class PaymentEventConsumer {
     private final BookingService bookingService;
 
     /**
-     * Handles successful payment events by confirming the associated booking.
-     *
-     * <p>On {@code PaymentCompletedEvent}:
-     * <ol>
-     *   <li>Extract the bookingId from the event</li>
-     *   <li>Call {@code bookingService.confirmBooking(bookingId)}</li>
-     *   <li>confirmBooking internally publishes {@code BookingConfirmedEvent}</li>
-     * </ol>
+     * Happy path: payment succeeded → confirm the booking.
+     * This triggers BookingConfirmedEvent → ticket generation + confirmation email.
      */
     @KafkaListener(
             topics = KafkaTopics.PAYMENT_COMPLETED,
@@ -50,14 +46,32 @@ public class PaymentEventConsumer {
                 record.partition(),
                 record.offset());
 
-        try {
-            UUID bookingId = UUID.fromString(event.getBookingId());
-            bookingService.confirmBooking(bookingId);
-            log.info("Booking confirmed via payment: bookingId='{}'", event.getBookingId());
-        } catch (Exception e) {
-            log.error("Failed to confirm booking '{}' from payment '{}': {}",
-                    event.getBookingId(), event.getPaymentId(), e.getMessage());
-            throw e;  // re-throw to trigger retry + DLT
-        }
+        UUID bookingId = UUID.fromString(event.getBookingId());
+        bookingService.confirmBooking(bookingId);
+
+        log.info("Booking confirmed: bookingId='{}'", event.getBookingId());
+    }
+
+    /**
+     * Compensation path (P3-07): payment failed → cancel the booking and release seats.
+     * This triggers BookingCancelledEvent → cancellation email.
+     */
+    @KafkaListener(
+            topics = KafkaTopics.PAYMENT_FAILED,
+            containerFactory = "paymentFailedListenerFactory"
+    )
+    public void onPaymentFailed(ConsumerRecord<String, PaymentFailedEvent> record) {
+        PaymentFailedEvent event = record.value();
+        log.warn("[PAYMENT_FAILED] paymentId='{}', bookingId='{}', reason='{}' | partition={}, offset={}",
+                event.getPaymentId(),
+                event.getBookingId(),
+                event.getReason(),
+                record.partition(),
+                record.offset());
+
+        UUID bookingId = UUID.fromString(event.getBookingId());
+        bookingService.cancelBookingOnPaymentFailure(bookingId, event.getReason());
+
+        log.info("Booking cancelled due to payment failure: bookingId='{}'", event.getBookingId());
     }
 }

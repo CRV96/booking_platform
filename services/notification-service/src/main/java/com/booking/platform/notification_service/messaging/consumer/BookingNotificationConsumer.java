@@ -4,6 +4,7 @@ import com.booking.platform.common.events.BookingCancelledEvent;
 import com.booking.platform.common.events.BookingConfirmedEvent;
 import com.booking.platform.common.events.BookingCreatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.common.events.PaymentFailedEvent;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
 import lombok.RequiredArgsConstructor;
@@ -134,5 +135,31 @@ public class BookingNotificationConsumer {
                         EmailTemplatesConst.BookingCancellation.Vars.TIMESTAMP,  event.getTimestamp()
                 )
         );
+    }
+
+    /**
+     * P3-07: Sends a notification when payment fails.
+     *
+     * <p>Note: the booking-service also publishes BookingCancelledEvent with
+     * reason "PAYMENT_FAILED: ..." which triggers {@link #onBookingCancelled}.
+     * This listener provides a direct payment failure notification with the
+     * specific payment error reason.
+     */
+    @KafkaListener(
+            topics = KafkaTopics.PAYMENT_FAILED,
+            containerFactory = "paymentFailedListenerFactory"
+    )
+    public void onPaymentFailed(ConsumerRecord<String, PaymentFailedEvent> record) {
+        PaymentFailedEvent event = record.value();
+        log.warn("[PAYMENT_FAILED] paymentId='{}', bookingId='{}', reason='{}' | partition={}, offset={}",
+                event.getPaymentId(),
+                event.getBookingId(),
+                event.getReason(),
+                record.partition(),
+                record.offset());
+
+        // The BookingCancelledEvent listener (onBookingCancelled) handles the cancellation email.
+        // This listener logs the payment failure details for observability.
+        // A dedicated payment failure email template can be added in the future.
     }
 }

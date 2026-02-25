@@ -49,4 +49,15 @@ public interface BookingService {
      * <p>Idempotent: silently skips bookings that no longer exist or are no longer PENDING.</p>
      */
     void expireBooking(UUID bookingId);
+
+    /**
+     * Cancels a booking after payment failure (P3-07 compensation).
+     * Transitions PENDING → CANCELLED, releases seats, and publishes BookingCancelledEvent.
+     *
+     * <p>Idempotent: silently skips if not PENDING (already cancelled/confirmed).</p>
+     *
+     * @param bookingId the booking to cancel
+     * @param reason    the payment failure reason (e.g. "Card declined")
+     */
+    void cancelBookingOnPaymentFailure(UUID bookingId, String reason);
 }

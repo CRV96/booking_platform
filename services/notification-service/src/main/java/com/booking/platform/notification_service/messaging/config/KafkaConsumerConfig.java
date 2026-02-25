@@ -7,6 +7,7 @@ import com.booking.platform.common.events.EventCancelledEvent;
 import com.booking.platform.common.events.EventCreatedEvent;
 import com.booking.platform.common.events.EventPublishedEvent;
 import com.booking.platform.common.events.EventUpdatedEvent;
+import com.booking.platform.common.events.PaymentFailedEvent;
 import com.booking.platform.common.events.config.BaseKafkaConsumerConfig;
 import com.booking.platform.common.events.serialization.ProtobufDeserializer;
 import org.springframework.context.annotation.Bean;
@@ -21,9 +22,10 @@ import java.util.Map;
 /**
  * Kafka consumer configuration for notification-service.
  *
- * <p>Notification-service consumes from 7 topics — all event and booking lifecycle
- * events. Base infrastructure (error handler, DLT, default factory) is inherited
- * from {@link BaseKafkaConsumerConfig}; only the typed event factories are defined here.
+ * <p>Notification-service consumes from 8 topics — all event and booking lifecycle
+ * events, plus payment failure events. Base infrastructure (error handler, DLT,
+ * default factory) is inherited from {@link BaseKafkaConsumerConfig}; only the
+ * typed event factories are defined here.
  */
 @Configuration
 public class KafkaConsumerConfig extends BaseKafkaConsumerConfig {
@@ -131,5 +133,20 @@ public class KafkaConsumerConfig extends BaseKafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, BookingCancelledEvent> bookingCancelledListenerFactory(
             CommonErrorHandler errorHandler) {
         return buildFactory(bookingCancelledConsumerFactory(), errorHandler);
+    }
+
+    // ── PaymentFailedEvent (P3-07 compensation) ────────────────────────────────
+
+    @Bean
+    public ConsumerFactory<String, PaymentFailedEvent> paymentFailedConsumerFactory() {
+        Map<String, Object> config = baseConfig();
+        config.put(ProtobufDeserializer.PARSER_CONFIG_KEY, PaymentFailedEvent.parser());
+        return new DefaultKafkaConsumerFactory<>(config);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, PaymentFailedEvent> paymentFailedListenerFactory(
+            CommonErrorHandler errorHandler) {
+        return buildFactory(paymentFailedConsumerFactory(), errorHandler);
     }
 }
