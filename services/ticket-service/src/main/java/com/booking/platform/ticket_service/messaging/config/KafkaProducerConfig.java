@@ -1,12 +1,12 @@
-package com.booking.platform.notification_service.messaging.config;
+package com.booking.platform.ticket_service.messaging.config;
 
 import com.booking.platform.common.events.config.BaseKafkaProducerConfig;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Kafka producer configuration for notification-service.
+ * Kafka producer configuration for ticket-service.
  *
- * <p>Notification-service is primarily a consumer. The producer inherited from
+ * <p>Ticket-service is primarily a consumer. The producer inherited from
  * {@link BaseKafkaProducerConfig} is used exclusively for forwarding failed
  * messages to Dead Letter Topics via the
  * {@link org.springframework.kafka.listener.DeadLetterPublishingRecoverer}.
