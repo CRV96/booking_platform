@@ -1,4 +1,4 @@
-package com.booking.platform.notification_service.messaging.deserializer;
+package com.booking.platform.common.events.serialization;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.MessageLite;
@@ -11,8 +11,8 @@ import java.util.Map;
 /**
  * Kafka value deserializer for Protobuf messages.
  *
- * <p>The matching counterpart to {@code ProtobufSerializer} in event-service.
- * Converts raw bytes from Kafka back into a Protobuf {@link MessageLite} object.
+ * <p>The matching counterpart to {@link ProtobufSerializer}. Converts raw bytes
+ * from Kafka back into a Protobuf {@link MessageLite} object.
  *
  * <p>Because each Kafka topic carries a single message type, the concrete
  * {@link Parser} is provided by each {@link org.springframework.kafka.core.ConsumerFactory}

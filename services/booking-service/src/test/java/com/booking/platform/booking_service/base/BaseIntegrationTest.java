@@ -64,6 +64,9 @@ public abstract class BaseIntegrationTest {
         registry.add("grpc.server.security.enabled", () -> "false");
         // Disable JWT validation in tests
         registry.add("security.jwt.enabled", () -> "false");
+        // Kafka consumer settings (required by KafkaConsumerConfig)
+        registry.add("spring.kafka.consumer.group-id", () -> "booking-service-test-group");
+        registry.add("spring.kafka.consumer.auto-offset-reset", () -> "earliest");
     }
 
     // =========================================================================
