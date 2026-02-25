@@ -94,13 +94,10 @@ public class BookingNotificationConsumer {
                         EmailTemplatesConst.BookingConfirmation.Vars.EVENT_ID,      event.getEventId(),
                         EmailTemplatesConst.BookingConfirmation.Vars.TICKET_IDS,    event.getTicketIdsList(),
                         EmailTemplatesConst.BookingConfirmation.Vars.TIMESTAMP,     event.getTimestamp(),
-                        // seatCategory / quantity / price not in BookingConfirmedEvent payload.
-                        // They belong to BookingCreatedEvent. Stubbed until booking-service
-                        // denormalizes these fields into the confirmed event.
-                        EmailTemplatesConst.BookingConfirmation.Vars.SEAT_CATEGORY, "—",
-                        EmailTemplatesConst.BookingConfirmation.Vars.QUANTITY,      "—",
-                        EmailTemplatesConst.BookingConfirmation.Vars.TOTAL_PRICE,   "—",
-                        EmailTemplatesConst.BookingConfirmation.Vars.CURRENCY,      "—"
+                        EmailTemplatesConst.BookingConfirmation.Vars.SEAT_CATEGORY, event.getSeatCategory(),
+                        EmailTemplatesConst.BookingConfirmation.Vars.QUANTITY,      String.valueOf(event.getQuantity()),
+                        EmailTemplatesConst.BookingConfirmation.Vars.TOTAL_PRICE,   String.valueOf(event.getTotalPrice()),
+                        EmailTemplatesConst.BookingConfirmation.Vars.CURRENCY,      event.getCurrency()
                 )
         );
     }

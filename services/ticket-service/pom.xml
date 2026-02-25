@@ -22,6 +22,24 @@
             <artifactId>common-core</artifactId>
         </dependency>
 
+        <!-- Common Events — Protobuf messages + KafkaTopics constants -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-events</artifactId>
+        </dependency>
+
+        <!-- MongoDB -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
+
+        <!-- Kafka -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
         <!-- Service Discovery -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>

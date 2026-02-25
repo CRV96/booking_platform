@@ -33,6 +33,17 @@
         </dependency>
 
         <!--
+            Kafka client — provides the Serializer and Deserializer interfaces
+            used by ProtobufSerializer and ProtobufDeserializer in the
+            serialization sub-package. Every Kafka-enabled service already
+            depends on spring-kafka, so this adds no new transitive weight.
+        -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!--
             Required for the @Generated annotation in code produced by protoc.
             Scope is "provided" because it only needs to be on the compile classpath,
             not bundled into the jar.

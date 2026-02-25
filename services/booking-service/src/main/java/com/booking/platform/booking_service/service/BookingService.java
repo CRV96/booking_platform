@@ -28,6 +28,20 @@ public interface BookingService {
     BookingEntity cancelBooking(UUID bookingId, String userId, String reason);
 
     /**
+     * Confirms a PENDING booking after successful payment.
+     * Transitions status from PENDING → CONFIRMED and publishes a
+     * {@code BookingConfirmedEvent} to Kafka.
+     *
+     * <p>Called by {@link com.booking.platform.booking_service.messaging.consumer.PaymentEventConsumer}
+     * when a {@code PaymentCompletedEvent} is received from payment-service.</p>
+     *
+     * <p>Idempotent: if the booking is already CONFIRMED, returns it as-is.</p>
+     *
+     * @throws com.booking.platform.booking_service.exception.BookingNotFoundException if booking does not exist
+     */
+    BookingEntity confirmBooking(UUID bookingId);
+
+    /**
      * System-level expiration of a PENDING booking whose hold timer has elapsed.
      * Unlike {@link #cancelBooking}, this does not require a userId — it is called
      * by the scheduled expiration job, not by a user action.

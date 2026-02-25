@@ -6,6 +6,7 @@ import com.booking.platform.booking_service.exception.*;
 import com.booking.platform.booking_service.grpc.client.EventServiceClient;
 import com.booking.platform.booking_service.lock.DistributedLockService;
 import com.booking.platform.booking_service.lock.LockHandle;
+import com.booking.platform.booking_service.messaging.publisher.BookingEventPublisher;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.common.grpc.event.EventResponse;
 import com.booking.platform.common.grpc.event.SeatCategoryInfo;
@@ -41,6 +42,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final DistributedLockService lockService;
     private final EventServiceClient eventServiceClient;
+    private final BookingEventPublisher bookingEventPublisher;
 
     @Override
     public BookingEntity createBooking(String userId, String eventId,
@@ -124,7 +126,8 @@ public class BookingServiceImpl implements BookingService {
             log.info("Booking created: id='{}', event='{}', category='{}', qty={}, total={}",
                     saved.getId(), eventId, seatCategory, quantity, totalPrice);
 
-            // 8. (Future P3-05: publish BookingCreatedEvent to Kafka here)
+            // 8. Publish BookingCreatedEvent → triggers payment-service
+            bookingEventPublisher.publishBookingCreated(saved);
 
             return saved;
 
@@ -186,6 +189,39 @@ public class BookingServiceImpl implements BookingService {
         }
 
         log.info("Booking cancelled: id='{}', reason='{}'", bookingId, reason);
+
+        // Publish BookingCancelledEvent → triggers seat release + cancellation email
+        bookingEventPublisher.publishBookingCancelled(saved);
+
+        return saved;
+    }
+
+    @Override
+    @Transactional
+    public BookingEntity confirmBooking(UUID bookingId) {
+        BookingEntity booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId.toString()));
+
+        // Idempotent: already confirmed → return as-is
+        if (booking.getStatus() == BookingStatus.CONFIRMED) {
+            log.info("Booking '{}' is already CONFIRMED, returning as-is", bookingId);
+            return booking;
+        }
+
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new BookingAlreadyCancelledException(bookingId.toString());
+        }
+
+        booking.setStatus(BookingStatus.CONFIRMED);
+        BookingEntity saved = bookingRepository.save(booking);
+
+        log.info("Booking confirmed: id='{}', event='{}', category='{}', qty={}, total={}",
+                bookingId, booking.getEventId(), booking.getSeatCategory(),
+                booking.getQuantity(), booking.getTotalPrice());
+
+        // Publish BookingConfirmedEvent → triggers ticket generation + confirmation email
+        bookingEventPublisher.publishBookingConfirmed(saved);
+
         return saved;
     }
 
@@ -222,7 +258,8 @@ public class BookingServiceImpl implements BookingService {
         log.info("Booking expired: id='{}', event='{}', category='{}', qty={}",
                 bookingId, booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
 
-        // (Future P3-05: publish BookingCancelledEvent with reason HOLD_EXPIRED)
+        // Publish BookingCancelledEvent with reason HOLD_EXPIRED → triggers cancellation email
+        bookingEventPublisher.publishBookingCancelled(booking);
     }
 
     // ─── Private helpers ─────────────────────────────────────────────

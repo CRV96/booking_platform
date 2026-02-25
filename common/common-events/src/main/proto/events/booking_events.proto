@@ -39,8 +39,13 @@ message BookingConfirmedEvent {
   string booking_id          = 1;
   string event_id            = 2;
   string user_id             = 3;
-  repeated string ticket_ids = 4;  // IDs of the generated tickets
+  repeated string ticket_ids = 4;  // IDs of the generated tickets (empty at confirmation time)
   string timestamp           = 5;  // ISO 8601
+  string seat_category       = 6;  // denormalized from booking for downstream consumers
+  int32  quantity            = 7;
+  double total_price         = 8;
+  string currency            = 9;
+  string event_title         = 10;
 }
 
 // ── BookingCancelledEvent ────────────────────────────────────────────────────
