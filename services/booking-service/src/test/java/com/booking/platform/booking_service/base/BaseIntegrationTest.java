@@ -56,6 +56,8 @@ public abstract class BaseIntegrationTest {
         registry.add("spring.data.redis.host", REDIS::getHost);
         registry.add("spring.data.redis.port", () -> REDIS.getMappedPort(6379));
         registry.add("spring.kafka.bootstrap-servers", KAFKA::getBootstrapServers);
+        registry.add("spring.kafka.consumer.group-id", () -> "booking-service-test-group");
+        registry.add("spring.kafka.consumer.auto-offset-reset", () -> "earliest");
         // Disable Eureka registration in tests
         registry.add("eureka.client.enabled", () -> "false");
         // Disable gRPC server startup in tests (no port conflict)

@@ -179,14 +179,7 @@ public class BookingServiceImpl implements BookingService {
         BookingEntity saved = bookingRepository.save(booking);
 
         // Release seats back to event-service (best-effort)
-        try {
-            eventServiceClient.updateSeatAvailability(
-                    booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
-        } catch (Exception e) {
-            log.error("Failed to release seats for cancelled booking '{}': {}",
-                    bookingId, e.getMessage());
-            // Seats will be recovered by eventual consistency / reconciliation
-        }
+        releaseSeats(booking);
 
         log.info("Booking cancelled: id='{}', reason='{}'", bookingId, reason);
 
@@ -247,13 +240,7 @@ public class BookingServiceImpl implements BookingService {
         bookingRepository.save(booking);
 
         // Release seats back to event-service (best-effort)
-        try {
-            eventServiceClient.updateSeatAvailability(
-                    booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
-        } catch (Exception e) {
-            log.error("Failed to release seats for expired booking '{}': {}",
-                    bookingId, e.getMessage());
-        }
+        releaseSeats(booking);
 
         log.info("Booking expired: id='{}', event='{}', category='{}', qty={}",
                 bookingId, booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
@@ -262,7 +249,50 @@ public class BookingServiceImpl implements BookingService {
         bookingEventPublisher.publishBookingCancelled(booking);
     }
 
+    @Override
+    @Transactional
+    public void cancelBookingOnPaymentFailure(UUID bookingId, String reason) {
+        Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
+        if (optional.isEmpty()) {
+            log.debug("Booking '{}' no longer exists, skipping payment failure cancellation", bookingId);
+            return;
+        }
+
+        BookingEntity booking = optional.get();
+
+        // Idempotent: if not PENDING, skip (already cancelled or confirmed)
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            log.debug("Booking '{}' is no longer PENDING (status={}), skipping payment failure cancellation",
+                    bookingId, booking.getStatus());
+            return;
+        }
+
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationReason("PAYMENT_FAILED: " + reason);
+        bookingRepository.save(booking);
+
+        // Release seats back to event-service (best-effort)
+        releaseSeats(booking);
+
+        log.info("Booking cancelled due to payment failure: id='{}', reason='{}'",
+                bookingId, reason);
+
+        // Publish BookingCancelledEvent → triggers notification-service (cancellation email)
+        bookingEventPublisher.publishBookingCancelled(booking);
+    }
+
     // ─── Private helpers ─────────────────────────────────────────────
+
+    private void releaseSeats(BookingEntity booking) {
+        try {
+            eventServiceClient.updateSeatAvailability(
+                    booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
+        } catch (Exception e) {
+            log.error("Failed to release seats for booking '{}': {}",
+                    booking.getId(), e.getMessage());
+            // Seats will be recovered by eventual consistency / reconciliation
+        }
+    }
 
     private BookingServiceException mapGrpcException(String eventId, StatusRuntimeException e) {
         log.error("Event-service gRPC call failed: {}", e.getStatus(), e);

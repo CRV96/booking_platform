@@ -26,7 +26,7 @@ import java.util.Map;
  * <p>Design notes:
  * <ul>
  *   <li>Each {@code @KafkaListener} references its own {@code containerFactory} bean,
- *       which holds the correct {@link com.booking.platform.notification_service.messaging.deserializer.ProtobufDeserializer}
+ *       which holds the correct {@link com.booking.platform.common.events.serialization.ProtobufDeserializer}
  *       parser for that message type.</li>
  *   <li>{@link ConsumerRecord} gives access to topic, partition, offset, and key
  *       for structured logging and debugging.</li>
