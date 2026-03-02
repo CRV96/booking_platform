@@ -14,8 +14,12 @@
     <artifactId>payment-service</artifactId>
     <name>Payment Service</name>
     <description>Payment processing - Stripe integration, transactions, and refunds</description>
-
     <dependencies>
+        <dependency>
+            <groupId>com.stripe</groupId>
+            <artifactId>stripe-java</artifactId>
+            <version>31.4.0</version>
+        </dependency>
         <!-- Common modules: proto stubs + gRPC security infrastructure (JWT interceptor, ActuatorSecurityConfig) -->
         <dependency>
             <groupId>com.booking.platform</groupId>
