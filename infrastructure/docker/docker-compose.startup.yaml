@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
-      POSTGRES_MULTIPLE_DATABASES: userdb,bookingdb
+      POSTGRES_MULTIPLE_DATABASES: userdb,bookingdb,paymentdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
