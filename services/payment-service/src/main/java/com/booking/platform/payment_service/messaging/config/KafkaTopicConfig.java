@@ -30,11 +30,23 @@ public class KafkaTopicConfig {
                 .partitions(PARTITIONS).replicas(REPLICAS).build();
     }
 
+    @Bean
+    public NewTopic paymentRefundCompletedTopic() {
+        return TopicBuilder.name(KafkaTopics.PAYMENT_REFUND_COMPLETED)
+                .partitions(PARTITIONS).replicas(REPLICAS).build();
+    }
+
     // ── DLT topics (consumed booking topics) ─────────────────────────────────
 
     @Bean
     public NewTopic bookingCreatedDlt() {
         return TopicBuilder.name(KafkaTopics.BOOKING_CREATED + "-dlt")
+                .partitions(DLT_PARTITIONS).replicas(REPLICAS).build();
+    }
+
+    @Bean
+    public NewTopic bookingCancelledDlt() {
+        return TopicBuilder.name(KafkaTopics.BOOKING_CANCELLED + "-dlt")
                 .partitions(DLT_PARTITIONS).replicas(REPLICAS).build();
     }
 }

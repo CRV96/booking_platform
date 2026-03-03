@@ -1,6 +1,7 @@
 package com.booking.platform.payment_service.service.impl;
 
 import com.booking.platform.payment_service.dto.GatewayPaymentResponse;
+import com.booking.platform.payment_service.dto.GatewayRefundResponse;
 import com.booking.platform.payment_service.entity.OutboxEventEntity;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 import com.booking.platform.payment_service.entity.enums.PaymentStatus;
@@ -122,7 +123,77 @@ public class PaymentServiceImpl implements PaymentService {
         return payment;
     }
 
-    // ── Exception handling ────────────────────────────────────────────────────
+    // ── Refund flow (P4-05) ─────────────────────────────────────────────────
+
+    @Override
+    public void processRefund(String bookingId) {
+        // Step 1: Look up the payment
+        Optional<PaymentEntity> optional = paymentRepository.findByBookingId(bookingId);
+        if (optional.isEmpty()) {
+            log.warn("No payment found for bookingId='{}', cannot process refund", bookingId);
+            return;
+        }
+
+        PaymentEntity payment = optional.get();
+
+        // Step 2: Guard — only COMPLETED payments can be refunded
+        if (payment.getStatus() != PaymentStatus.COMPLETED) {
+            log.info("Payment id='{}' for bookingId='{}' is not COMPLETED (status={}), skipping refund",
+                    payment.getId(), bookingId, payment.getStatus());
+            return;
+        }
+
+        // Step 3: Mark REFUND_INITIATED (transactional)
+        payment = markRefundInitiated(payment.getId());
+        log.info("Payment REFUND_INITIATED: id='{}', bookingId='{}'", payment.getId(), bookingId);
+
+        // Step 4: Call gateway refund (outside transaction)
+        try {
+            GatewayRefundResponse refundResponse =
+                    paymentGateway.createRefund(payment.getExternalPaymentId(), payment.getAmount()).join();
+
+            if ("succeeded".equals(refundResponse.status())) {
+                payment = markRefunded(payment.getId(), refundResponse);
+                log.info("Payment REFUNDED: id='{}', bookingId='{}', refundId='{}'",
+                        payment.getId(), bookingId, refundResponse.refundId());
+            } else {
+                // TODO: Unexpected status — leave as REFUND_INITIATED for investigation
+                log.warn("Refund returned unexpected status '{}' for payment id='{}', leaving as REFUND_INITIATED",
+                        refundResponse.status(), payment.getId());
+            }
+
+        } catch (CompletionException e) {
+            handleRefundException(payment.getId(), bookingId, e.getCause());
+        } catch (PaymentGatewayUnavailableException e) {
+            // Leave as REFUND_INITIATED — can be retried later
+            log.warn("Refund PENDING (gateway unavailable): paymentId='{}', bookingId='{}', reason='{}'",
+                    payment.getId(), bookingId, e.getMessage());
+        } catch (PaymentGatewayException e) {
+            // Leave as REFUND_INITIATED — refunds must eventually succeed
+            log.error("Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
+                    payment.getId(), bookingId, e.getMessage());
+        }
+    }
+
+    // ── Refund exception handling ─────────────────────────────────────────────
+
+    private void handleRefundException(UUID paymentId, String bookingId, Throwable cause) {
+        if (cause instanceof PaymentGatewayUnavailableException) {
+            log.warn("Refund PENDING (gateway unavailable): paymentId='{}', bookingId='{}', reason='{}'",
+                    paymentId, bookingId, cause.getMessage());
+            return;
+        }
+        if (cause instanceof PaymentGatewayException) {
+            log.error("Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
+                    paymentId, bookingId, cause.getMessage());
+            return;
+        }
+        String reason = cause != null ? cause.getMessage() : "Unknown error";
+        log.error("Refund FAILED (unexpected): paymentId='{}', bookingId='{}', reason='{}'",
+                paymentId, bookingId, reason);
+    }
+
+    // ── Payment exception handling ────────────────────────────────────────────
 
     private PaymentEntity handleGatewayException(UUID paymentId, String bookingId, Throwable cause) {
         if (cause instanceof PaymentGatewayUnavailableException) {
@@ -208,6 +279,24 @@ public class PaymentServiceImpl implements PaymentService {
         return paymentRepository.save(payment);
     }
 
+    @Transactional
+    protected PaymentEntity markRefundInitiated(UUID paymentId) {
+        PaymentEntity payment = paymentRepository.findById(paymentId).orElseThrow();
+        payment.setStatus(PaymentStatus.REFUND_INITIATED);
+        return paymentRepository.save(payment);
+    }
+
+    @Transactional
+    protected PaymentEntity markRefunded(UUID paymentId, GatewayRefundResponse response) {
+        PaymentEntity payment = paymentRepository.findById(paymentId).orElseThrow();
+        payment.setStatus(PaymentStatus.REFUNDED);
+        payment = paymentRepository.save(payment);
+
+        // P4-04: Write outbox event in the same transaction as the status change.
+        saveOutboxEvent(payment, "RefundCompleted", buildRefundCompletedPayload(payment, response));
+        return payment;
+    }
+
     // ── Outbox helpers (P4-04) ──────────────────────────────────────────────────
 
     /**
@@ -225,6 +314,7 @@ public class PaymentServiceImpl implements PaymentService {
         log.debug("Outbox event saved: type='{}', aggregateId='{}'", eventType, payment.getId());
     }
 
+    //TODO: Refactoring this class, a lot of duplicates
     /** Builds JSON payload for PaymentCompleted (mirrors PaymentCompletedEvent proto fields). */
     private String buildCompletedPayload(PaymentEntity payment) {
         ObjectNode node = objectMapper.createObjectNode();
@@ -242,6 +332,18 @@ public class PaymentServiceImpl implements PaymentService {
         node.put("payment_id", payment.getId().toString());
         node.put("booking_id", payment.getBookingId());
         node.put("reason", payment.getFailureReason() != null ? payment.getFailureReason() : "Unknown");
+        node.put("timestamp", Instant.now().toString());
+        return node.toString();
+    }
+
+    /** Builds JSON payload for RefundCompleted (mirrors RefundCompletedEvent proto fields). */
+    private String buildRefundCompletedPayload(PaymentEntity payment, GatewayRefundResponse response) {
+        ObjectNode node = objectMapper.createObjectNode();
+        node.put("payment_id", payment.getId().toString());
+        node.put("booking_id", payment.getBookingId());
+        node.put("refund_id", response.refundId());
+        node.put("amount", payment.getAmount().doubleValue());
+        node.put("currency", payment.getCurrency());
         node.put("timestamp", Instant.now().toString());
         return node.toString();
     }

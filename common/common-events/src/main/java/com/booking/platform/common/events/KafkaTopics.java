@@ -23,8 +23,9 @@ package com.booking.platform.common.events;
  * booking-service  →  events.booking.confirmed    →  ticket, notification, analytics
  * booking-service  →  events.booking.cancelled    →  event (seat release), notification
  *
- * payment-service  →  events.payment.completed    →  booking
- * payment-service  →  events.payment.failed       →  booking, notification
+ * payment-service  →  events.payment.completed         →  booking
+ * payment-service  →  events.payment.failed            →  booking, notification
+ * payment-service  →  events.payment.refund-completed  →  booking
  * </pre>
  */
 public final class KafkaTopics {
@@ -65,4 +66,7 @@ public final class KafkaTopics {
 
     /** Published when a payment charge fails (card declined, timeout, etc.). */
     public static final String PAYMENT_FAILED    = "events.payment.failed";
+
+    /** Published when a refund completes successfully for a previously charged payment. */
+    public static final String PAYMENT_REFUND_COMPLETED = "events.payment.refund-completed";
 }

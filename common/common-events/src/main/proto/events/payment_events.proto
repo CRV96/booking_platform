@@ -37,3 +37,16 @@ message PaymentFailedEvent {
   string reason      = 3;
   string timestamp   = 4;  // ISO 8601
 }
+
+// ── RefundCompletedEvent ─────────────────────────────────────────────────────
+// Fired when a refund succeeds for a previously completed payment.
+// Triggers booking-service to transition the booking to REFUNDED.
+
+message RefundCompletedEvent {
+  string payment_id  = 1;
+  string booking_id  = 2;
+  string refund_id   = 3;  // gateway refund ID (e.g. Stripe Refund ID)
+  double amount      = 4;
+  string currency    = 5;
+  string timestamp   = 6;  // ISO 8601
+}

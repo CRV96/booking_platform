@@ -24,7 +24,7 @@ NC='\033[0m' # No Color
 export JAVA_HOME=$(/usr/libexec/java_home -v 21)
 
 # Services that have integration tests — extend this list as new test suites are added
-TESTABLE_SERVICES="services/user-service services/event-service"
+TESTABLE_SERVICES="services/user-service services/event-service services/payment-service"
 
 show_usage() {
     echo "Usage: ./build-service.sh <module-name> [options]"

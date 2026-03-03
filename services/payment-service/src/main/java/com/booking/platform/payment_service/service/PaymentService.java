@@ -30,4 +30,20 @@ public interface PaymentService {
      * @return the persisted payment entity
      */
     PaymentEntity processPayment(String bookingId, String userId, BigDecimal amount, String currency);
+
+    /**
+     * Processes a refund for a completed payment (P4-05).
+     *
+     * <p>Finds the payment by bookingId. If the payment is not in COMPLETED status,
+     * logs and returns (no refund needed). Otherwise:
+     * <ol>
+     *   <li>COMPLETED → REFUND_INITIATED (persisted in same transaction)</li>
+     *   <li>Calls gateway.createRefund() outside transaction</li>
+     *   <li>On success: REFUND_INITIATED → REFUNDED + outbox event "RefundCompleted"</li>
+     *   <li>On gateway unavailable: stays REFUND_INITIATED for manual retry</li>
+     * </ol>
+     *
+     * @param bookingId the booking whose payment should be refunded
+     */
+    void processRefund(String bookingId);
 }

@@ -4,6 +4,7 @@ import com.booking.platform.booking_service.service.BookingService;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentCompletedEvent;
 import com.booking.platform.common.events.PaymentFailedEvent;
+import com.booking.platform.common.events.RefundCompletedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -15,10 +16,11 @@ import java.util.UUID;
 /**
  * Kafka consumer for payment lifecycle events.
  *
- * <p>Handles both the happy path (P3-06) and compensation (P3-07):
+ * <p>Handles the full payment lifecycle:
  * <ul>
- *   <li>{@code PAYMENT_COMPLETED} → confirms the booking (PENDING → CONFIRMED)</li>
- *   <li>{@code PAYMENT_FAILED}    → cancels the booking, releases seats (PENDING → CANCELLED)</li>
+ *   <li>{@code PAYMENT_COMPLETED}        → confirms the booking (PENDING → CONFIRMED) (P3-06)</li>
+ *   <li>{@code PAYMENT_FAILED}           → cancels the booking, releases seats (PENDING → CANCELLED) (P3-07)</li>
+ *   <li>{@code PAYMENT_REFUND_COMPLETED} → marks booking as refunded (CANCELLED → REFUNDED) (P4-05)</li>
  * </ul>
  */
 @Slf4j
@@ -73,5 +75,29 @@ public class PaymentEventConsumer {
         bookingService.cancelBookingOnPaymentFailure(bookingId, event.getReason());
 
         log.info("Booking cancelled due to payment failure: bookingId='{}'", event.getBookingId());
+    }
+
+    /**
+     * Refund path (P4-05): refund completed → mark booking as REFUNDED.
+     */
+    @KafkaListener(
+            topics = KafkaTopics.PAYMENT_REFUND_COMPLETED,
+            containerFactory = "refundCompletedListenerFactory"
+    )
+    public void onRefundCompleted(ConsumerRecord<String, RefundCompletedEvent> record) {
+        RefundCompletedEvent event = record.value();
+        log.info("[REFUND_COMPLETED] paymentId='{}', bookingId='{}', refundId='{}', amount={} {} | partition={}, offset={}",
+                event.getPaymentId(),
+                event.getBookingId(),
+                event.getRefundId(),
+                event.getAmount(),
+                event.getCurrency(),
+                record.partition(),
+                record.offset());
+
+        UUID bookingId = UUID.fromString(event.getBookingId());
+        bookingService.markRefunded(bookingId);
+
+        log.info("Booking marked as REFUNDED: bookingId='{}'", event.getBookingId());
     }
 }

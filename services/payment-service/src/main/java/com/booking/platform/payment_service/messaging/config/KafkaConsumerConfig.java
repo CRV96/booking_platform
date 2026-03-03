@@ -1,5 +1,6 @@
 package com.booking.platform.payment_service.messaging.config;
 
+import com.booking.platform.common.events.BookingCancelledEvent;
 import com.booking.platform.common.events.BookingCreatedEvent;
 import com.booking.platform.common.events.config.BaseKafkaConsumerConfig;
 import com.booking.platform.common.events.serialization.ProtobufDeserializer;
@@ -15,13 +16,14 @@ import java.util.Map;
 /**
  * Kafka consumer configuration for payment-service.
  *
- * <p>Payment-service consumes from one topic:
+ * <p>Payment-service consumes from two topics:
  * <ul>
- *   <li>{@code events.booking.created} — triggers payment processing (stub: auto-success)</li>
+ *   <li>{@code events.booking.created}   — triggers payment processing</li>
+ *   <li>{@code events.booking.cancelled} — triggers refund processing (P4-05)</li>
  * </ul>
  *
  * <p>Base infrastructure (error handler, DLT, default factory) is inherited
- * from {@link BaseKafkaConsumerConfig}; only the typed event factory is defined here.
+ * from {@link BaseKafkaConsumerConfig}; only the typed event factories are defined here.
  */
 @Configuration
 public class KafkaConsumerConfig extends BaseKafkaConsumerConfig {
@@ -39,5 +41,20 @@ public class KafkaConsumerConfig extends BaseKafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, BookingCreatedEvent> bookingCreatedListenerFactory(
             CommonErrorHandler errorHandler) {
         return buildFactory(bookingCreatedConsumerFactory(), errorHandler);
+    }
+
+    // ── BookingCancelledEvent (P4-05 refund trigger) ─────────────────────────
+
+    @Bean
+    public ConsumerFactory<String, BookingCancelledEvent> bookingCancelledConsumerFactory() {
+        Map<String, Object> config = baseConfig();
+        config.put(ProtobufDeserializer.PARSER_CONFIG_KEY, BookingCancelledEvent.parser());
+        return new DefaultKafkaConsumerFactory<>(config);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, BookingCancelledEvent> bookingCancelledListenerFactory(
+            CommonErrorHandler errorHandler) {
+        return buildFactory(bookingCancelledConsumerFactory(), errorHandler);
     }
 }

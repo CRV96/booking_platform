@@ -3,6 +3,7 @@ package com.booking.platform.payment_service.messaging.publisher.impl;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentCompletedEvent;
 import com.booking.platform.common.events.PaymentFailedEvent;
+import com.booking.platform.common.events.RefundCompletedEvent;
 import com.booking.platform.payment_service.entity.OutboxEventEntity;
 import com.booking.platform.payment_service.repository.OutboxEventRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -125,6 +126,7 @@ public class OutboxPollingPublisher {
         return switch (eventType) {
             case "PaymentCompleted" -> KafkaTopics.PAYMENT_COMPLETED;
             case "PaymentFailed" -> KafkaTopics.PAYMENT_FAILED;
+            case "RefundCompleted" -> KafkaTopics.PAYMENT_REFUND_COMPLETED;
             default -> throw new IllegalArgumentException("Unknown outbox event type: " + eventType);
         };
     }
@@ -150,6 +152,15 @@ public class OutboxPollingPublisher {
                         .setPaymentId(json.get("payment_id").asText())
                         .setBookingId(json.get("booking_id").asText())
                         .setReason(json.get("reason").asText())
+                        .setTimestamp(json.get("timestamp").asText())
+                        .build();
+//TODO: refactor this strings, use constants instead, a lot of duplicates
+                case "RefundCompleted" -> RefundCompletedEvent.newBuilder()
+                        .setPaymentId(json.get("payment_id").asText())
+                        .setBookingId(json.get("booking_id").asText())
+                        .setRefundId(json.get("refund_id").asText())
+                        .setAmount(json.get("amount").asDouble())
+                        .setCurrency(json.get("currency").asText())
                         .setTimestamp(json.get("timestamp").asText())
                         .build();
 
