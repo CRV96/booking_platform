@@ -1,5 +1,6 @@
 package com.booking.platform.payment_service.entity;
 
+import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;

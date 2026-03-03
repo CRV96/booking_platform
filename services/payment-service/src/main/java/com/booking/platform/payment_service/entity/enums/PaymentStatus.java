@@ -1,4 +1,4 @@
-package com.booking.platform.payment_service.entity;
+package com.booking.platform.payment_service.entity.enums;
 
 /**
  * Status machine for a payment transaction.
