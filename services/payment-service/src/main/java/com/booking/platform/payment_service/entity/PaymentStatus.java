@@ -8,7 +8,10 @@ package com.booking.platform.payment_service.entity;
  *
  *   INITIATED        → PROCESSING        (charge request sent to payment gateway)
  *   PROCESSING       → COMPLETED         (payment gateway confirmed success)
- *   PROCESSING       → FAILED            (payment gateway declined or timed out)
+ *   PROCESSING       → FAILED            (payment gateway declined — business failure)
+ *   PROCESSING       → PENDING_RETRY     (gateway temporarily unavailable — circuit open / timeout)
+ *   PENDING_RETRY    → PROCESSING        (retry attempt by scheduler)
+ *   PENDING_RETRY    → FAILED            (max retries exhausted)
  *   COMPLETED        → REFUND_INITIATED  (refund requested — e.g. booking cancelled)
  *   REFUND_INITIATED → REFUNDED          (refund confirmed by payment gateway)
  * </pre>
@@ -23,10 +26,13 @@ public enum PaymentStatus {
     /** Charge request sent to payment gateway — awaiting confirmation. */
     PROCESSING,
 
+    /** Gateway temporarily unavailable (circuit open, timeout, bulkhead full). Will be retried. */
+    PENDING_RETRY,
+
     /** Payment gateway confirmed the charge — funds captured. */
     COMPLETED,
 
-    /** Payment gateway declined the charge or it timed out. */
+    /** Payment gateway declined the charge (business failure — card declined, invalid amount). */
     FAILED,
 
     /** Refund has been requested — waiting for gateway confirmation. */
