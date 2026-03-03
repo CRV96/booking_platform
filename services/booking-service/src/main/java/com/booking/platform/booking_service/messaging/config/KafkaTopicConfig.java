@@ -55,10 +55,15 @@ public class KafkaTopicConfig {
         return TopicBuilder.name(KafkaTopics.BOOKING_CANCELLED).partitions(3).replicas(1).build();
     }
 
-    // ── DLT for consumed payment topic ────────────────────────────────────────
+    // ── DLT for consumed payment topics ───────────────────────────────────────
 
     @Bean
     public NewTopic paymentCompletedDlt() {
         return TopicBuilder.name(KafkaTopics.PAYMENT_COMPLETED + "-dlt").partitions(1).replicas(1).build();
+    }
+
+    @Bean
+    public NewTopic paymentRefundCompletedDlt() {
+        return TopicBuilder.name(KafkaTopics.PAYMENT_REFUND_COMPLETED + "-dlt").partitions(1).replicas(1).build();
     }
 }

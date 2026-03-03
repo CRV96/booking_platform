@@ -60,4 +60,13 @@ public interface BookingService {
      * @param reason    the payment failure reason (e.g. "Card declined")
      */
     void cancelBookingOnPaymentFailure(UUID bookingId, String reason);
+
+    /**
+     * Marks a booking as REFUNDED after receiving a RefundCompletedEvent from payment-service (P4-05).
+     *
+     * <p>Transitions CANCELLED → REFUNDED. Idempotent: if already REFUNDED, returns silently.</p>
+     *
+     * @param bookingId the booking that was refunded
+     */
+    void markRefunded(UUID bookingId);
 }

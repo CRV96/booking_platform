@@ -281,6 +281,39 @@ public class BookingServiceImpl implements BookingService {
         bookingEventPublisher.publishBookingCancelled(booking);
     }
 
+    // ─── Refund completion (P4-05) ───────────────────────────────────
+
+    @Override
+    @Transactional
+    public void markRefunded(UUID bookingId) {
+        Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
+        if (optional.isEmpty()) {
+            log.debug("Booking '{}' no longer exists, skipping refund completion", bookingId);
+            return;
+        }
+
+        BookingEntity booking = optional.get();
+
+        // Idempotent: already refunded
+        if (booking.getStatus() == BookingStatus.REFUNDED) {
+            log.info("Booking '{}' is already REFUNDED, skipping", bookingId);
+            return;
+        }
+
+        // Guard: only CANCELLED bookings should receive a refund completion
+        if (booking.getStatus() != BookingStatus.CANCELLED) {
+            log.warn("Booking '{}' has unexpected status '{}' for refund completion, skipping",
+                    bookingId, booking.getStatus());
+            return;
+        }
+
+        booking.setStatus(BookingStatus.REFUNDED);
+        bookingRepository.save(booking);
+
+        log.info("Booking REFUNDED: id='{}', eventId='{}', category='{}', total={}",
+                bookingId, booking.getEventId(), booking.getSeatCategory(), booking.getTotalPrice());
+    }
+
     // ─── Private helpers ─────────────────────────────────────────────
 
     private void releaseSeats(BookingEntity booking) {
