@@ -1,5 +1,6 @@
 package com.booking.platform.payment_service.gateway.impl;
 
+import com.booking.platform.payment_service.constants.BkgConstants;
 import com.booking.platform.payment_service.dto.GatewayPaymentResponse;
 import com.booking.platform.payment_service.dto.GatewayRefundResponse;
 import com.booking.platform.payment_service.exception.PaymentGatewayException;
@@ -47,7 +48,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 @Component
-@ConditionalOnProperty(name = "payment.gateway.type", havingValue = "stripe")
+@ConditionalOnProperty(name = BkgConstants.BkgStripeConstants.PAYMENT_GATEWAY_TYPE, havingValue = BkgConstants.BkgStripeConstants.STRIPE)
 public class StripePaymentGateway implements PaymentGateway {
 
     @Value("${stripe.api-key}")
@@ -63,10 +64,10 @@ public class StripePaymentGateway implements PaymentGateway {
     // ── Gateway methods (decorated with Resilience4j) ────────────────────────
 
     @Override
-    @Retry(name = "stripe")
-    @CircuitBreaker(name = "stripe", fallbackMethod = "createPaymentIntentFallback")
-    @TimeLimiter(name = "stripe")
-    @Bulkhead(name = "stripe", type = Bulkhead.Type.SEMAPHORE)
+    @Retry(name = BkgConstants.BkgStripeConstants.STRIPE)
+    @CircuitBreaker(name = BkgConstants.BkgStripeConstants.STRIPE, fallbackMethod = "createPaymentIntentFallback")
+    @TimeLimiter(name = BkgConstants.BkgStripeConstants.STRIPE)
+    @Bulkhead(name = BkgConstants.BkgStripeConstants.STRIPE, type = Bulkhead.Type.SEMAPHORE)
     public CompletableFuture<GatewayPaymentResponse> createPaymentIntent(
             BigDecimal amount, String currency, String idempotencyKey) {
         return CompletableFuture.supplyAsync(() -> {
@@ -96,10 +97,10 @@ public class StripePaymentGateway implements PaymentGateway {
     }
 
     @Override
-    @Retry(name = "stripe")
-    @CircuitBreaker(name = "stripe", fallbackMethod = "confirmPaymentFallback")
-    @TimeLimiter(name = "stripe")
-    @Bulkhead(name = "stripe", type = Bulkhead.Type.SEMAPHORE)
+    @Retry(name = BkgConstants.BkgStripeConstants.STRIPE)
+    @CircuitBreaker(name = BkgConstants.BkgStripeConstants.STRIPE, fallbackMethod = "confirmPaymentFallback")
+    @TimeLimiter(name = BkgConstants.BkgStripeConstants.STRIPE)
+    @Bulkhead(name = BkgConstants.BkgStripeConstants.STRIPE, type = Bulkhead.Type.SEMAPHORE)
     public CompletableFuture<GatewayPaymentResponse> confirmPayment(String externalPaymentId) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -129,10 +130,10 @@ public class StripePaymentGateway implements PaymentGateway {
     }
 
     @Override
-    @Retry(name = "stripe")
-    @CircuitBreaker(name = "stripe", fallbackMethod = "createRefundFallback")
-    @TimeLimiter(name = "stripe")
-    @Bulkhead(name = "stripe", type = Bulkhead.Type.SEMAPHORE)
+    @Retry(name = BkgConstants.BkgStripeConstants.STRIPE)
+    @CircuitBreaker(name = BkgConstants.BkgStripeConstants.STRIPE, fallbackMethod = "createRefundFallback")
+    @TimeLimiter(name = BkgConstants.BkgStripeConstants.STRIPE)
+    @Bulkhead(name = BkgConstants.BkgStripeConstants.STRIPE, type = Bulkhead.Type.SEMAPHORE)
     public CompletableFuture<GatewayRefundResponse> createRefund(
             String externalPaymentId, BigDecimal amount) {
         return CompletableFuture.supplyAsync(() -> {
