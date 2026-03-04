@@ -1,6 +1,8 @@
 package com.booking.platform.analytics_service.service.impl;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
 import com.booking.platform.analytics_service.document.EventLog;
+import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,15 +39,16 @@ public abstract class BaseAnalyticsProcessor {
     /**
      * Saves a raw event to the immutable {@code events_log} collection.
      */
-    protected void saveRawEvent(String eventType, String topic, String key,
-                                Map<String, Object> payload) {
+    protected void saveRawEvent(String eventType, PaymentDto payment, Map<String, Object> payload) {
+
         EventLog eventLog = EventLog.builder()
                 .eventType(eventType)
-                .topic(topic)
-                .key(key)
+                .topic(payment.topic())
+                .key(payment.key())
                 .payload(payload)
                 .receivedAt(Instant.now())
                 .build();
+
         eventLogRepository.save(eventLog);
     }
 
@@ -94,5 +97,15 @@ public abstract class BaseAnalyticsProcessor {
         } else {
             log.debug("Skipping category_stats update — event_stats not yet available for eventId='{}'", eventId);
         }
+    }
+
+    protected Map<String, Object> getPayload(PaymentDto payment) {
+        return Map.of(
+                BkgAnalyticsConstants.PAYLOAD_PAYMENT_ID, payment.paymentId(),
+                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, payment.bookingId(),
+                BkgAnalyticsConstants.PAYLOAD_AMOUNT, payment.amount(),
+                BkgAnalyticsConstants.PAYLOAD_CURRENCY, payment.currency(),
+                BkgAnalyticsConstants.PAYLOAD_REASON, payment.reason(),
+                BkgAnalyticsConstants.PAYLOAD_REFUND_ID, payment.refundId());
     }
 }
