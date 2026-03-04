@@ -39,17 +39,25 @@ public abstract class BaseAnalyticsProcessor {
     /**
      * Saves a raw event to the immutable {@code events_log} collection.
      */
-    protected void saveRawEvent(String eventType, PaymentDto payment, Map<String, Object> payload) {
-
+    protected void saveRawEvent(String eventType, String topic, String key,
+                                Map<String, Object> payload) {
         EventLog eventLog = EventLog.builder()
                 .eventType(eventType)
-                .topic(payment.topic())
-                .key(payment.key())
+                .topic(topic)
+                .key(key)
                 .payload(payload)
                 .receivedAt(Instant.now())
                 .build();
 
         eventLogRepository.save(eventLog);
+    }
+
+    /**
+     * Convenience overload that extracts topic/key from a {@link PaymentDto}.
+     */
+    protected void saveRawEvent(String eventType, PaymentDto payment,
+                                Map<String, Object> payload) {
+        saveRawEvent(eventType, payment.topic(), payment.key(), payload);
     }
 
     /**
