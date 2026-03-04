@@ -228,8 +228,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         // Write outbox event in the same transaction as the status change.
         // The OutboxPollingPublisher will read this and publish to Kafka.
-        saveOutboxEvent(payment, BkgConstants.BkgOutboxConstants.PAYMENT_COMPLETED_EVENT_TYPE,
-                buildPayload(payment, null, BkgConstants.BkgOutboxConstants.PAYMENT_COMPLETED_EVENT_TYPE));
+        saveOutboxEvent(payment, BkgConstants.BkgOutboxConstants.PAYMENT_COMPLETED_EVENT,
+                buildPayload(payment, null, BkgConstants.BkgOutboxConstants.PAYMENT_COMPLETED_EVENT));
         return payment;
     }
 
@@ -242,8 +242,8 @@ public class PaymentServiceImpl implements PaymentService {
 
         // Write outbox event in the same transaction as the status change.
         // The OutboxPollingPublisher will read this and publish to Kafka.
-        saveOutboxEvent(payment, BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT_TYPE,
-                buildPayload(payment, null, BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT_TYPE));
+        saveOutboxEvent(payment, BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT,
+                buildPayload(payment, null, BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT));
         return payment;
     }
 
@@ -268,9 +268,9 @@ public class PaymentServiceImpl implements PaymentService {
         payment.setStatus(PaymentStatus.REFUNDED);
         payment = paymentRepository.save(payment);
 
-        saveOutboxEvent(payment, BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT_TYPE,
+        saveOutboxEvent(payment, BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT,
                 buildPayload(payment, response.refundId(),
-                BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT_TYPE));
+                BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT));
 
         return payment;
     }
@@ -294,11 +294,11 @@ public class PaymentServiceImpl implements PaymentService {
 
     private String buildPayload(PaymentEntity payment, String refundId, String eventType) {
         ObjectNode node = objectMapper.createObjectNode();
-        if (BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT_TYPE.equals(eventType)) {
+        if (BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT.equals(eventType)) {
             node.put(BkgConstants.BkgOutboxConstants.REFUND_ID, refundId);
         }
-        if (BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT_TYPE.equals(eventType)) {
-            node.put(BkgConstants.BkgOutboxConstants.REASON, payment.getFailureReason() != null ? payment.getFailureReason() : "Unknown");
+        if (BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT.equals(eventType)) {
+            node.put(BkgConstants.BkgOutboxConstants.REASON, payment.getFailureReason() != null ? payment.getFailureReason() : BkgConstants.BkgOutboxConstants.UNKNOWN);
         } else {
             node.put(BkgConstants.BkgOutboxConstants.AMOUNT, payment.getAmount().doubleValue());
             node.put(BkgConstants.BkgOutboxConstants.CURRENCY, payment.getCurrency());

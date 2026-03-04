@@ -3,6 +3,7 @@ package com.booking.platform.payment_service.messaging.publisher.impl;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentCompletedEvent;
 import com.booking.platform.common.events.PaymentFailedEvent;
+import com.booking.platform.payment_service.constants.BkgConstants;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 import com.booking.platform.payment_service.messaging.publisher.PaymentEventPublisher;
 import com.google.protobuf.MessageLite;
@@ -50,7 +51,7 @@ public class KafkaPaymentEventPublisher implements PaymentEventPublisher {
         PaymentFailedEvent message = PaymentFailedEvent.newBuilder()
                 .setPaymentId(payment.getId().toString())
                 .setBookingId(payment.getBookingId())
-                .setReason(payment.getFailureReason() != null ? payment.getFailureReason() : "Unknown")
+                .setReason(payment.getFailureReason() != null ? payment.getFailureReason() : BkgConstants.BkgOutboxConstants.UNKNOWN)
                 .setTimestamp(Instant.now().toString())
                 .build();
 

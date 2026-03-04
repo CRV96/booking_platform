@@ -38,6 +38,7 @@ public class KafkaTopicConfig {
 
     // ── DLT topics (consumed booking topics) ─────────────────────────────────
 
+    //TODO: Create a constant here
     @Bean
     public NewTopic bookingCreatedDlt() {
         return TopicBuilder.name(KafkaTopics.BOOKING_CREATED + "-dlt")
