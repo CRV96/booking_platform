@@ -4,6 +4,7 @@ import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentCompletedEvent;
 import com.booking.platform.common.events.PaymentFailedEvent;
 import com.booking.platform.common.events.RefundCompletedEvent;
+import com.booking.platform.payment_service.constants.BkgConstants.BkgOutboxConstants;
 import com.booking.platform.payment_service.entity.OutboxEventEntity;
 import com.booking.platform.payment_service.repository.OutboxEventRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -124,9 +125,9 @@ public class OutboxPollingPublisher {
      */
     private String resolveTopicFromEventType(String eventType) {
         return switch (eventType) {
-            case "PaymentCompleted" -> KafkaTopics.PAYMENT_COMPLETED;
-            case "PaymentFailed" -> KafkaTopics.PAYMENT_FAILED;
-            case "RefundCompleted" -> KafkaTopics.PAYMENT_REFUND_COMPLETED;
+            case BkgOutboxConstants.PAYMENT_COMPLETED_EVENT -> KafkaTopics.PAYMENT_COMPLETED;
+            case BkgOutboxConstants.PAYMENT_FAILED_EVENT -> KafkaTopics.PAYMENT_FAILED;
+            case BkgOutboxConstants.REFUND_COMPLETED_EVENT -> KafkaTopics.PAYMENT_REFUND_COMPLETED;
             default -> throw new IllegalArgumentException("Unknown outbox event type: " + eventType);
         };
     }
@@ -140,28 +141,28 @@ public class OutboxPollingPublisher {
             JsonNode json = objectMapper.readTree(event.getPayload());
 
             return switch (event.getEventType()) {
-                case "PaymentCompleted" -> PaymentCompletedEvent.newBuilder()
-                        .setPaymentId(json.get("payment_id").asText())
-                        .setBookingId(json.get("booking_id").asText())
-                        .setAmount(json.get("amount").asDouble())
-                        .setCurrency(json.get("currency").asText())
-                        .setTimestamp(json.get("timestamp").asText())
+                case BkgOutboxConstants.PAYMENT_COMPLETED_EVENT -> PaymentCompletedEvent.newBuilder()
+                        .setPaymentId(json.get(BkgOutboxConstants.PAYMENT_ID).asText())
+                        .setBookingId(json.get(BkgOutboxConstants.BOOKING_ID).asText())
+                        .setAmount(json.get(BkgOutboxConstants.AMOUNT).asDouble())
+                        .setCurrency(json.get(BkgOutboxConstants.CURRENCY).asText())
+                        .setTimestamp(json.get(BkgOutboxConstants.TIMESTAMP).asText())
                         .build();
 
-                case "PaymentFailed" -> PaymentFailedEvent.newBuilder()
-                        .setPaymentId(json.get("payment_id").asText())
-                        .setBookingId(json.get("booking_id").asText())
-                        .setReason(json.get("reason").asText())
-                        .setTimestamp(json.get("timestamp").asText())
+                case BkgOutboxConstants.PAYMENT_FAILED_EVENT -> PaymentFailedEvent.newBuilder()
+                        .setPaymentId(json.get(BkgOutboxConstants.PAYMENT_ID).asText())
+                        .setBookingId(json.get(BkgOutboxConstants.BOOKING_ID).asText())
+                        .setReason(json.get(BkgOutboxConstants.REASON).asText())
+                        .setTimestamp(json.get(BkgOutboxConstants.TIMESTAMP).asText())
                         .build();
-//TODO: refactor this strings, use constants instead, a lot of duplicates
-                case "RefundCompleted" -> RefundCompletedEvent.newBuilder()
-                        .setPaymentId(json.get("payment_id").asText())
-                        .setBookingId(json.get("booking_id").asText())
-                        .setRefundId(json.get("refund_id").asText())
-                        .setAmount(json.get("amount").asDouble())
-                        .setCurrency(json.get("currency").asText())
-                        .setTimestamp(json.get("timestamp").asText())
+
+                case BkgOutboxConstants.REFUND_COMPLETED_EVENT -> RefundCompletedEvent.newBuilder()
+                        .setPaymentId(json.get(BkgOutboxConstants.PAYMENT_ID).asText())
+                        .setBookingId(json.get(BkgOutboxConstants.BOOKING_ID).asText())
+                        .setRefundId(json.get(BkgOutboxConstants.REFUND_ID).asText())
+                        .setAmount(json.get(BkgOutboxConstants.AMOUNT).asDouble())
+                        .setCurrency(json.get(BkgOutboxConstants.CURRENCY).asText())
+                        .setTimestamp(json.get(BkgOutboxConstants.TIMESTAMP).asText())
                         .build();
 
                 default -> throw new IllegalArgumentException(
@@ -180,7 +181,7 @@ public class OutboxPollingPublisher {
     private String extractBookingIdFromPayload(OutboxEventEntity event) {
         try {
             JsonNode json = objectMapper.readTree(event.getPayload());
-            return json.get("booking_id").asText();
+            return json.get(BkgOutboxConstants.BOOKING_ID).asText();
         } catch (Exception e) {
             log.warn("Could not extract booking_id from outbox event id='{}', using aggregate_id",
                     event.getId());
