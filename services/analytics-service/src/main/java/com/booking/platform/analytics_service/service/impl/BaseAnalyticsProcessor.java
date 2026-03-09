@@ -88,6 +88,7 @@ public abstract class BaseAnalyticsProcessor {
     protected void upsertCategoryStats(String category, Update update) {
         Query query = Query.query(Criteria.where("category").is(category));
         update.setOnInsert("category", category);
+        //TODO: I need to do some refactoring, also I have already a constant called lastUpdated, need to rename it name because I don't think it's payload
         update.currentDate("lastUpdated");
         mongoTemplate.upsert(query, update, "category_stats");
     }
