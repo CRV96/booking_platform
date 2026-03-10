@@ -38,6 +38,8 @@ public final class BkgAnalyticsConstants {
     public final class BkgPaymentConstants {
         private BkgPaymentConstants() {}
 
+        public static final String KEY_PAYMENT_TRENDS= "'payment-trends:' + #days";
+
         public static final String PAYMENT_COMPLETED_FACTORY = "paymentCompletedListenerFactory";
         public static final String PAYMENT_COMPLETED_EVENT = "paymentCompletedEvent";
         public static final String PAYMENT_COMPLETED_TOPIC = "paymentsCompleted";
@@ -58,6 +60,10 @@ public final class BkgAnalyticsConstants {
 
     public final class BkgEventConstants {
         private BkgEventConstants() {}
+        public static final String KEY_TOP_REVENUE = "'top-revenue:' + #limit";
+        public static final String KEY_ALL_EVENTS = "'all-events'";
+        public static final String KEY_EVENTS_ANALYTICS = "'event:' + #eventId";
+        public static final String KEY_EVENTS_LIFECYCLE_DAYS= "'event-lifecycle:' + #days";
 
         public static final String EVENT_CREATED_FACTORY = "eventCreatedListenerFactory";
         public static final String EVENT_CREATED_EVENT = "EventCreatedEvent";
@@ -85,6 +91,11 @@ public final class BkgAnalyticsConstants {
     public final class BkgBookingConstants {
         private BkgBookingConstants() {}
 
+        public static final String KEY_BOOKING_TRENDS = "'booking-trends:' + #days";
+        public static final String KEY_REVENUE_BY_CATEGORY = "'revenue-by-category'";
+        public static final String KEY_CANCELLATION_RATE = "'cancellation-rate'";
+        public static final String KEY_AVG_BOOKING_VALUE= "'avg-booking-value'";
+
         public static final String BOOKING_CREATED_FACTORY = "bookingCreatedListenerFactory";
         public static final String BOOKING_CREATED_EVENT = "BookingCreatedEvent";
         public static final String BOOKINGS_CREATED = "bookingsCreated";
@@ -101,9 +112,17 @@ public final class BkgAnalyticsConstants {
         public static final String CONFIRMED_BOOKINGS = "confirmedBookings";
         public static final String CANCELLED_BOOKINGS = "cancelledBookings";
         public static final String TOTAL_REVENUE = "totalRevenue";
-
+        public static final String AVERAGE_REVENUE = "averageRevenue";
+        public static final String CANCELLATION_RATE = "cancellationRate";
         public static final String PAYLOAD_TOTAL_PRICE = "totalPrice";
         public static final String PAYLOAD_SEAT_CATEGORY = "seatCategory";
+
+        public static final String TOTAL_BOOKINGS_CREATED = "totalBookingsCreated";
+        public static final String TOTAL_BOOKINGS_CONFIRMED = "totalConfirmedBookings";
+        public static final String TOTAL_BOOKINGS_CANCELLED = "totalBookingsCancelled";
+
+        public static final String TOTAL_BOOKINGS_CANCELLATION_RATE_CONDITION = "cond(" + TOTAL_BOOKINGS_CREATED + " == 0, 0, " + TOTAL_BOOKINGS_CANCELLED + " / " + TOTAL_BOOKINGS_CREATED + ")";
+        public static final String TOTAL_BOOKINGS_AVERAGE_VALUE_CONDITION = "cond(" + TOTAL_BOOKINGS_CONFIRMED + " == 0, 0, " + TOTAL_REVENUE + " / " + TOTAL_BOOKINGS_CONFIRMED + ")";
     }
 
     public final class BkgControllerConstants {
