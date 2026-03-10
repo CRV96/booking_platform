@@ -16,13 +16,13 @@ public class AnalyticsController {
 
     @GetMapping("/top-revenue")
     public List<TopRevenueEvent> getTopEventsByRevenue(
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(name = "limit", defaultValue = "10") int limit) {
         return analyticsQueryService.getTopEventsByRevenue(limit);
     }
 
     @GetMapping("/booking-trends")
     public List<BookingTrend> getBookingTrends(
-            @RequestParam(defaultValue = "30") int days) {
+            @RequestParam(name = "days", defaultValue = "30") int days) {
         return analyticsQueryService.getBookingTrends(days);
     }
 

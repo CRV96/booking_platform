@@ -39,7 +39,7 @@ public final class BkgAnalyticsConstants {
         public static final String PAYMENT_FAILED_EVENT = "paymentFailedEvent";
         public static final String PAYMENT_FAILED_TOPIC = "paymentFailed";
 
-        public static final String PAYMENT_REFUND_FACTORY = "paymentRefundListenerFactory";
+        public static final String PAYMENT_REFUND_FACTORY = "refundCompletedListenerFactory";
         public static final String PAYMENT_REFUND_EVENT = "paymentRefundEvent";
         public static final String PAYMENT_REFUND_COMPLETED = "refundsCompleted";
         public static final String PAYMENT_REFUND_TOTAL_REFUNDS = "totalRefunds";

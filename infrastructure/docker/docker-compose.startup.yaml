@@ -211,6 +211,9 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: admin
       GF_SECURITY_ADMIN_EMAIL: admin@booking-platform.com
+      GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       # Auto-provisions Prometheus, Loki and Zipkin datasources on first start
       - ../grafana/provisioning:/etc/grafana/provisioning
