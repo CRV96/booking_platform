@@ -65,8 +65,9 @@ public abstract class BaseAnalyticsProcessor {
      * Creates the document if it doesn't exist, otherwise applies the update.
      */
     protected void upsertEventStats(String eventId, Update update) {
-        Query query = Query.query(Criteria.where("eventId").is(eventId));
-        mongoTemplate.upsert(query, update, "event_stats");
+        Query query = Query.query(Criteria.where(BkgAnalyticsConstants.EVENT_ID).is(eventId));
+
+        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.BkgDocumentConstants.EVENT_STATS_COLLECTION);
     }
 
     /**
@@ -75,10 +76,13 @@ public abstract class BaseAnalyticsProcessor {
      */
     protected void upsertDailyMetrics(Update update) {
         String today = LocalDate.now(ZoneOffset.UTC).toString();
-        Query query = Query.query(Criteria.where("date").is(today));
-        update.setOnInsert("date", today);
-        update.currentDate("lastUpdated");
-        mongoTemplate.upsert(query, update, "daily_metrics");
+
+        Query query = Query.query(Criteria.where(BkgAnalyticsConstants.DATE).is(today));
+
+        update.setOnInsert(BkgAnalyticsConstants.DATE, today);
+        update.currentDate(BkgAnalyticsConstants.LAST_UPDATED);
+
+        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.BkgDocumentConstants.DAILY_METRICS_COLLECTION);
     }
 
     /**
@@ -86,11 +90,12 @@ public abstract class BaseAnalyticsProcessor {
      * Creates the document if it doesn't exist, otherwise increments counters.
      */
     protected void upsertCategoryStats(String category, Update update) {
-        Query query = Query.query(Criteria.where("category").is(category));
-        update.setOnInsert("category", category);
-        //TODO: I need to do some refactoring, also I have already a constant called lastUpdated, need to rename it name because I don't think it's payload
-        update.currentDate("lastUpdated");
-        mongoTemplate.upsert(query, update, "category_stats");
+        Query query = Query.query(Criteria.where(BkgAnalyticsConstants.CATEGORY).is(category));
+
+        update.setOnInsert(BkgAnalyticsConstants.CATEGORY, category);
+        update.currentDate(BkgAnalyticsConstants.LAST_UPDATED);
+
+        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.BkgDocumentConstants.CATEGORY_STATS_COLLECTION);
     }
 
     /**
@@ -99,10 +104,11 @@ public abstract class BaseAnalyticsProcessor {
      * yet (race condition), the update is silently skipped.
      */
     protected void incrementCategoryStatsByEventId(String eventId, Update update) {
-        Query eventQuery = Query.query(Criteria.where("eventId").is(eventId));
-        var eventStats = mongoTemplate.findOne(eventQuery, org.bson.Document.class, "event_stats");
-        if (eventStats != null && eventStats.getString("category") != null) {
-            upsertCategoryStats(eventStats.getString("category"), update);
+        Query eventQuery = Query.query(Criteria.where(BkgAnalyticsConstants.EVENT_ID).is(eventId));
+        var eventStats = mongoTemplate.findOne(eventQuery, org.bson.Document.class, BkgAnalyticsConstants.BkgDocumentConstants.EVENT_STATS_COLLECTION);
+
+        if (eventStats != null && eventStats.getString(BkgAnalyticsConstants.CATEGORY) != null) {
+            upsertCategoryStats(eventStats.getString(BkgAnalyticsConstants.CATEGORY), update);
         } else {
             log.debug("Skipping category_stats update — event_stats not yet available for eventId='{}'", eventId);
         }

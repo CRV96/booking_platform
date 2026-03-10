@@ -45,7 +45,7 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         upsertEventStats(booking.eventId(), new Update()
                 .inc(BkgBookingConstants.TOTAL_BOOKINGS, 1)
                 .setOnInsert(BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency())
-                .currentDate(BkgAnalyticsConstants.PAYLOAD_LAST_UPDATED));
+                .currentDate(BkgAnalyticsConstants.LAST_UPDATED));
 
         // daily_metrics: increment bookingsCreated
         upsertDailyMetrics(new Update().inc(BkgBookingConstants.BOOKINGS_CREATED, 1));
@@ -74,7 +74,7 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
                 .inc(BkgBookingConstants.TOTAL_REVENUE, booking.totalPrice())
                 .set(BkgAnalyticsConstants.PAYLOAD_EVENT_TITLE, booking.eventTitle())
                 .setOnInsert(BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency())
-                .currentDate(BkgAnalyticsConstants.PAYLOAD_LAST_UPDATED));
+                .currentDate(BkgAnalyticsConstants.LAST_UPDATED));
 
         // daily_metrics: increment bookingsConfirmed + totalRevenue
         upsertDailyMetrics(new Update()
@@ -98,7 +98,7 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         // event_stats: increment cancelledBookings
         upsertEventStats(booking.eventId(), new Update()
                 .inc(BkgBookingConstants.CANCELLED_BOOKINGS, 1)
-                .currentDate(BkgAnalyticsConstants.PAYLOAD_LAST_UPDATED));
+                .currentDate(BkgAnalyticsConstants.LAST_UPDATED));
 
         // daily_metrics: increment bookingsCancelled
         upsertDailyMetrics(new Update().inc(BkgBookingConstants.BOOKINGS_CANCELLED, 1));

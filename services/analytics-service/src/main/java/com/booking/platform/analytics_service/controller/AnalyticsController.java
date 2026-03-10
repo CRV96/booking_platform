@@ -62,4 +62,44 @@ public class AnalyticsController {
 
         return averageBookingValue;
     }
+
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.ALL_EVENTS_PATH)
+    public List<EventStatsDetail> getAllEventStats() {
+        final List<EventStatsDetail> eventStatsList = analyticsQueryService.getAllEventStats();
+        log.debug("Returning all event stats ({} events)", eventStatsList.size());
+
+        return eventStatsList;
+    }
+
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.EVENT_ANALYTICS_PATH)
+    public EventStatsDetail getEventAnalytics(
+            @PathVariable(BkgAnalyticsConstants.BkgControllerConstants.PARAM_EVENT_ID) String eventId)
+    {
+        final EventStatsDetail eventStats = analyticsQueryService.getEventAnalytics(eventId);
+        log.debug("Returning event analytics for {}: {}", eventId, eventStats);
+
+        return eventStats;
+    }
+
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.PAYMENT_TRENDS_PATH)
+    public List<PaymentTrend> getPaymentTrends(
+            @RequestParam(name = BkgAnalyticsConstants.BkgControllerConstants.PARAM_DAYS,
+                    defaultValue = BkgAnalyticsConstants.BkgControllerConstants.DEFAULT_DAYS) int days)
+    {
+        final List<PaymentTrend> paymentTrendList = analyticsQueryService.getPaymentTrends(days);
+        log.debug("Returning payment trends for the past {} days: {}", days, paymentTrendList);
+
+        return paymentTrendList;
+    }
+
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.EVENT_LIFECYCLE_PATH)
+    public List<EventLifecycleTrend> getEventLifecycleTrends(
+            @RequestParam(name = BkgAnalyticsConstants.BkgControllerConstants.PARAM_DAYS,
+                    defaultValue = BkgAnalyticsConstants.BkgControllerConstants.DEFAULT_DAYS) int days)
+    {
+        final List<EventLifecycleTrend> lifecycleTrendList = analyticsQueryService.getEventLifecycleTrends(days);
+        log.debug("Returning event lifecycle trends for the past {} days: {}", days, lifecycleTrendList);
+
+        return lifecycleTrendList;
+    }
 }

@@ -20,4 +20,12 @@ public interface AnalyticsQueryService {
     CancellationRate getCancellationRate();
 
     AverageBookingValue getAverageBookingValue();
+
+    List<EventStatsDetail> getAllEventStats();
+
+    EventStatsDetail getEventAnalytics(String eventId);
+
+    List<PaymentTrend> getPaymentTrends(int days);
+
+    List<EventLifecycleTrend> getEventLifecycleTrends(int days);
 }

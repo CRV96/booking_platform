@@ -45,7 +45,7 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
                 .setOnInsert(BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId())
                 .setOnInsert(BkgAnalyticsConstants.PAYLOAD_EVENT_TITLE, event.title())
                 .setOnInsert(BkgEventConstants.PAYLOAD_CATEGORY, event.category())
-                .currentDate("lastUpdated"));
+                .currentDate(BkgAnalyticsConstants.LAST_UPDATED));
 
         // daily_metrics: increment eventsCreated
         upsertDailyMetrics(new Update().inc(BkgEventConstants.EVENTS_CREATED, 1));

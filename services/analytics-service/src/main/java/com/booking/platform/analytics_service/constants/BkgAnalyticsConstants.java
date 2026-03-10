@@ -26,7 +26,14 @@ public final class BkgAnalyticsConstants {
     public static final String PAYLOAD_PAYMENT_ID = "paymentId";
     public static final String PAYLOAD_AMOUNT = "amount";
     public static final String PAYLOAD_REFUND_ID = "refundId";
-    public static final String PAYLOAD_LAST_UPDATED = "lastUpdated";
+
+    // Document field names (shared across collections)
+    public static final String LAST_UPDATED = "lastUpdated";
+    public static final String CATEGORY = "category";
+    public static final String EVENT_ID = "eventId";
+    public static final String EVENT_TITLE = "eventTitle";
+    public static final String CURRENCY = "currency";
+    public static final String DATE = "date";
 
     public final class BkgPaymentConstants {
         private BkgPaymentConstants() {}
@@ -43,6 +50,10 @@ public final class BkgAnalyticsConstants {
         public static final String PAYMENT_REFUND_EVENT = "paymentRefundEvent";
         public static final String PAYMENT_REFUND_COMPLETED = "refundsCompleted";
         public static final String PAYMENT_REFUND_TOTAL_REFUNDS = "totalRefunds";
+
+        // daily_metrics document field names
+        public static final String PAYMENTS_COMPLETED = "paymentsCompleted";
+        public static final String PAYMENTS_FAILED = "paymentsFailed";
     }
 
     public final class BkgEventConstants {
@@ -110,6 +121,13 @@ public final class BkgAnalyticsConstants {
 
         public static final String PARAM_DAYS = "days";
         public static final String DEFAULT_DAYS = "30";
+
+        public static final String ALL_EVENTS_PATH = "/events";
+        public static final String EVENT_ANALYTICS_PATH = "/event/{eventId}";
+        public static final String PAYMENT_TRENDS_PATH = "/payment-trends";
+        public static final String EVENT_LIFECYCLE_PATH = "/event-lifecycle";
+
+        public static final String PARAM_EVENT_ID = "eventId";
     }
 
     public final class BkgDocumentConstants {
