@@ -77,7 +77,7 @@ public class PaymentLifecycleConsumer {
     public void onRefundCompleted(ConsumerRecord<String, RefundCompletedEvent> record) {
         RefundCompletedEvent event = record.value();
 
-        log.info("[REFUND_COMPLETED] paymentId='{}', bookingId='{}', refundId='{}', amount={} {} | partition={}, offset={}",
+        log.debug("[REFUND_COMPLETED] paymentId='{}', bookingId='{}', refundId='{}', amount={} {} | partition={}, offset={}",
                 event.getPaymentId(), event.getBookingId(), event.getRefundId(),
                 event.getAmount(), event.getCurrency(),
                 record.partition(), record.offset());

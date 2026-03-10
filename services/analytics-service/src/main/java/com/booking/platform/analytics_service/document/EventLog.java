@@ -1,5 +1,6 @@
 package com.booking.platform.analytics_service.document;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,7 +22,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document("events_log")
+@Document(BkgAnalyticsConstants.BkgDocumentConstants.EVENT_LOG_COLLECTION)
 public class EventLog {
 
     @Id

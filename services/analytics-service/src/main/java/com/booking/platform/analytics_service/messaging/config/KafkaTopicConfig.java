@@ -33,55 +33,55 @@ public class KafkaTopicConfig {
 
     @Bean
     public NewTopic eventCreatedDlt() {
-        return TopicBuilder.name(KafkaTopics.EVENT_CREATED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.EVENT_CREATED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     @Bean
     public NewTopic eventUpdatedDlt() {
-        return TopicBuilder.name(KafkaTopics.EVENT_UPDATED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.EVENT_UPDATED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     @Bean
     public NewTopic eventPublishedDlt() {
-        return TopicBuilder.name(KafkaTopics.EVENT_PUBLISHED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.EVENT_PUBLISHED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     @Bean
     public NewTopic eventCancelledDlt() {
-        return TopicBuilder.name(KafkaTopics.EVENT_CANCELLED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.EVENT_CANCELLED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     // ── Booking domain DLTs ──────────────────────────────────────────────────
 
     @Bean
     public NewTopic bookingCreatedDlt() {
-        return TopicBuilder.name(KafkaTopics.BOOKING_CREATED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.BOOKING_CREATED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     @Bean
     public NewTopic bookingConfirmedDlt() {
-        return TopicBuilder.name(KafkaTopics.BOOKING_CONFIRMED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.BOOKING_CONFIRMED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     @Bean
     public NewTopic bookingCancelledDlt() {
-        return TopicBuilder.name(KafkaTopics.BOOKING_CANCELLED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.BOOKING_CANCELLED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     // ── Payment domain DLTs ──────────────────────────────────────────────────
 
     @Bean
     public NewTopic paymentCompletedDlt() {
-        return TopicBuilder.name(KafkaTopics.PAYMENT_COMPLETED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.PAYMENT_COMPLETED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     @Bean
     public NewTopic paymentFailedDlt() {
-        return TopicBuilder.name(KafkaTopics.PAYMENT_FAILED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.PAYMENT_FAILED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 
     @Bean
     public NewTopic paymentRefundCompletedDlt() {
-        return TopicBuilder.name(KafkaTopics.PAYMENT_REFUND_COMPLETED + "-dlt").partitions(1).replicas(1).build();
+        return TopicBuilder.name(KafkaTopics.PAYMENT_REFUND_COMPLETED + KafkaTopics.DLT_SUFFIX).partitions(1).replicas(1).build();
     }
 }

@@ -94,4 +94,30 @@ public final class BkgAnalyticsConstants {
         public static final String PAYLOAD_TOTAL_PRICE = "totalPrice";
         public static final String PAYLOAD_SEAT_CATEGORY = "seatCategory";
     }
+
+    public final class BkgControllerConstants {
+        private BkgControllerConstants() {}
+
+        public static final String ANALYTICS_BASE_PATH = "/api/analytics";
+        public static final String TOP_REVENUE_PATH = "/top-revenue";
+        public static final String BOOKING_TRENDS_PATH = "/booking-trends";
+        public static final String REVENUE_BY_CATEGORY_PATH = "/revenue-by-category";
+        public static final String CANCELLATION_RATE_PATH = "/cancellation-rate";
+        public static final String AVG_BOOKING_VALUE_PATH = "/avg-booking-value";
+
+        public static final String PARAM_LIMIT = "limit";
+        public static final String DEFAULT_LIMIT = "10";
+
+        public static final String PARAM_DAYS = "days";
+        public static final String DEFAULT_DAYS = "30";
+    }
+
+    public final class BkgDocumentConstants {
+        private BkgDocumentConstants() {}
+
+        public static final String DAILY_METRICS_COLLECTION = "daily_metrics";
+        public static final String CATEGORY_STATS_COLLECTION = "category_stats";
+        public static final String EVENT_LOG_COLLECTION = "event_log";
+        public static final String EVENT_STATS_COLLECTION = "event_stats";
+    }
 }

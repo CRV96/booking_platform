@@ -1,43 +1,65 @@
 package com.booking.platform.analytics_service.controller;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
 import com.booking.platform.analytics_service.dto.response.*;
 import com.booking.platform.analytics_service.service.AnalyticsQueryService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/analytics")
+@RequestMapping(BkgAnalyticsConstants.BkgControllerConstants.ANALYTICS_BASE_PATH)
 @RequiredArgsConstructor
+@Log4j2
 public class AnalyticsController {
 
     private final AnalyticsQueryService analyticsQueryService;
 
-    @GetMapping("/top-revenue")
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.TOP_REVENUE_PATH)
     public List<TopRevenueEvent> getTopEventsByRevenue(
-            @RequestParam(name = "limit", defaultValue = "10") int limit) {
-        return analyticsQueryService.getTopEventsByRevenue(limit);
+            @RequestParam(name = BkgAnalyticsConstants.BkgControllerConstants.PARAM_LIMIT,
+                    defaultValue = BkgAnalyticsConstants.BkgControllerConstants.DEFAULT_LIMIT) int limit)
+    {
+            final List<TopRevenueEvent> topRevenueEventList = analyticsQueryService.getTopEventsByRevenue(limit);
+            log.debug("Returning top {} events by revenue: {}", limit, topRevenueEventList);
+
+            return topRevenueEventList;
     }
 
-    @GetMapping("/booking-trends")
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.BOOKING_TRENDS_PATH)
     public List<BookingTrend> getBookingTrends(
-            @RequestParam(name = "days", defaultValue = "30") int days) {
-        return analyticsQueryService.getBookingTrends(days);
+            @RequestParam(name = BkgAnalyticsConstants.BkgControllerConstants.PARAM_DAYS,
+                    defaultValue = BkgAnalyticsConstants.BkgControllerConstants.DEFAULT_DAYS) int days)
+    {
+        final List<BookingTrend> bookingTrendList = analyticsQueryService.getBookingTrends(days);
+        log.debug("Returning booking trends for the past {} days: {}", days, bookingTrendList);
+
+        return bookingTrendList;
     }
 
-    @GetMapping("/revenue-by-category")
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.REVENUE_BY_CATEGORY_PATH)
     public List<CategoryRevenue> getRevenueByCategory() {
-        return analyticsQueryService.getRevenueByCategory();
+        final List<CategoryRevenue> categoryRevenueList = analyticsQueryService.getRevenueByCategory();
+        log.debug("Returning revenue by category: {}", categoryRevenueList);
+
+        return categoryRevenueList;
     }
 
-    @GetMapping("/cancellation-rate")
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.CANCELLATION_RATE_PATH)
     public CancellationRate getCancellationRate() {
-        return analyticsQueryService.getCancellationRate();
+        final CancellationRate cancellationRate = analyticsQueryService.getCancellationRate();
+        log.debug("Returning cancellation rate: {}", cancellationRate);
+
+        return cancellationRate;
     }
 
-    @GetMapping("/avg-booking-value")
+    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.AVG_BOOKING_VALUE_PATH)
     public AverageBookingValue getAverageBookingValue() {
-        return analyticsQueryService.getAverageBookingValue();
+        final AverageBookingValue averageBookingValue = analyticsQueryService.getAverageBookingValue();
+        log.debug("Returning average booking value: {}", averageBookingValue);
+
+        return averageBookingValue;
     }
 }
