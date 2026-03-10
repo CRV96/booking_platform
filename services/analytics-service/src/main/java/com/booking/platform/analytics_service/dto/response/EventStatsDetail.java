@@ -5,13 +5,16 @@ import lombok.Builder;
 import java.io.Serializable;
 
 @Builder
-public record TopRevenueEvent
+public record EventStatsDetail
         (
                 String eventId,
                 String eventTitle,
                 String category,
-                double totalRevenue,
+                int totalBookings,
                 int confirmedBookings,
+                int cancelledBookings,
+                double totalRevenue,
+                double totalRefunds,
                 String currency
         )
         implements Serializable {}

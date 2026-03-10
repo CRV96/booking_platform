@@ -1,5 +1,6 @@
 package com.booking.platform.analytics_service.document;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,7 +22,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document("category_stats")
+@Document(BkgAnalyticsConstants.BkgDocumentConstants.CATEGORY_STATS_COLLECTION)
 public class CategoryStats {
 
     @Id

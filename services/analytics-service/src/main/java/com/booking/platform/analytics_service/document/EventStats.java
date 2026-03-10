@@ -1,5 +1,6 @@
 package com.booking.platform.analytics_service.document;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -20,7 +21,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document("event_stats")
+@Document(BkgAnalyticsConstants.BkgDocumentConstants.EVENT_STATS_COLLECTION)
 public class EventStats {
 
     @Id

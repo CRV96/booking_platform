@@ -32,7 +32,7 @@ public class BookingLifecycleConsumer {
     public void onBookingCreated(ConsumerRecord<String, BookingCreatedEvent> record) {
         BookingCreatedEvent event = record.value();
 
-        log.info("[BOOKING_CREATED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
+        log.debug("[BOOKING_CREATED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(),
                 event.getTotalPrice(), event.getCurrency(),
                 record.partition(), record.offset());
@@ -55,7 +55,7 @@ public class BookingLifecycleConsumer {
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
 
-        log.info("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
+        log.debug("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(),
                 event.getTotalPrice(), event.getCurrency(),
                 record.partition(), record.offset());
@@ -80,7 +80,7 @@ public class BookingLifecycleConsumer {
     public void onBookingCancelled(ConsumerRecord<String, BookingCancelledEvent> record) {
         BookingCancelledEvent event = record.value();
 
-        log.info("[BOOKING_CANCELLED] bookingId='{}', eventId='{}', reason='{}' | partition={}, offset={}",
+        log.debug("[BOOKING_CANCELLED] bookingId='{}', eventId='{}', reason='{}' | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(), event.getReason(),
                 record.partition(), record.offset());
 

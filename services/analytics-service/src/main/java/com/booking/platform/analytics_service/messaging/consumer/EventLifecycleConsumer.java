@@ -32,7 +32,7 @@ public class EventLifecycleConsumer {
     public void onEventCreated(ConsumerRecord<String, EventCreatedEvent> record) {
         EventCreatedEvent event = record.value();
 
-        log.info("[EVENT_CREATED] eventId='{}', title='{}', category='{}' | partition={}, offset={}",
+        log.debug("[EVENT_CREATED] eventId='{}', title='{}', category='{}' | partition={}, offset={}",
                 event.getEventId(), event.getTitle(), event.getCategory(),
                 record.partition(), record.offset());
 
@@ -73,7 +73,7 @@ public class EventLifecycleConsumer {
     public void onEventPublished(ConsumerRecord<String, EventPublishedEvent> record) {
         EventPublishedEvent event = record.value();
 
-        log.info("[EVENT_PUBLISHED] eventId='{}', title='{}', category='{}' | partition={}, offset={}",
+        log.debug("[EVENT_PUBLISHED] eventId='{}', title='{}', category='{}' | partition={}, offset={}",
                 event.getEventId(), event.getTitle(), event.getCategory(),
                 record.partition(), record.offset());
 
@@ -94,7 +94,7 @@ public class EventLifecycleConsumer {
     public void onEventCancelled(ConsumerRecord<String, EventCancelledEvent> record) {
         EventCancelledEvent event = record.value();
 
-        log.info("[EVENT_CANCELLED] eventId='{}', reason='{}' | partition={}, offset={}",
+        log.debug("[EVENT_CANCELLED] eventId='{}', reason='{}' | partition={}, offset={}",
                 event.getEventId(), event.getReason(),
                 record.partition(), record.offset());
 

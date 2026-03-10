@@ -5,10 +5,11 @@ import lombok.Builder;
 import java.io.Serializable;
 
 @Builder
-public record CancellationRate
+public record EventLifecycleTrend
         (
-                long totalBookingsCreated,
-                long totalBookingsCancelled,
-                double cancellationRate
+                String date,
+                int eventsCreated,
+                int eventsPublished,
+                int eventsCancelled
         )
         implements Serializable {}

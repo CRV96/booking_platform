@@ -69,4 +69,6 @@ public final class KafkaTopics {
 
     /** Published when a refund completes successfully for a previously charged payment. */
     public static final String PAYMENT_REFUND_COMPLETED = "events.payment.refund-completed";
+
+    public static final String DLT_SUFFIX = "-dlt";
 }

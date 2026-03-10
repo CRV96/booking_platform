@@ -26,10 +26,19 @@ public final class BkgAnalyticsConstants {
     public static final String PAYLOAD_PAYMENT_ID = "paymentId";
     public static final String PAYLOAD_AMOUNT = "amount";
     public static final String PAYLOAD_REFUND_ID = "refundId";
-    public static final String PAYLOAD_LAST_UPDATED = "lastUpdated";
+
+    // Document field names (shared across collections)
+    public static final String LAST_UPDATED = "lastUpdated";
+    public static final String CATEGORY = "category";
+    public static final String EVENT_ID = "eventId";
+    public static final String EVENT_TITLE = "eventTitle";
+    public static final String CURRENCY = "currency";
+    public static final String DATE = "date";
 
     public final class BkgPaymentConstants {
         private BkgPaymentConstants() {}
+
+        public static final String KEY_PAYMENT_TRENDS= "'payment-trends:' + #days";
 
         public static final String PAYMENT_COMPLETED_FACTORY = "paymentCompletedListenerFactory";
         public static final String PAYMENT_COMPLETED_EVENT = "paymentCompletedEvent";
@@ -43,10 +52,18 @@ public final class BkgAnalyticsConstants {
         public static final String PAYMENT_REFUND_EVENT = "paymentRefundEvent";
         public static final String PAYMENT_REFUND_COMPLETED = "refundsCompleted";
         public static final String PAYMENT_REFUND_TOTAL_REFUNDS = "totalRefunds";
+
+        // daily_metrics document field names
+        public static final String PAYMENTS_COMPLETED = "paymentsCompleted";
+        public static final String PAYMENTS_FAILED = "paymentsFailed";
     }
 
     public final class BkgEventConstants {
         private BkgEventConstants() {}
+        public static final String KEY_TOP_REVENUE = "'top-revenue:' + #limit";
+        public static final String KEY_ALL_EVENTS = "'all-events'";
+        public static final String KEY_EVENTS_ANALYTICS = "'event:' + #eventId";
+        public static final String KEY_EVENTS_LIFECYCLE_DAYS= "'event-lifecycle:' + #days";
 
         public static final String EVENT_CREATED_FACTORY = "eventCreatedListenerFactory";
         public static final String EVENT_CREATED_EVENT = "EventCreatedEvent";
@@ -74,6 +91,11 @@ public final class BkgAnalyticsConstants {
     public final class BkgBookingConstants {
         private BkgBookingConstants() {}
 
+        public static final String KEY_BOOKING_TRENDS = "'booking-trends:' + #days";
+        public static final String KEY_REVENUE_BY_CATEGORY = "'revenue-by-category'";
+        public static final String KEY_CANCELLATION_RATE = "'cancellation-rate'";
+        public static final String KEY_AVG_BOOKING_VALUE= "'avg-booking-value'";
+
         public static final String BOOKING_CREATED_FACTORY = "bookingCreatedListenerFactory";
         public static final String BOOKING_CREATED_EVENT = "BookingCreatedEvent";
         public static final String BOOKINGS_CREATED = "bookingsCreated";
@@ -90,8 +112,49 @@ public final class BkgAnalyticsConstants {
         public static final String CONFIRMED_BOOKINGS = "confirmedBookings";
         public static final String CANCELLED_BOOKINGS = "cancelledBookings";
         public static final String TOTAL_REVENUE = "totalRevenue";
-
+        public static final String AVERAGE_REVENUE = "averageRevenue";
+        public static final String CANCELLATION_RATE = "cancellationRate";
         public static final String PAYLOAD_TOTAL_PRICE = "totalPrice";
         public static final String PAYLOAD_SEAT_CATEGORY = "seatCategory";
+
+        public static final String TOTAL_BOOKINGS_CREATED = "totalBookingsCreated";
+        public static final String TOTAL_BOOKINGS_CONFIRMED = "totalConfirmedBookings";
+        public static final String TOTAL_BOOKINGS_CANCELLED = "totalBookingsCancelled";
+
+        public static final String TOTAL_BOOKINGS_CANCELLATION_RATE_CONDITION = "cond(" + TOTAL_BOOKINGS_CREATED + " == 0, 0, " + TOTAL_BOOKINGS_CANCELLED + " / " + TOTAL_BOOKINGS_CREATED + ")";
+        public static final String TOTAL_BOOKINGS_AVERAGE_VALUE_CONDITION = "cond(" + TOTAL_BOOKINGS_CONFIRMED + " == 0, 0, " + TOTAL_REVENUE + " / " + TOTAL_BOOKINGS_CONFIRMED + ")";
+    }
+
+    public final class BkgControllerConstants {
+        private BkgControllerConstants() {}
+
+        public static final String ANALYTICS_BASE_PATH = "/api/analytics";
+        public static final String TOP_REVENUE_PATH = "/top-revenue";
+        public static final String BOOKING_TRENDS_PATH = "/booking-trends";
+        public static final String REVENUE_BY_CATEGORY_PATH = "/revenue-by-category";
+        public static final String CANCELLATION_RATE_PATH = "/cancellation-rate";
+        public static final String AVG_BOOKING_VALUE_PATH = "/avg-booking-value";
+
+        public static final String PARAM_LIMIT = "limit";
+        public static final String DEFAULT_LIMIT = "10";
+
+        public static final String PARAM_DAYS = "days";
+        public static final String DEFAULT_DAYS = "30";
+
+        public static final String ALL_EVENTS_PATH = "/events";
+        public static final String EVENT_ANALYTICS_PATH = "/event/{eventId}";
+        public static final String PAYMENT_TRENDS_PATH = "/payment-trends";
+        public static final String EVENT_LIFECYCLE_PATH = "/event-lifecycle";
+
+        public static final String PARAM_EVENT_ID = "eventId";
+    }
+
+    public final class BkgDocumentConstants {
+        private BkgDocumentConstants() {}
+
+        public static final String DAILY_METRICS_COLLECTION = "daily_metrics";
+        public static final String CATEGORY_STATS_COLLECTION = "category_stats";
+        public static final String EVENT_LOG_COLLECTION = "event_log";
+        public static final String EVENT_STATS_COLLECTION = "event_stats";
     }
 }

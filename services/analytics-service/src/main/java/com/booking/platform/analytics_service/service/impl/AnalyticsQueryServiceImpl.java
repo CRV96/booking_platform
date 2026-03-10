@@ -1,6 +1,11 @@
 package com.booking.platform.analytics_service.service.impl;
 
 import com.booking.platform.analytics_service.config.CacheConfig;
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.BkgBookingConstants;
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.BkgDocumentConstants;
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.BkgEventConstants;
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.BkgPaymentConstants;
 import com.booking.platform.analytics_service.dto.response.*;
 import com.booking.platform.analytics_service.service.AnalyticsQueryService;
 import lombok.RequiredArgsConstructor;
@@ -24,43 +29,53 @@ import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
 
     private final MongoTemplate mongoTemplate;
+    private final static String IF_NULL = "ifNull(";
+    private final static String THEN_ZERO = ", 0)";
 
     /**
      * Top N events ranked by total revenue from {@code event_stats}.
      */
     @Override
-    @Cacheable(value = CacheConfig.CACHE_EVENT_STATS, key = "'top-revenue:' + #limit")
+    @Cacheable(value = CacheConfig.CACHE_EVENT_STATS, key = BkgEventConstants.KEY_TOP_REVENUE)
     public List<TopRevenueEvent> getTopEventsByRevenue(int limit) {
         Aggregation aggregation = newAggregation(
-                match(Criteria.where("totalRevenue").gt(0)),
-                sort(Sort.Direction.DESC, "totalRevenue"),
+                match(Criteria.where(BkgBookingConstants.TOTAL_REVENUE).gt(0)),
+                sort(Sort.Direction.DESC, BkgBookingConstants.TOTAL_REVENUE),
                 limit(limit),
-                project("eventId", "eventTitle", "category",
-                        "totalRevenue", "confirmedBookings", "currency")
+                project(BkgAnalyticsConstants.EVENT_ID, BkgAnalyticsConstants.EVENT_TITLE,
+                        BkgAnalyticsConstants.CATEGORY, BkgBookingConstants.TOTAL_REVENUE,
+                        BkgBookingConstants.CONFIRMED_BOOKINGS, BkgAnalyticsConstants.CURRENCY)
         );
 
         return mongoTemplate
-                .aggregate(aggregation, "event_stats", TopRevenueEvent.class)
+                .aggregate(aggregation, BkgDocumentConstants.EVENT_STATS_COLLECTION, TopRevenueEvent.class)
                 .getMappedResults();
     }
 
     /**
      * Daily booking trends over the last N days from {@code daily_metrics}.
+     *
+     * <p>Uses {@code $ifNull} to default missing counters to 0 — a daily_metrics
+     * document may not have booking fields if only event or payment events
+     * occurred on that day.
      */
     @Override
-    @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = "'booking-trends:' + #days")
+    @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = BkgBookingConstants.KEY_BOOKING_TRENDS)
     public List<BookingTrend> getBookingTrends(int days) {
         String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
 
         Aggregation aggregation = newAggregation(
-                match(Criteria.where("date").gte(startDate)),
-                sort(Sort.Direction.ASC, "date"),
-                project("date", "bookingsCreated", "bookingsConfirmed",
-                        "bookingsCancelled", "totalRevenue")
+                match(Criteria.where(BkgAnalyticsConstants.DATE).gte(startDate)),
+                sort(Sort.Direction.ASC, BkgAnalyticsConstants.DATE),
+                project(BkgAnalyticsConstants.DATE)
+                        .andExpression(IF_NULL + BkgBookingConstants.BOOKINGS_CREATED + THEN_ZERO).as(BkgBookingConstants.BOOKINGS_CREATED)
+                        .andExpression(IF_NULL + BkgBookingConstants.BOOKINGS_CONFIRMED + THEN_ZERO).as(BkgBookingConstants.BOOKINGS_CONFIRMED)
+                        .andExpression(IF_NULL + BkgBookingConstants.BOOKINGS_CANCELLED + THEN_ZERO).as(BkgBookingConstants.BOOKINGS_CANCELLED)
+                        .andExpression(IF_NULL + BkgBookingConstants.TOTAL_REVENUE + THEN_ZERO).as(BkgBookingConstants.TOTAL_REVENUE)
         );
 
         return mongoTemplate
-                .aggregate(aggregation, "daily_metrics", BookingTrend.class)
+                .aggregate(aggregation, BkgDocumentConstants.DAILY_METRICS_COLLECTION, BookingTrend.class)
                 .getMappedResults();
     }
 
@@ -68,16 +83,17 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
      * Revenue breakdown by category from {@code category_stats}.
      */
     @Override
-    @Cacheable(value = CacheConfig.CACHE_CATEGORY_STATS, key = "'revenue-by-category'")
+    @Cacheable(value = CacheConfig.CACHE_CATEGORY_STATS, key = BkgBookingConstants.KEY_REVENUE_BY_CATEGORY)
     public List<CategoryRevenue> getRevenueByCategory() {
         Aggregation aggregation = newAggregation(
-                match(Criteria.where("totalRevenue").gt(0)),
-                sort(Sort.Direction.DESC, "totalRevenue"),
-                project("category", "totalRevenue", "totalBookings")
+                match(Criteria.where(BkgBookingConstants.TOTAL_REVENUE).gt(0)),
+                sort(Sort.Direction.DESC, BkgBookingConstants.TOTAL_REVENUE),
+                project(BkgAnalyticsConstants.CATEGORY, BkgBookingConstants.TOTAL_REVENUE,
+                        BkgBookingConstants.TOTAL_BOOKINGS)
         );
 
         return mongoTemplate
-                .aggregate(aggregation, "category_stats", CategoryRevenue.class)
+                .aggregate(aggregation, BkgDocumentConstants.CATEGORY_STATS_COLLECTION, CategoryRevenue.class)
                 .getMappedResults();
     }
 
@@ -85,21 +101,19 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
      * Platform-wide cancellation rate aggregated from {@code daily_metrics}.
      */
     @Override
-    @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = "'cancellation-rate'")
+    @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = BkgBookingConstants.KEY_CANCELLATION_RATE)
     public CancellationRate getCancellationRate() {
         Aggregation aggregation = newAggregation(
                 group()
-                        .sum("bookingsCreated").as("totalBookingsCreated")
-                        .sum("bookingsCancelled").as("totalBookingsCancelled"),
-                project("totalBookingsCreated", "totalBookingsCancelled")
-                        .andExpression(
-                                "cond(totalBookingsCreated == 0, 0, " +
-                                "totalBookingsCancelled / totalBookingsCreated)")
-                        .as("cancellationRate")
+                        .sum(BkgBookingConstants.BOOKINGS_CREATED).as(BkgBookingConstants.TOTAL_BOOKINGS_CREATED)
+                        .sum(BkgBookingConstants.BOOKINGS_CANCELLED).as(BkgBookingConstants.TOTAL_BOOKINGS_CANCELLED),
+                project(BkgBookingConstants.TOTAL_BOOKINGS_CREATED, BkgBookingConstants.TOTAL_BOOKINGS_CANCELLED)
+                        .andExpression(BkgBookingConstants.TOTAL_BOOKINGS_CANCELLATION_RATE_CONDITION)
+                        .as(BkgBookingConstants.CANCELLATION_RATE)
         );
 
         List<CancellationRate> results = mongoTemplate
-                .aggregate(aggregation, "daily_metrics", CancellationRate.class)
+                .aggregate(aggregation, BkgDocumentConstants.DAILY_METRICS_COLLECTION, CancellationRate.class)
                 .getMappedResults();
 
         return results.isEmpty()
@@ -111,25 +125,130 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
      * Platform-wide average booking value aggregated from {@code daily_metrics}.
      */
     @Override
-    @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = "'avg-booking-value'")
+    @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = BkgBookingConstants.KEY_AVG_BOOKING_VALUE)
     public AverageBookingValue getAverageBookingValue() {
         Aggregation aggregation = newAggregation(
                 group()
-                        .sum("totalRevenue").as("totalRevenue")
-                        .sum("bookingsConfirmed").as("totalConfirmedBookings"),
-                project("totalRevenue", "totalConfirmedBookings")
-                        .andExpression(
-                                "cond(totalConfirmedBookings == 0, 0, " +
-                                "totalRevenue / totalConfirmedBookings)")
-                        .as("averageValue")
+                        .sum(BkgBookingConstants.TOTAL_REVENUE).as(BkgBookingConstants.TOTAL_REVENUE)
+                        .sum(BkgBookingConstants.BOOKINGS_CONFIRMED).as(BkgBookingConstants.TOTAL_BOOKINGS_CONFIRMED),
+                project(BkgBookingConstants.TOTAL_REVENUE, BkgBookingConstants.TOTAL_BOOKINGS_CONFIRMED)
+                        .andExpression(BkgBookingConstants.TOTAL_BOOKINGS_AVERAGE_VALUE_CONDITION)
+                        .as(BkgBookingConstants.AVERAGE_REVENUE)
         );
 
         List<AverageBookingValue> results = mongoTemplate
-                .aggregate(aggregation, "daily_metrics", AverageBookingValue.class)
+                .aggregate(aggregation, BkgDocumentConstants.DAILY_METRICS_COLLECTION, AverageBookingValue.class)
                 .getMappedResults();
 
         return results.isEmpty()
                 ? new AverageBookingValue(0.0, 0, 0.0)
                 : results.getFirst();
+    }
+
+    /**
+     * All events with booking activity from {@code event_stats}.
+     * Used by Grafana variable dropdown for per-event drill-down.
+     *
+     * <p>Uses {@code $ifNull} to default missing numeric counters to 0 —
+     * an event_stats document may not have refund or cancellation fields
+     * if those events never occurred for that event.
+     */
+    @Override
+    @Cacheable(value = CacheConfig.CACHE_EVENT_STATS, key = BkgEventConstants.KEY_ALL_EVENTS)
+    public List<EventStatsDetail> getAllEventStats() {
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where(BkgBookingConstants.TOTAL_BOOKINGS).gt(0)),
+                sort(Sort.Direction.ASC, BkgAnalyticsConstants.EVENT_TITLE),
+                project(BkgAnalyticsConstants.EVENT_ID, BkgAnalyticsConstants.EVENT_TITLE,
+                        BkgAnalyticsConstants.CATEGORY, BkgAnalyticsConstants.CURRENCY)
+                        .andExpression(IF_NULL + BkgBookingConstants.TOTAL_BOOKINGS + THEN_ZERO).as(BkgBookingConstants.TOTAL_BOOKINGS)
+                        .andExpression(IF_NULL + BkgBookingConstants.CONFIRMED_BOOKINGS + THEN_ZERO).as(BkgBookingConstants.CONFIRMED_BOOKINGS)
+                        .andExpression(IF_NULL + BkgBookingConstants.CANCELLED_BOOKINGS + THEN_ZERO).as(BkgBookingConstants.CANCELLED_BOOKINGS)
+                        .andExpression(IF_NULL + BkgBookingConstants.TOTAL_REVENUE + THEN_ZERO).as(BkgBookingConstants.TOTAL_REVENUE)
+                        .andExpression(IF_NULL + BkgPaymentConstants.PAYMENT_REFUND_TOTAL_REFUNDS + THEN_ZERO).as(BkgPaymentConstants.PAYMENT_REFUND_TOTAL_REFUNDS)
+        );
+
+        return mongoTemplate
+                .aggregate(aggregation, BkgDocumentConstants.EVENT_STATS_COLLECTION, EventStatsDetail.class)
+                .getMappedResults();
+    }
+
+    /**
+     * Single event statistics from {@code event_stats} by eventId.
+     *
+     * <p>Uses {@code $ifNull} to default missing numeric counters to 0.
+     */
+    @Override
+    @Cacheable(value = CacheConfig.CACHE_EVENT_STATS, key = BkgEventConstants.KEY_EVENTS_ANALYTICS)
+    public EventStatsDetail getEventAnalytics(String eventId) {
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where(BkgAnalyticsConstants.EVENT_ID).is(eventId)),
+                project(BkgAnalyticsConstants.EVENT_ID, BkgAnalyticsConstants.EVENT_TITLE,
+                        BkgAnalyticsConstants.CATEGORY, BkgAnalyticsConstants.CURRENCY)
+                        .andExpression(IF_NULL + BkgBookingConstants.TOTAL_BOOKINGS + THEN_ZERO).as(BkgBookingConstants.TOTAL_BOOKINGS)
+                        .andExpression(IF_NULL + BkgBookingConstants.CONFIRMED_BOOKINGS + THEN_ZERO).as(BkgBookingConstants.CONFIRMED_BOOKINGS)
+                        .andExpression(IF_NULL + BkgBookingConstants.CANCELLED_BOOKINGS + THEN_ZERO).as(BkgBookingConstants.CANCELLED_BOOKINGS)
+                        .andExpression(IF_NULL + BkgBookingConstants.TOTAL_REVENUE + THEN_ZERO).as(BkgBookingConstants.TOTAL_REVENUE)
+                        .andExpression(IF_NULL + BkgPaymentConstants.PAYMENT_REFUND_TOTAL_REFUNDS + THEN_ZERO).as(BkgPaymentConstants.PAYMENT_REFUND_TOTAL_REFUNDS)
+        );
+
+        List<EventStatsDetail> results = mongoTemplate
+                .aggregate(aggregation, BkgDocumentConstants.EVENT_STATS_COLLECTION, EventStatsDetail.class)
+                .getMappedResults();
+
+        return results.isEmpty() ? null : results.getFirst();
+    }
+
+    /**
+     * Daily payment trends over the last N days from {@code daily_metrics}.
+     *
+     * <p>Uses {@code $ifNull} to default missing counters to 0 — a daily_metrics
+     * document may not have payment fields if only booking or event lifecycle
+     * events occurred on that day.
+     */
+    @Override
+    @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = BkgPaymentConstants.KEY_PAYMENT_TRENDS)
+    public List<PaymentTrend> getPaymentTrends(int days) {
+        String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
+
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where(BkgAnalyticsConstants.DATE).gte(startDate)),
+                sort(Sort.Direction.ASC, BkgAnalyticsConstants.DATE),
+                project(BkgAnalyticsConstants.DATE)
+                        .andExpression(IF_NULL + BkgPaymentConstants.PAYMENTS_COMPLETED + THEN_ZERO).as(BkgPaymentConstants.PAYMENTS_COMPLETED)
+                        .andExpression(IF_NULL + BkgPaymentConstants.PAYMENTS_FAILED + THEN_ZERO).as(BkgPaymentConstants.PAYMENTS_FAILED)
+                        .andExpression(IF_NULL + BkgPaymentConstants.PAYMENT_REFUND_COMPLETED + THEN_ZERO).as(BkgPaymentConstants.PAYMENT_REFUND_COMPLETED)
+                        .andExpression(IF_NULL + BkgPaymentConstants.PAYMENT_REFUND_TOTAL_REFUNDS + THEN_ZERO).as(BkgPaymentConstants.PAYMENT_REFUND_TOTAL_REFUNDS)
+        );
+
+        return mongoTemplate
+                .aggregate(aggregation, BkgDocumentConstants.DAILY_METRICS_COLLECTION, PaymentTrend.class)
+                .getMappedResults();
+    }
+
+    /**
+     * Daily event lifecycle trends over the last N days from {@code daily_metrics}.
+     *
+     * <p>Uses {@code $ifNull} to default missing counters to 0 — a daily_metrics
+     * document may not have event lifecycle fields if only booking or payment
+     * events occurred on that day.
+     */
+    @Override
+    @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = BkgEventConstants.KEY_EVENTS_LIFECYCLE_DAYS)
+    public List<EventLifecycleTrend> getEventLifecycleTrends(int days) {
+        String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
+
+        Aggregation aggregation = newAggregation(
+                match(Criteria.where(BkgAnalyticsConstants.DATE).gte(startDate)),
+                sort(Sort.Direction.ASC, BkgAnalyticsConstants.DATE),
+                project(BkgAnalyticsConstants.DATE)
+                        .andExpression(IF_NULL + BkgEventConstants.EVENTS_CREATED + THEN_ZERO).as(BkgEventConstants.EVENTS_CREATED)
+                        .andExpression(IF_NULL + BkgEventConstants.EVENTS_PUBLISHED + THEN_ZERO).as(BkgEventConstants.EVENTS_PUBLISHED)
+                        .andExpression(IF_NULL + BkgEventConstants.EVENTS_CANCELLED + THEN_ZERO).as(BkgEventConstants.EVENTS_CANCELLED)
+        );
+
+        return mongoTemplate
+                .aggregate(aggregation, BkgDocumentConstants.DAILY_METRICS_COLLECTION, EventLifecycleTrend.class)
+                .getMappedResults();
     }
 }
