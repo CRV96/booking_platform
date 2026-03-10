@@ -1,5 +1,8 @@
 package com.booking.platform.analytics_service.service.impl;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.BkgEventConstants;
+import com.booking.platform.analytics_service.dto.EventDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.EventAnalyticsProcessor;
 import lombok.extern.slf4j.Slf4j;
@@ -7,7 +10,6 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,61 +34,63 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     }
 
     @Override
-    public void processEventCreated(String topic, String key,
-                                    String eventId, String title, String category) {
-        saveRawEvent("EventCreatedEvent", topic, key, Map.of(
-                "eventId", eventId, "title", title, "category", category));
+    public void processEventCreated(EventDto event) {
+        saveRawEvent(BkgEventConstants.EVENT_CREATED_EVENT, event.topic(), event.key(), Map.of(
+                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
+                BkgEventConstants.PAYLOAD_TITLE, event.title(),
+                BkgEventConstants.PAYLOAD_CATEGORY, event.category()));
 
         // event_stats: initialize entry for this event
-        upsertEventStats(eventId, new Update()
-                .setOnInsert("eventId", eventId)
-                .setOnInsert("eventTitle", title)
-                .setOnInsert("category", category)
+        upsertEventStats(event.eventId(), new Update()
+                .setOnInsert(BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId())
+                .setOnInsert(BkgAnalyticsConstants.PAYLOAD_EVENT_TITLE, event.title())
+                .setOnInsert(BkgEventConstants.PAYLOAD_CATEGORY, event.category())
                 .currentDate("lastUpdated"));
 
         // daily_metrics: increment eventsCreated
-        upsertDailyMetrics(new Update().inc("eventsCreated", 1));
+        upsertDailyMetrics(new Update().inc(BkgEventConstants.EVENTS_CREATED, 1));
 
         // category_stats: increment totalEvents
-        upsertCategoryStats(category, new Update().inc("totalEvents", 1));
+        upsertCategoryStats(event.category(), new Update().inc(BkgEventConstants.TOTAL_EVENTS, 1));
 
-        log.debug("Processed EventCreatedEvent: eventId='{}'", eventId);
+        log.debug("Processed EventCreatedEvent: eventId='{}'", event.eventId());
     }
 
     @Override
-    public void processEventUpdated(String topic, String key,
-                                    String eventId, List<String> changedFields) {
-        saveRawEvent("EventUpdatedEvent", topic, key, Map.of(
-                "eventId", eventId, "changedFields", changedFields));
+    public void processEventUpdated(EventDto event) {
+        saveRawEvent(BkgEventConstants.EVENT_UPDATED_EVENT, event.topic(), event.key(), Map.of(
+                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
+                BkgEventConstants.PAYLOAD_CHANGED_FIELDS, event.changedFields()));
 
         // EventUpdated only goes to the raw log — no materialized view updates needed
-        log.debug("Processed EventUpdatedEvent: eventId='{}'", eventId);
+        log.debug("Processed EventUpdatedEvent: eventId='{}'", event.eventId());
     }
 
     @Override
-    public void processEventPublished(String topic, String key,
-                                      String eventId, String title, String category) {
-        saveRawEvent("EventPublishedEvent", topic, key, Map.of(
-                "eventId", eventId, "title", title, "category", category));
+    public void processEventPublished(EventDto event) {
+        saveRawEvent(BkgEventConstants.EVENT_PUBLISHED_EVENT, event.topic(), event.key(), Map.of(
+                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
+                BkgEventConstants.PAYLOAD_TITLE, event.title(),
+                BkgEventConstants.PAYLOAD_CATEGORY, event.category()));
 
         // daily_metrics: increment eventsPublished
-        upsertDailyMetrics(new Update().inc("eventsPublished", 1));
+        upsertDailyMetrics(new Update().inc(BkgEventConstants.EVENTS_PUBLISHED, 1));
 
         // category_stats: increment publishedEvents
-        upsertCategoryStats(category, new Update().inc("publishedEvents", 1));
+        upsertCategoryStats(event.category(), new Update().inc(BkgEventConstants.PUBLISHED_EVENTS, 1));
 
-        log.debug("Processed EventPublishedEvent: eventId='{}'", eventId);
+        log.debug("Processed EventPublishedEvent: eventId='{}'", event.eventId());
     }
 
     @Override
-    public void processEventCancelled(String topic, String key,
-                                      String eventId, String reason) {
-        saveRawEvent("EventCancelledEvent", topic, key, Map.of(
-                "eventId", eventId, "reason", reason));
+    public void processEventCancelled(EventDto event) {
+        saveRawEvent(BkgEventConstants.EVENT_CANCELLED_EVENT, event.topic(), event.key(), Map.of(
+                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
+                BkgAnalyticsConstants.PAYLOAD_REASON, event.reason()));
 
         // daily_metrics: increment eventsCancelled
-        upsertDailyMetrics(new Update().inc("eventsCancelled", 1));
+        upsertDailyMetrics(new Update().inc(BkgEventConstants.EVENTS_CANCELLED, 1));
 
-        log.debug("Processed EventCancelledEvent: eventId='{}'", eventId);
+        log.debug("Processed EventCancelledEvent: eventId='{}'", event.eventId());
     }
 }

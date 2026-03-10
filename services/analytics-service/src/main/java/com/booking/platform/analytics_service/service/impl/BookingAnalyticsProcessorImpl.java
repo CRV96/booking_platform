@@ -1,5 +1,8 @@
 package com.booking.platform.analytics_service.service.impl;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.BkgBookingConstants;
+import com.booking.platform.analytics_service.dto.BookingDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.BookingAnalyticsProcessor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,72 +34,76 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     }
 
     @Override
-    public void processBookingCreated(String topic, String key,
-                                      String bookingId, String eventId,
-                                      double totalPrice, String currency) {
-        saveRawEvent("BookingCreatedEvent", topic, key, Map.of(
-                "bookingId", bookingId, "eventId", eventId,
-                "totalPrice", totalPrice, "currency", currency));
+    public void processBookingCreated(BookingDto booking) {
+        saveRawEvent(BkgBookingConstants.BOOKING_CREATED_EVENT, booking.topic(), booking.key(), Map.of(
+                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
+                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId(),
+                BkgBookingConstants.PAYLOAD_TOTAL_PRICE, booking.totalPrice(),
+                BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency()));
 
         // event_stats: increment totalBookings
-        upsertEventStats(eventId, new Update()
-                .inc("totalBookings", 1)
-                .setOnInsert("currency", currency)
-                .currentDate("lastUpdated"));
+        upsertEventStats(booking.eventId(), new Update()
+                .inc(BkgBookingConstants.TOTAL_BOOKINGS, 1)
+                .setOnInsert(BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency())
+                .currentDate(BkgAnalyticsConstants.PAYLOAD_LAST_UPDATED));
 
         // daily_metrics: increment bookingsCreated
-        upsertDailyMetrics(new Update().inc("bookingsCreated", 1));
+        upsertDailyMetrics(new Update().inc(BkgBookingConstants.BOOKINGS_CREATED, 1));
 
         // category_stats: increment totalBookings (category resolved from event_stats)
-        incrementCategoryStatsByEventId(eventId, new Update().inc("totalBookings", 1));
+        incrementCategoryStatsByEventId(booking.eventId(), new Update()
+                .inc(BkgBookingConstants.TOTAL_BOOKINGS, 1));
 
-        log.debug("Processed BookingCreatedEvent: bookingId='{}', eventId='{}'", bookingId, eventId);
+        log.debug("Processed BookingCreatedEvent: bookingId='{}', eventId='{}'",
+                booking.bookingId(), booking.eventId());
     }
 
     @Override
-    public void processBookingConfirmed(String topic, String key,
-                                        String bookingId, String eventId,
-                                        double totalPrice, String currency,
-                                        String eventTitle, String seatCategory) {
-        saveRawEvent("BookingConfirmedEvent", topic, key, Map.of(
-                "bookingId", bookingId, "eventId", eventId,
-                "totalPrice", totalPrice, "currency", currency,
-                "eventTitle", eventTitle, "seatCategory", seatCategory));
+    public void processBookingConfirmed(BookingDto booking) {
+        saveRawEvent(BkgBookingConstants.BOOKING_CONFIRMED_EVENT, booking.topic(), booking.key(), Map.of(
+                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
+                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId(),
+                BkgBookingConstants.PAYLOAD_TOTAL_PRICE, booking.totalPrice(),
+                BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency(),
+                BkgAnalyticsConstants.PAYLOAD_EVENT_TITLE, booking.eventTitle(),
+                BkgBookingConstants.PAYLOAD_SEAT_CATEGORY, booking.seatCategory()));
 
         // event_stats: increment confirmedBookings + totalRevenue
-        upsertEventStats(eventId, new Update()
-                .inc("confirmedBookings", 1)
-                .inc("totalRevenue", totalPrice)
-                .set("eventTitle", eventTitle)
-                .setOnInsert("currency", currency)
-                .currentDate("lastUpdated"));
+        upsertEventStats(booking.eventId(), new Update()
+                .inc(BkgBookingConstants.CONFIRMED_BOOKINGS, 1)
+                .inc(BkgBookingConstants.TOTAL_REVENUE, booking.totalPrice())
+                .set(BkgAnalyticsConstants.PAYLOAD_EVENT_TITLE, booking.eventTitle())
+                .setOnInsert(BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency())
+                .currentDate(BkgAnalyticsConstants.PAYLOAD_LAST_UPDATED));
 
         // daily_metrics: increment bookingsConfirmed + totalRevenue
         upsertDailyMetrics(new Update()
-                .inc("bookingsConfirmed", 1)
-                .inc("totalRevenue", totalPrice));
+                .inc(BkgBookingConstants.BOOKINGS_CONFIRMED, 1)
+                .inc(BkgBookingConstants.TOTAL_REVENUE, booking.totalPrice()));
 
         // category_stats: increment totalRevenue (category resolved from event_stats)
-        incrementCategoryStatsByEventId(eventId, new Update().inc("totalRevenue", totalPrice));
+        incrementCategoryStatsByEventId(booking.eventId(), new Update()
+                .inc(BkgBookingConstants.TOTAL_REVENUE, booking.totalPrice()));
 
         log.debug("Processed BookingConfirmedEvent: bookingId='{}', eventId='{}', revenue={}",
-                bookingId, eventId, totalPrice);
+                booking.bookingId(), booking.eventId(), booking.totalPrice());
     }
 
     @Override
-    public void processBookingCancelled(String topic, String key,
-                                        String bookingId, String eventId) {
-        saveRawEvent("BookingCancelledEvent", topic, key, Map.of(
-                "bookingId", bookingId, "eventId", eventId));
+    public void processBookingCancelled(BookingDto booking) {
+        saveRawEvent(BkgBookingConstants.BOOKING_CANCELLED_EVENT, booking.topic(), booking.key(), Map.of(
+                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
+                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId()));
 
         // event_stats: increment cancelledBookings
-        upsertEventStats(eventId, new Update()
-                .inc("cancelledBookings", 1)
-                .currentDate("lastUpdated"));
+        upsertEventStats(booking.eventId(), new Update()
+                .inc(BkgBookingConstants.CANCELLED_BOOKINGS, 1)
+                .currentDate(BkgAnalyticsConstants.PAYLOAD_LAST_UPDATED));
 
         // daily_metrics: increment bookingsCancelled
-        upsertDailyMetrics(new Update().inc("bookingsCancelled", 1));
+        upsertDailyMetrics(new Update().inc(BkgBookingConstants.BOOKINGS_CANCELLED, 1));
 
-        log.debug("Processed BookingCancelledEvent: bookingId='{}', eventId='{}'", bookingId, eventId);
+        log.debug("Processed BookingCancelledEvent: bookingId='{}', eventId='{}'",
+                booking.bookingId(), booking.eventId());
     }
 }

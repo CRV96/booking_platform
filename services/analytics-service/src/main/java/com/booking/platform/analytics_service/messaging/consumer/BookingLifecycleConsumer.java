@@ -1,5 +1,7 @@
 package com.booking.platform.analytics_service.messaging.consumer;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.dto.BookingDto;
 import com.booking.platform.analytics_service.service.BookingAnalyticsProcessor;
 import com.booking.platform.common.events.*;
 import com.booking.platform.common.events.KafkaTopics;
@@ -25,51 +27,69 @@ public class BookingLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CREATED,
-            containerFactory = "bookingCreatedListenerFactory"
+            containerFactory = BkgAnalyticsConstants.BkgBookingConstants.BOOKING_CREATED_FACTORY
     )
     public void onBookingCreated(ConsumerRecord<String, BookingCreatedEvent> record) {
         BookingCreatedEvent event = record.value();
+
         log.info("[BOOKING_CREATED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(),
                 event.getTotalPrice(), event.getCurrency(),
                 record.partition(), record.offset());
 
         processor.processBookingCreated(
-                record.topic(), record.key(),
-                event.getBookingId(), event.getEventId(),
-                event.getTotalPrice(), event.getCurrency());
+                BookingDto.builder()
+                        .topic(record.topic())
+                        .key(record.key())
+                        .bookingId(event.getBookingId())
+                        .eventId(event.getEventId())
+                        .totalPrice(event.getTotalPrice())
+                        .currency(event.getCurrency())
+                        .build());
     }
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CONFIRMED,
-            containerFactory = "bookingConfirmedListenerFactory"
+            containerFactory = BkgAnalyticsConstants.BkgBookingConstants.BOOKING_CONFIRMED_FACTORY
     )
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
+
         log.info("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(),
                 event.getTotalPrice(), event.getCurrency(),
                 record.partition(), record.offset());
 
         processor.processBookingConfirmed(
-                record.topic(), record.key(),
-                event.getBookingId(), event.getEventId(),
-                event.getTotalPrice(), event.getCurrency(),
-                event.getEventTitle(), event.getSeatCategory());
+                BookingDto.builder()
+                        .topic(record.topic())
+                        .key(record.key())
+                        .bookingId(event.getBookingId())
+                        .eventId(event.getEventId())
+                        .totalPrice(event.getTotalPrice())
+                        .currency(event.getCurrency())
+                        .eventTitle(event.getEventTitle())
+                        .seatCategory(event.getSeatCategory())
+                        .build());
     }
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CANCELLED,
-            containerFactory = "bookingCancelledListenerFactory"
+            containerFactory = BkgAnalyticsConstants.BkgBookingConstants.BOOKING_CANCELLED_FACTORY
     )
     public void onBookingCancelled(ConsumerRecord<String, BookingCancelledEvent> record) {
         BookingCancelledEvent event = record.value();
+
         log.info("[BOOKING_CANCELLED] bookingId='{}', eventId='{}', reason='{}' | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(), event.getReason(),
                 record.partition(), record.offset());
 
         processor.processBookingCancelled(
-                record.topic(), record.key(),
-                event.getBookingId(), event.getEventId());
+                BookingDto.builder()
+                        .topic(record.topic())
+                        .key(record.key())
+                        .bookingId(event.getBookingId())
+                        .eventId(event.getEventId())
+                        .build());
     }
 }

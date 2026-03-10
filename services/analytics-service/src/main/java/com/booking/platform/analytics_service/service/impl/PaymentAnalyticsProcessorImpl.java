@@ -1,5 +1,7 @@
 package com.booking.platform.analytics_service.service.impl;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.BkgPaymentConstants;
+import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.PaymentAnalyticsProcessor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,45 +35,39 @@ public class PaymentAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     }
 
     @Override
-    public void processPaymentCompleted(String topic, String key,
-                                        String paymentId, String bookingId,
-                                        double amount, String currency) {
-        saveRawEvent("PaymentCompletedEvent", topic, key, Map.of(
-                "paymentId", paymentId, "bookingId", bookingId,
-                "amount", amount, "currency", currency));
-
-        // Payment events only update daily_metrics (no eventId available)
-        upsertDailyMetrics(new Update().inc("paymentsCompleted", 1));
-
-        log.debug("Processed PaymentCompletedEvent: paymentId='{}', bookingId='{}'", paymentId, bookingId);
-    }
-
-    @Override
-    public void processPaymentFailed(String topic, String key,
-                                     String paymentId, String bookingId, String reason) {
-        saveRawEvent("PaymentFailedEvent", topic, key, Map.of(
-                "paymentId", paymentId, "bookingId", bookingId, "reason", reason));
-
-        // Payment events only update daily_metrics (no eventId available)
-        upsertDailyMetrics(new Update().inc("paymentsFailed", 1));
-
-        log.debug("Processed PaymentFailedEvent: paymentId='{}', bookingId='{}'", paymentId, bookingId);
-    }
-
-    @Override
-    public void processRefundCompleted(String topic, String key,
-                                       String paymentId, String bookingId,
-                                       String refundId, double amount, String currency) {
-        saveRawEvent("RefundCompletedEvent", topic, key, Map.of(
-                "paymentId", paymentId, "bookingId", bookingId,
-                "refundId", refundId, "amount", amount, "currency", currency));
+    public void processPaymentCompleted(PaymentDto payment) {
+        saveRawEvent(BkgPaymentConstants.PAYMENT_COMPLETED_EVENT, payment, getPayload(payment));
 
         // Payment events only update daily_metrics (no eventId available)
         upsertDailyMetrics(new Update()
-                .inc("refundsCompleted", 1)
-                .inc("totalRefunds", amount));
+                .inc(BkgPaymentConstants.PAYMENT_COMPLETED_TOPIC, 1));
+
+        log.debug("Processed PaymentCompletedEvent: paymentId='{}', bookingId='{}'",
+                payment.paymentId(), payment.bookingId());
+    }
+
+    @Override
+    public void processPaymentFailed(PaymentDto payment) {
+        saveRawEvent(BkgPaymentConstants.PAYMENT_FAILED_EVENT, payment, getPayload(payment));
+
+        // Payment events only update daily_metrics (no eventId available)
+        upsertDailyMetrics(new Update()
+                .inc(BkgPaymentConstants.PAYMENT_FAILED_TOPIC, 1));
+
+        log.debug("Processed PaymentFailedEvent: paymentId='{}', bookingId='{}'",
+                payment.paymentId(), payment.bookingId());
+    }
+
+    @Override
+    public void processRefundCompleted(PaymentDto payment) {
+        saveRawEvent(BkgPaymentConstants.PAYMENT_REFUND_EVENT, payment, getPayload(payment));
+
+        // Payment events only update daily_metrics (no eventId available)
+        upsertDailyMetrics(new Update()
+                .inc(BkgPaymentConstants.PAYMENT_REFUND_COMPLETED, 1)
+                .inc(BkgPaymentConstants.PAYMENT_REFUND_TOTAL_REFUNDS, payment.amount()));
 
         log.debug("Processed RefundCompletedEvent: paymentId='{}', bookingId='{}', amount={}",
-                paymentId, bookingId, amount);
+                payment.paymentId(), payment.bookingId(), payment.amount());
     }
 }

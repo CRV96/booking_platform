@@ -1,5 +1,7 @@
 package com.booking.platform.analytics_service.service;
 
+import com.booking.platform.analytics_service.dto.PaymentDto;
+
 /**
  * Processes payment-domain Kafka events for analytics.
  *
@@ -13,14 +15,9 @@ package com.booking.platform.analytics_service.service;
  */
 public interface PaymentAnalyticsProcessor {
 
-    void processPaymentCompleted(String topic, String key,
-                                 String paymentId, String bookingId,
-                                 double amount, String currency);
+    void processPaymentCompleted(PaymentDto payment);
 
-    void processPaymentFailed(String topic, String key,
-                              String paymentId, String bookingId, String reason);
+    void processPaymentFailed(PaymentDto payment);
 
-    void processRefundCompleted(String topic, String key,
-                                String paymentId, String bookingId,
-                                String refundId, double amount, String currency);
+    void processRefundCompleted(PaymentDto payment);
 }

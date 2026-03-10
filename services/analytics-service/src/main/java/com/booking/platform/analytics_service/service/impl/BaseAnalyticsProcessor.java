@@ -1,6 +1,8 @@
 package com.booking.platform.analytics_service.service.impl;
 
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
 import com.booking.platform.analytics_service.document.EventLog;
+import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +48,16 @@ public abstract class BaseAnalyticsProcessor {
                 .payload(payload)
                 .receivedAt(Instant.now())
                 .build();
+
         eventLogRepository.save(eventLog);
+    }
+
+    /**
+     * Convenience overload that extracts topic/key from a {@link PaymentDto}.
+     */
+    protected void saveRawEvent(String eventType, PaymentDto payment,
+                                Map<String, Object> payload) {
+        saveRawEvent(eventType, payment.topic(), payment.key(), payload);
     }
 
     /**
@@ -77,6 +88,7 @@ public abstract class BaseAnalyticsProcessor {
     protected void upsertCategoryStats(String category, Update update) {
         Query query = Query.query(Criteria.where("category").is(category));
         update.setOnInsert("category", category);
+        //TODO: I need to do some refactoring, also I have already a constant called lastUpdated, need to rename it name because I don't think it's payload
         update.currentDate("lastUpdated");
         mongoTemplate.upsert(query, update, "category_stats");
     }
@@ -94,5 +106,15 @@ public abstract class BaseAnalyticsProcessor {
         } else {
             log.debug("Skipping category_stats update — event_stats not yet available for eventId='{}'", eventId);
         }
+    }
+
+    protected Map<String, Object> getPayload(PaymentDto payment) {
+        return Map.of(
+                BkgAnalyticsConstants.PAYLOAD_PAYMENT_ID, payment.paymentId(),
+                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, payment.bookingId(),
+                BkgAnalyticsConstants.PAYLOAD_AMOUNT, payment.amount(),
+                BkgAnalyticsConstants.PAYLOAD_CURRENCY, payment.currency(),
+                BkgAnalyticsConstants.PAYLOAD_REASON, payment.reason(),
+                BkgAnalyticsConstants.PAYLOAD_REFUND_ID, payment.refundId());
     }
 }

@@ -1,6 +1,6 @@
 package com.booking.platform.analytics_service.service;
 
-import java.util.List;
+import com.booking.platform.analytics_service.dto.EventDto;
 
 /**
  * Processes event-domain Kafka events for analytics.
@@ -12,15 +12,11 @@ import java.util.List;
  */
 public interface EventAnalyticsProcessor {
 
-    void processEventCreated(String topic, String key,
-                             String eventId, String title, String category);
+    void processEventCreated(EventDto event);
 
-    void processEventUpdated(String topic, String key,
-                             String eventId, List<String> changedFields);
+    void processEventUpdated(EventDto event);
 
-    void processEventPublished(String topic, String key,
-                               String eventId, String title, String category);
+    void processEventPublished(EventDto event);
 
-    void processEventCancelled(String topic, String key,
-                               String eventId, String reason);
+    void processEventCancelled(EventDto event);
 }

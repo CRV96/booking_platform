@@ -1,5 +1,7 @@
 package com.booking.platform.analytics_service.service;
 
+import com.booking.platform.analytics_service.dto.BookingDto;
+
 /**
  * Processes booking-domain Kafka events for analytics.
  *
@@ -10,15 +12,9 @@ package com.booking.platform.analytics_service.service;
  */
 public interface BookingAnalyticsProcessor {
 
-    void processBookingCreated(String topic, String key,
-                               String bookingId, String eventId,
-                               double totalPrice, String currency);
+    void processBookingCreated(BookingDto booking);
 
-    void processBookingConfirmed(String topic, String key,
-                                 String bookingId, String eventId,
-                                 double totalPrice, String currency,
-                                 String eventTitle, String seatCategory);
+    void processBookingConfirmed(BookingDto booking);
 
-    void processBookingCancelled(String topic, String key,
-                                 String bookingId, String eventId);
+    void processBookingCancelled(BookingDto booking);
 }
