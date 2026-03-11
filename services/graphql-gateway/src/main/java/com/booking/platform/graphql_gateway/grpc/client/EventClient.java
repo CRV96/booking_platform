@@ -2,9 +2,9 @@ package com.booking.platform.graphql_gateway.grpc.client;
 
 import com.booking.platform.common.grpc.event.EventResponse;
 import com.booking.platform.common.grpc.event.SearchEventsResponse;
-import com.booking.platform.graphql_gateway.grpc.client.dto.EventCreateRequest;
-import com.booking.platform.graphql_gateway.grpc.client.dto.EventSearchRequest;
-import com.booking.platform.graphql_gateway.grpc.client.dto.EventUpdateRequest;
+import com.booking.platform.graphql_gateway.dto.event.EventCreateRequest;
+import com.booking.platform.graphql_gateway.dto.event.EventSearchRequest;
+import com.booking.platform.graphql_gateway.dto.event.EventUpdateRequest;
 
 /**
  * Client interface for communicating with the event-service via gRPC.

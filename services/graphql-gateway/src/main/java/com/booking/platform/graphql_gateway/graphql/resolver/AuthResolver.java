@@ -5,7 +5,7 @@ import com.booking.platform.graphql_gateway.dto.auth.LoginInput;
 import com.booking.platform.graphql_gateway.dto.auth.LogoutPayload;
 import com.booking.platform.graphql_gateway.dto.auth.RegisterInput;
 import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
-import com.booking.platform.graphql_gateway.security.PublicEndpoint;
+import com.booking.platform.graphql_gateway.annotations.PublicEndpoint;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.graphql.data.method.annotation.Argument;

@@ -27,6 +27,9 @@ public enum ErrorCode {
     VALIDATION_ERROR("VAL_001", "Input validation failed"),
     INVALID_INPUT("VAL_002", "Invalid input provided"),
 
+    // Rate limiting errors
+    RATE_LIMITED("RATE_001", "Too many requests. Please try again later."),
+
     // General errors
     INTERNAL_ERROR("GEN_001", "An unexpected error occurred"),
     SERVICE_UNAVAILABLE("GEN_002", "Service is temporarily unavailable"),
