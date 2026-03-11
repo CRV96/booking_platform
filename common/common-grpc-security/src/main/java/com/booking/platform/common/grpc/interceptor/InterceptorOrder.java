@@ -12,7 +12,12 @@ public final class InterceptorOrder {
     private InterceptorOrder() {}
 
     /**
-     * JWT validation and context population (runs first).
+     * Correlation ID extraction and propagation (runs before everything).
+     */
+    public static final int CORRELATION_ID = 1;
+
+    /**
+     * JWT validation and context population (runs second).
      */
     public static final int JWT_CONTEXT = 10;
 
