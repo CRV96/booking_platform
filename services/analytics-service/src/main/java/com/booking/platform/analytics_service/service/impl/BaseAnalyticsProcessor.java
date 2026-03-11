@@ -67,7 +67,7 @@ public abstract class BaseAnalyticsProcessor {
     protected void upsertEventStats(String eventId, Update update) {
         Query query = Query.query(Criteria.where(BkgAnalyticsConstants.EVENT_ID).is(eventId));
 
-        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.BkgDocumentConstants.EVENT_STATS_COLLECTION);
+        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.Collection.EVENT_STATS);
     }
 
     /**
@@ -82,7 +82,7 @@ public abstract class BaseAnalyticsProcessor {
         update.setOnInsert(BkgAnalyticsConstants.DATE, today);
         update.currentDate(BkgAnalyticsConstants.LAST_UPDATED);
 
-        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.BkgDocumentConstants.DAILY_METRICS_COLLECTION);
+        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.Collection.DAILY_METRICS);
     }
 
     /**
@@ -95,7 +95,7 @@ public abstract class BaseAnalyticsProcessor {
         update.setOnInsert(BkgAnalyticsConstants.CATEGORY, category);
         update.currentDate(BkgAnalyticsConstants.LAST_UPDATED);
 
-        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.BkgDocumentConstants.CATEGORY_STATS_COLLECTION);
+        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.Collection.CATEGORY_STATS);
     }
 
     /**
@@ -105,7 +105,7 @@ public abstract class BaseAnalyticsProcessor {
      */
     protected void incrementCategoryStatsByEventId(String eventId, Update update) {
         Query eventQuery = Query.query(Criteria.where(BkgAnalyticsConstants.EVENT_ID).is(eventId));
-        var eventStats = mongoTemplate.findOne(eventQuery, org.bson.Document.class, BkgAnalyticsConstants.BkgDocumentConstants.EVENT_STATS_COLLECTION);
+        var eventStats = mongoTemplate.findOne(eventQuery, org.bson.Document.class, BkgAnalyticsConstants.Collection.EVENT_STATS);
 
         if (eventStats != null && eventStats.getString(BkgAnalyticsConstants.CATEGORY) != null) {
             upsertCategoryStats(eventStats.getString(BkgAnalyticsConstants.CATEGORY), update);

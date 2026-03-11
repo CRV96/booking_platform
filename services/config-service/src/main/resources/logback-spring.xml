@@ -12,7 +12,7 @@
 
     <!-- Console: coloured by level for developer terminal use -->
     <property name="CONSOLE_LOG_PATTERN"
-              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %lvl(%-5level [%X{traceId:-},%X{spanId:-}] %-40.40logger{39} : %m%n%wEx)"/>
+              value="%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %lvl(%-5level [%X{correlationId:-},%X{traceId:-},%X{spanId:-}] %-40.40logger{39} : %m%n%wEx)"/>
     <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
 
     <!-- JSON file: structured logs for Loki/Grafana -->

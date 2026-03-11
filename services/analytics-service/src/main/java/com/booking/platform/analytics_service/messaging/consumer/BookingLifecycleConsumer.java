@@ -27,7 +27,7 @@ public class BookingLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CREATED,
-            containerFactory = BkgAnalyticsConstants.BkgBookingConstants.BOOKING_CREATED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Booking.CREATED_FACTORY
     )
     public void onBookingCreated(ConsumerRecord<String, BookingCreatedEvent> record) {
         BookingCreatedEvent event = record.value();
@@ -50,7 +50,7 @@ public class BookingLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CONFIRMED,
-            containerFactory = BkgAnalyticsConstants.BkgBookingConstants.BOOKING_CONFIRMED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Booking.CONFIRMED_FACTORY
     )
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
@@ -75,7 +75,7 @@ public class BookingLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CANCELLED,
-            containerFactory = BkgAnalyticsConstants.BkgBookingConstants.BOOKING_CANCELLED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Booking.CANCELLED_FACTORY
     )
     public void onBookingCancelled(ConsumerRecord<String, BookingCancelledEvent> record) {
         BookingCancelledEvent event = record.value();

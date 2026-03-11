@@ -22,7 +22,7 @@ import java.util.Map;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(BkgAnalyticsConstants.BkgDocumentConstants.EVENT_LOG_COLLECTION)
+@Document(BkgAnalyticsConstants.Collection.EVENT_LOG)
 public class EventLog {
 
     @Id

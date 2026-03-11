@@ -21,7 +21,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(BkgAnalyticsConstants.BkgDocumentConstants.DAILY_METRICS_COLLECTION)
+@Document(BkgAnalyticsConstants.Collection.DAILY_METRICS)
 public class DailyMetrics {
 
     @Id

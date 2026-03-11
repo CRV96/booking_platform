@@ -1,6 +1,8 @@
 package com.booking.platform.common.events.config;
 
+import com.booking.platform.common.events.interceptor.CorrelationIdKafkaConsumerInterceptor;
 import com.booking.platform.common.events.serialization.ProtobufDeserializer;
+import org.springframework.kafka.listener.RecordInterceptor;
 import com.google.protobuf.MessageLite;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
@@ -98,11 +100,19 @@ public abstract class BaseKafkaConsumerConfig {
         return new DefaultErrorHandler(recoverer, backOff);
     }
 
+    // ── Correlation ID interceptor ───────────────────────────────────────────
+
+    @SuppressWarnings("unchecked")
+    @Bean
+    public RecordInterceptor<Object, Object> correlationIdKafkaConsumerInterceptor() {
+        return (RecordInterceptor<Object, Object>) (RecordInterceptor<?, ?>) new CorrelationIdKafkaConsumerInterceptor();
+    }
+
     // ── Factory builder ───────────────────────────────────────────────────────
 
     /**
      * Builds a typed {@link ConcurrentKafkaListenerContainerFactory} with the
-     * shared error handler. Called by subclass factory methods.
+     * shared error handler and correlation ID interceptor. Called by subclass factory methods.
      */
     protected <K, V> ConcurrentKafkaListenerContainerFactory<K, V> buildFactory(
             ConsumerFactory<K, V> consumerFactory,
@@ -111,6 +121,10 @@ public abstract class BaseKafkaConsumerConfig {
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
         factory.setCommonErrorHandler(errorHandler);
+        @SuppressWarnings("unchecked")
+        RecordInterceptor<K, V> interceptor =
+                (RecordInterceptor<K, V>) (RecordInterceptor<?, ?>) correlationIdKafkaConsumerInterceptor();
+        factory.setRecordInterceptor(interceptor);
         return factory;
     }
 

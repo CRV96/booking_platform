@@ -1,5 +1,6 @@
 package com.booking.platform.common.events.config;
 
+import com.booking.platform.common.events.interceptor.CorrelationIdKafkaProducerInterceptor;
 import com.booking.platform.common.events.serialization.ProtobufSerializer;
 import com.google.protobuf.MessageLite;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -66,6 +67,10 @@ public abstract class BaseKafkaProducerConfig {
 
         // ── Ordering ──────────────────────────────────────────────────
         config.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 5);
+
+        // ── Correlation ID propagation ───────────────────────────────
+        config.put(ProducerConfig.INTERCEPTOR_CLASSES_CONFIG,
+                CorrelationIdKafkaProducerInterceptor.class.getName());
 
         return new DefaultKafkaProducerFactory<>(config);
     }

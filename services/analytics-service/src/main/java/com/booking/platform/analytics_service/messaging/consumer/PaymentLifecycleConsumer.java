@@ -27,7 +27,7 @@ public class PaymentLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.PAYMENT_COMPLETED,
-            containerFactory = BkgAnalyticsConstants.BkgPaymentConstants.PAYMENT_COMPLETED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Payment.COMPLETED_FACTORY
     )
     public void onPaymentCompleted(ConsumerRecord<String, PaymentCompletedEvent> record) {
         PaymentCompletedEvent event = record.value();
@@ -50,7 +50,7 @@ public class PaymentLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.PAYMENT_FAILED,
-            containerFactory = BkgAnalyticsConstants.BkgPaymentConstants.PAYMENT_FAILED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Payment.FAILED_FACTORY
     )
     public void onPaymentFailed(ConsumerRecord<String, PaymentFailedEvent> record) {
         PaymentFailedEvent event = record.value();
@@ -72,7 +72,7 @@ public class PaymentLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.PAYMENT_REFUND_COMPLETED,
-            containerFactory = BkgAnalyticsConstants.BkgPaymentConstants.PAYMENT_REFUND_FACTORY
+            containerFactory = BkgAnalyticsConstants.Payment.REFUND_FACTORY
     )
     public void onRefundCompleted(ConsumerRecord<String, RefundCompletedEvent> record) {
         RefundCompletedEvent event = record.value();
