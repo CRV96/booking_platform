@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.security;
 
+import com.booking.platform.graphql_gateway.annotations.PublicEndpoint;
 import com.booking.platform.graphql_gateway.exception.ErrorCode;
 import com.booking.platform.graphql_gateway.exception.GraphQLException;
 import com.booking.platform.graphql_gateway.service.AuthService;

@@ -1,4 +1,4 @@
-package com.booking.platform.graphql_gateway.grpc.client.dto;
+package com.booking.platform.graphql_gateway.dto.event;
 
 /**
  * Internal DTO passed from EventResolver to EventClient for event search/listing.

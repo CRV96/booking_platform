@@ -1,7 +1,4 @@
-package com.booking.platform.graphql_gateway.grpc.client.dto;
-
-import com.booking.platform.graphql_gateway.dto.event.SeatCategoryInput;
-import com.booking.platform.graphql_gateway.dto.event.VenueInput;
+package com.booking.platform.graphql_gateway.dto.event;
 
 import java.util.List;
 

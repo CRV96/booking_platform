@@ -1,4 +1,4 @@
-package com.booking.platform.graphql_gateway.config;
+package com.booking.platform.graphql_gateway.filter;
 
 import com.booking.platform.common.grpc.context.CorrelationIdContext;
 import jakarta.servlet.FilterChain;
