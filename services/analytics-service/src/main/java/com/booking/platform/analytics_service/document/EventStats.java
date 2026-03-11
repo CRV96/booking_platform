@@ -21,7 +21,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(BkgAnalyticsConstants.BkgDocumentConstants.EVENT_STATS_COLLECTION)
+@Document(BkgAnalyticsConstants.Collection.EVENT_STATS)
 public class EventStats {
 
     @Id

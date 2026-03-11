@@ -22,7 +22,7 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(BkgAnalyticsConstants.BkgDocumentConstants.CATEGORY_STATS_COLLECTION)
+@Document(BkgAnalyticsConstants.Collection.CATEGORY_STATS)
 public class CategoryStats {
 
     @Id

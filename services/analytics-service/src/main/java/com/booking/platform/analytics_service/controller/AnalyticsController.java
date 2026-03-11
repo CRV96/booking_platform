@@ -1,6 +1,6 @@
 package com.booking.platform.analytics_service.controller;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Api;
 import com.booking.platform.analytics_service.dto.response.*;
 import com.booking.platform.analytics_service.service.AnalyticsQueryService;
 import lombok.RequiredArgsConstructor;
@@ -10,17 +10,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(BkgAnalyticsConstants.BkgControllerConstants.ANALYTICS_BASE_PATH)
+@RequestMapping(Api.ANALYTICS_BASE_PATH)
 @RequiredArgsConstructor
 @Log4j2
 public class AnalyticsController {
 
     private final AnalyticsQueryService analyticsQueryService;
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.TOP_REVENUE_PATH)
+    @GetMapping(Api.TOP_REVENUE_PATH)
     public List<TopRevenueEvent> getTopEventsByRevenue(
-            @RequestParam(name = BkgAnalyticsConstants.BkgControllerConstants.PARAM_LIMIT,
-                    defaultValue = BkgAnalyticsConstants.BkgControllerConstants.DEFAULT_LIMIT) int limit)
+            @RequestParam(name = Api.PARAM_LIMIT,
+                    defaultValue = Api.DEFAULT_LIMIT) int limit)
     {
             final List<TopRevenueEvent> topRevenueEventList = analyticsQueryService.getTopEventsByRevenue(limit);
             log.debug("Returning top {} events by revenue: {}", limit, topRevenueEventList);
@@ -28,10 +28,10 @@ public class AnalyticsController {
             return topRevenueEventList;
     }
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.BOOKING_TRENDS_PATH)
+    @GetMapping(Api.BOOKING_TRENDS_PATH)
     public List<BookingTrend> getBookingTrends(
-            @RequestParam(name = BkgAnalyticsConstants.BkgControllerConstants.PARAM_DAYS,
-                    defaultValue = BkgAnalyticsConstants.BkgControllerConstants.DEFAULT_DAYS) int days)
+            @RequestParam(name = Api.PARAM_DAYS,
+                    defaultValue = Api.DEFAULT_DAYS) int days)
     {
         final List<BookingTrend> bookingTrendList = analyticsQueryService.getBookingTrends(days);
         log.debug("Returning booking trends for the past {} days: {}", days, bookingTrendList);
@@ -39,7 +39,7 @@ public class AnalyticsController {
         return bookingTrendList;
     }
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.REVENUE_BY_CATEGORY_PATH)
+    @GetMapping(Api.REVENUE_BY_CATEGORY_PATH)
     public List<CategoryRevenue> getRevenueByCategory() {
         final List<CategoryRevenue> categoryRevenueList = analyticsQueryService.getRevenueByCategory();
         log.debug("Returning revenue by category: {}", categoryRevenueList);
@@ -47,7 +47,7 @@ public class AnalyticsController {
         return categoryRevenueList;
     }
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.CANCELLATION_RATE_PATH)
+    @GetMapping(Api.CANCELLATION_RATE_PATH)
     public CancellationRate getCancellationRate() {
         final CancellationRate cancellationRate = analyticsQueryService.getCancellationRate();
         log.debug("Returning cancellation rate: {}", cancellationRate);
@@ -55,7 +55,7 @@ public class AnalyticsController {
         return cancellationRate;
     }
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.AVG_BOOKING_VALUE_PATH)
+    @GetMapping(Api.AVG_BOOKING_VALUE_PATH)
     public AverageBookingValue getAverageBookingValue() {
         final AverageBookingValue averageBookingValue = analyticsQueryService.getAverageBookingValue();
         log.debug("Returning average booking value: {}", averageBookingValue);
@@ -63,7 +63,7 @@ public class AnalyticsController {
         return averageBookingValue;
     }
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.ALL_EVENTS_PATH)
+    @GetMapping(Api.ALL_EVENTS_PATH)
     public List<EventStatsDetail> getAllEventStats() {
         final List<EventStatsDetail> eventStatsList = analyticsQueryService.getAllEventStats();
         log.debug("Returning all event stats ({} events)", eventStatsList.size());
@@ -71,9 +71,9 @@ public class AnalyticsController {
         return eventStatsList;
     }
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.EVENT_ANALYTICS_PATH)
+    @GetMapping(Api.EVENT_ANALYTICS_PATH)
     public EventStatsDetail getEventAnalytics(
-            @PathVariable(BkgAnalyticsConstants.BkgControllerConstants.PARAM_EVENT_ID) String eventId)
+            @PathVariable(Api.PARAM_EVENT_ID) String eventId)
     {
         final EventStatsDetail eventStats = analyticsQueryService.getEventAnalytics(eventId);
         log.debug("Returning event analytics for {}: {}", eventId, eventStats);
@@ -81,10 +81,10 @@ public class AnalyticsController {
         return eventStats;
     }
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.PAYMENT_TRENDS_PATH)
+    @GetMapping(Api.PAYMENT_TRENDS_PATH)
     public List<PaymentTrend> getPaymentTrends(
-            @RequestParam(name = BkgAnalyticsConstants.BkgControllerConstants.PARAM_DAYS,
-                    defaultValue = BkgAnalyticsConstants.BkgControllerConstants.DEFAULT_DAYS) int days)
+            @RequestParam(name = Api.PARAM_DAYS,
+                    defaultValue = Api.DEFAULT_DAYS) int days)
     {
         final List<PaymentTrend> paymentTrendList = analyticsQueryService.getPaymentTrends(days);
         log.debug("Returning payment trends for the past {} days: {}", days, paymentTrendList);
@@ -92,10 +92,10 @@ public class AnalyticsController {
         return paymentTrendList;
     }
 
-    @GetMapping(BkgAnalyticsConstants.BkgControllerConstants.EVENT_LIFECYCLE_PATH)
+    @GetMapping(Api.EVENT_LIFECYCLE_PATH)
     public List<EventLifecycleTrend> getEventLifecycleTrends(
-            @RequestParam(name = BkgAnalyticsConstants.BkgControllerConstants.PARAM_DAYS,
-                    defaultValue = BkgAnalyticsConstants.BkgControllerConstants.DEFAULT_DAYS) int days)
+            @RequestParam(name = Api.PARAM_DAYS,
+                    defaultValue = Api.DEFAULT_DAYS) int days)
     {
         final List<EventLifecycleTrend> lifecycleTrendList = analyticsQueryService.getEventLifecycleTrends(days);
         log.debug("Returning event lifecycle trends for the past {} days: {}", days, lifecycleTrendList);

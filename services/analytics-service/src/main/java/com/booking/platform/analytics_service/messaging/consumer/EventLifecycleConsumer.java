@@ -27,7 +27,7 @@ public class EventLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.EVENT_CREATED,
-            containerFactory = BkgAnalyticsConstants.BkgEventConstants.EVENT_CREATED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Event.CREATED_FACTORY
     )
     public void onEventCreated(ConsumerRecord<String, EventCreatedEvent> record) {
         EventCreatedEvent event = record.value();
@@ -48,7 +48,7 @@ public class EventLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.EVENT_UPDATED,
-            containerFactory = BkgAnalyticsConstants.BkgEventConstants.EVENT_UPDATED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Event.UPDATED_FACTORY
     )
     public void onEventUpdated(ConsumerRecord<String, EventUpdatedEvent> record) {
         EventUpdatedEvent event = record.value();
@@ -68,7 +68,7 @@ public class EventLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.EVENT_PUBLISHED,
-            containerFactory = BkgAnalyticsConstants.BkgEventConstants.EVENT_PUBLISHED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Event.PUBLISHED_FACTORY
     )
     public void onEventPublished(ConsumerRecord<String, EventPublishedEvent> record) {
         EventPublishedEvent event = record.value();
@@ -89,7 +89,7 @@ public class EventLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.EVENT_CANCELLED,
-            containerFactory = BkgAnalyticsConstants.BkgEventConstants.EVENT_CANCELLED_FACTORY
+            containerFactory = BkgAnalyticsConstants.Event.CANCELLED_FACTORY
     )
     public void onEventCancelled(ConsumerRecord<String, EventCancelledEvent> record) {
         EventCancelledEvent event = record.value();
