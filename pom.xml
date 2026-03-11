@@ -40,7 +40,7 @@
         <spring-cloud.version>2024.0.0</spring-cloud.version>
 
         <!-- gRPC & Protobuf -->
-        <grpc.version>1.68.2</grpc.version>
+        <grpc.version>1.75.0</grpc.version>
         <protobuf.version>4.29.2</protobuf.version>
         <grpc-spring-boot.version>3.1.0.RELEASE</grpc-spring-boot.version>
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
