@@ -1,0 +1,3 @@
+include:
+  - docker-compose.startup.yaml
+  - docker-compose.services.yaml

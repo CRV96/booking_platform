@@ -1,0 +1,8 @@
+**/target/
+.git/
+.idea/
+*.iml
+infrastructure/
+docs/
+*.md
+.dockerignore

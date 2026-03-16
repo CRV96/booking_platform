@@ -1,0 +1,913 @@
+{
+	"info": {
+		"_postman_id": "booking-platform-docker",
+		"name": "Booking Platform - Docker Services",
+		"description": "Health checks and verification requests for the Dockerized booking platform.\n\n## How to use\n\n1. Start the platform: `docker compose -f infrastructure/docker/docker-compose.yaml up --build`\n2. Wait for all containers to reach healthy status\n3. Run the requests in order — start with Health Checks to verify all services are up\n4. Then run the GraphQL API requests (same as local, but through Docker containers)\n\n## Port mappings\n\n| Service | Port |\n|---|---|\n| config-service | 8888 |\n| eureka-service | 8761 |\n| graphql-gateway | 8080 |\n| user-service | 8081 |\n| event-service | 8082 |\n| booking-service | 8083 |\n| payment-service | 8084 |\n| notification-service | 8086 |\n| analytics-service | 8087 |\n| ticket-service | 8088 |\n\n## Differences from local collection\n\n- Keycloak runs on port 8180 (same as local)\n- All services communicate internally via Docker network\n- gRPC mTLS is disabled (plaintext within Docker network)\n- Config server URL is overridden via CONFIG_SERVER_URL env var",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "eventId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bookingId",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Service Health Checks",
+			"description": "Verify all 10 services are running and healthy.\nRun these first after `docker compose up` to confirm the platform is ready.",
+			"item": [
+				{
+					"name": "Config Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Config service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8888/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8888",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "Eureka Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Eureka service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8761/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8761",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "GraphQL Gateway Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('GraphQL gateway is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8080/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8080",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "User Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('User service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "Event Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Event service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8082/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8082",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "Booking Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Booking service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8083/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8083",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "Payment Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Payment service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8084/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8084",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "Notification Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Notification service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8086/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8086",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "Analytics Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Analytics service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8087/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8087",
+							"path": ["actuator", "health"]
+						}
+					}
+				},
+				{
+					"name": "Ticket Service Health",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Ticket service is UP', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.status).to.eql('UP');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8088/actuator/health",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8088",
+							"path": ["actuator", "health"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Config Server Verification",
+			"description": "Verify the config server is serving configuration correctly to all services.",
+			"item": [
+				{
+					"name": "Config for eureka-service (dev)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Config server returns eureka config', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.name).to.eql('eureka-service');",
+									"    pm.expect(jsonData.propertySources).to.be.an('array').that.is.not.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8888/eureka-service/dev",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8888",
+							"path": ["eureka-service", "dev"]
+						}
+					}
+				},
+				{
+					"name": "Config for user-service (dev)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Config server returns user-service config', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.name).to.eql('user-service');",
+									"    pm.expect(jsonData.propertySources).to.be.an('array').that.is.not.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8888/user-service/dev",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8888",
+							"path": ["user-service", "dev"]
+						}
+					}
+				},
+				{
+					"name": "Config for graphql-gateway (dev)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Config server returns gateway config', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.name).to.eql('graphql-gateway');",
+									"    pm.expect(jsonData.propertySources).to.be.an('array').that.is.not.empty;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8888/graphql-gateway/dev",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8888",
+							"path": ["graphql-gateway", "dev"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Eureka Service Registry",
+			"description": "Verify all services registered with Eureka.",
+			"item": [
+				{
+					"name": "Eureka Applications (all registered services)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Eureka returns registered apps', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.applications).to.have.property('application');",
+									"    var apps = jsonData.applications.application;",
+									"    pm.expect(apps).to.be.an('array');",
+									"    var appNames = apps.map(function(a) { return a.name; });",
+									"    console.log('Registered services:', appNames.join(', '));",
+									"});",
+									"",
+									"pm.test('All 9 services are registered', function() {",
+									"    var jsonData = pm.response.json();",
+									"    var apps = jsonData.applications.application;",
+									"    var appNames = apps.map(function(a) { return a.name; });",
+									"    var expected = [",
+									"        'GRAPHQL-GATEWAY', 'USER-SERVICE', 'EVENT-SERVICE',",
+									"        'BOOKING-SERVICE', 'PAYMENT-SERVICE', 'NOTIFICATION-SERVICE',",
+									"        'ANALYTICS-SERVICE', 'TICKET-SERVICE', 'EUREKA-SERVICE'",
+									"    ];",
+									"    expected.forEach(function(name) {",
+									"        pm.expect(appNames).to.include(name);",
+									"    });",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "http://localhost:8761/eureka/apps",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8761",
+							"path": ["eureka", "apps"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "4. GraphQL API (via Docker)",
+			"description": "End-to-end GraphQL API tests running through the Dockerized services.\nIdentical to the local collection — the gateway is on the same port (8080).\n\nRecommended order:\n1. Login (customer or employee)\n2. Run queries/mutations as needed",
+			"item": [
+				{
+					"name": "Schema Introspection",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('GraphQL schema is accessible', function() {",
+									"    pm.response.to.have.status(200);",
+									"    var jsonData = pm.response.json();",
+									"    pm.expect(jsonData.data).to.have.property('__typename');",
+									"    pm.expect(jsonData.data.__typename).to.eql('Query');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "{ __typename }",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Login (customer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.login) {",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.login.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', jsonData.data.login.refreshToken);",
+									"    if (jsonData.data.login.user) {",
+									"        pm.collectionVariables.set('userId', jsonData.data.login.user.id);",
+									"    }",
+									"    pm.test('Login successful', function() {",
+									"        pm.expect(jsonData.data.login.accessToken).to.be.a('string');",
+									"        pm.expect(jsonData.data.login.tokenType).to.eql('Bearer');",
+									"    });",
+									"} else {",
+									"    pm.test('Login failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    expiresIn\n    refreshExpiresIn\n    tokenType\n    user {\n      id\n      username\n      email\n      firstName\n      lastName\n      emailVerified\n      roles\n    }\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"username\": \"john.doe\",\n    \"password\": \"customer123\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Login (employee)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.login) {",
+									"    pm.collectionVariables.set('accessToken', jsonData.data.login.accessToken);",
+									"    pm.collectionVariables.set('refreshToken', jsonData.data.login.refreshToken);",
+									"    if (jsonData.data.login.user) {",
+									"        pm.collectionVariables.set('userId', jsonData.data.login.user.id);",
+									"    }",
+									"    pm.test('Employee login successful', function() {",
+									"        pm.expect(jsonData.data.login.accessToken).to.be.a('string');",
+									"        pm.expect(jsonData.data.login.user.roles).to.include('employee');",
+									"    });",
+									"} else {",
+									"    pm.test('Employee login failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation Login($input: LoginInput!) {\n  login(input: $input) {\n    accessToken\n    refreshToken\n    expiresIn\n    tokenType\n    user {\n      id\n      username\n      email\n      firstName\n      lastName\n      roles\n    }\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"username\": \"jane.organizer\",\n    \"password\": \"employee123\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Get Current User (me)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('me query returns authenticated user', function() {",
+									"    pm.expect(jsonData.data).to.have.property('me');",
+									"    pm.expect(jsonData.data.me).to.have.property('id');",
+									"    pm.expect(jsonData.data.me).to.have.property('email');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query Me {\n  me {\n    id\n    username\n    email\n    firstName\n    lastName\n    roles\n  }\n}",
+								"variables": ""
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "List Events",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Events list returned', function() {",
+									"    pm.expect(jsonData.data).to.have.property('events');",
+									"    pm.expect(jsonData.data.events.events).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query ListEvents($page: Int, $pageSize: Int) {\n  events(page: $page, pageSize: $pageSize) {\n    events {\n      id\n      title\n      category\n      status\n      dateTime\n      venue {\n        name\n        city\n        country\n      }\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Create Event (requires employee token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.createEvent) {",
+									"    var event = jsonData.data.createEvent;",
+									"    pm.collectionVariables.set('eventId', event.id);",
+									"    pm.test('Event created successfully', function() {",
+									"        pm.expect(event.id).to.be.a('string');",
+									"        pm.expect(event.status).to.eql('DRAFT');",
+									"    });",
+									"} else {",
+									"    pm.test('Create event failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateEvent($input: CreateEventInput!) {\n  createEvent(input: $input) {\n    id\n    title\n    description\n    category\n    status\n    dateTime\n    venue {\n      name\n      city\n      country\n      capacity\n    }\n    seatCategories {\n      name\n      price\n      currency\n      totalSeats\n      availableSeats\n    }\n    createdAt\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"title\": \"Docker Test Event\",\n    \"description\": \"Event created to verify the Dockerized platform works end-to-end.\",\n    \"category\": \"CONCERT\",\n    \"dateTime\": \"2026-08-15T18:00:00Z\",\n    \"venue\": {\n      \"name\": \"Docker Arena\",\n      \"address\": \"1 Container Street\",\n      \"city\": \"London\",\n      \"country\": \"UK\",\n      \"capacity\": 1000\n    },\n    \"seatCategories\": [\n      {\n        \"name\": \"General Admission\",\n        \"price\": 25.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 800\n      },\n      {\n        \"name\": \"VIP\",\n        \"price\": 75.00,\n        \"currency\": \"GBP\",\n        \"totalSeats\": 200\n      }\n    ]\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Publish Event (requires employee token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Event published', function() {",
+									"    pm.expect(jsonData.data.publishEvent.status).to.eql('PUBLISHED');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation PublishEvent($id: ID!) {\n  publishEvent(id: $id) {\n    id\n    title\n    status\n    updatedAt\n  }\n}",
+								"variables": "{\n  \"id\": \"{{eventId}}\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Create Booking (requires customer token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.createBooking) {",
+									"    var booking = jsonData.data.createBooking;",
+									"    pm.collectionVariables.set('bookingId', booking.id);",
+									"    pm.test('Booking created', function() {",
+									"        pm.expect(booking.status).to.eql('PENDING');",
+									"        pm.expect(booking.eventTitle).to.be.a('string');",
+									"    });",
+									"} else {",
+									"    pm.test('Create booking failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CreateBooking($input: CreateBookingInput!) {\n  createBooking(input: $input) {\n    id\n    userId\n    eventId\n    eventTitle\n    status\n    seatCategory\n    quantity\n    unitPrice\n    totalPrice\n    currency\n    holdExpiresAt\n    createdAt\n  }\n}",
+								"variables": "{\n  \"input\": {\n    \"eventId\": \"{{eventId}}\",\n    \"seatCategory\": \"VIP\",\n    \"quantity\": 2,\n    \"idempotencyKey\": \"{{$guid}}\"\n  }\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "List My Bookings",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Bookings list returned', function() {",
+									"    pm.expect(jsonData.data).to.have.property('myBookings');",
+									"    pm.expect(jsonData.data.myBookings.bookings).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query MyBookings($page: Int, $pageSize: Int) {\n  myBookings(page: $page, pageSize: $pageSize) {\n    bookings {\n      id\n      eventTitle\n      status\n      seatCategory\n      quantity\n      totalPrice\n      currency\n      createdAt\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				}
+			]
+		}
+	]
+}

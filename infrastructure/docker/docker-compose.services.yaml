@@ -1,0 +1,307 @@
+name: bkg-services
+
+# ==================== COMMON TEMPLATES ====================
+x-common-env: &common-env
+  SPRING_PROFILES_ACTIVE: dev
+  CONFIG_SERVER_URL: http://config-service:8888
+  EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE: http://eureka-service:8761/eureka/
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://bkg-zipkin:9411/api/v2/spans
+  GRPC_MTLS_ENABLED: "false"
+  # JWT: issuer-uri must match the token "iss" claim. Keycloak uses KC_HOSTNAME=localhost
+  # so tokens have iss=http://localhost:8080/realms/booking-platform (Keycloak internal port).
+  # jwk-set-uri must be reachable inside Docker via the container name.
+  SECURITY_JWT_ISSUER_URI: http://localhost:8080/realms/booking-platform
+  SECURITY_JWT_JWK_SET_URI: http://bkg-keycloak:8080/realms/booking-platform/protocol/openid-connect/certs
+
+x-common-healthcheck: &common-healthcheck
+  interval: 15s
+  timeout: 5s
+  retries: 10
+  start_period: 60s
+
+services:
+
+  # ==================== CONFIG & DISCOVERY ====================
+  config-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: config-service
+    container_name: config-service
+    ports:
+      - "8888:8888"
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      CONFIG_SERVER_CONFIGURATIONS_PATH: /config
+      MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://bkg-zipkin:9411/api/v2/spans
+    volumes:
+      - ../../config:/config:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8888/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  eureka-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: eureka-service
+    container_name: eureka-service
+    ports:
+      - "8761:8761"
+    environment:
+      <<: *common-env
+    depends_on:
+      config-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8761/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  # ==================== BACKEND SERVICES ====================
+  user-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: user-service
+    container_name: user-service
+    ports:
+      - "8081:8081"
+    environment:
+      <<: *common-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://bkg-postgres:5432/userdb
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_DATA_REDIS_HOST: bkg-redis
+      KEYCLOAK_ADMIN_SERVER_URL: http://bkg-keycloak:8080
+      USER_SERVICE_KEYCLOAK_CLIENT_SECRET: user-service-secret
+      KEYCLOAK_AUTH_SERVER_URL: http://bkg-keycloak:8080
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  event-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: event-service
+    container_name: event-service
+    ports:
+      - "8082:8082"
+    environment:
+      <<: *common-env
+      SPRING_DATA_MONGODB_URI: mongodb://admin:admin@bkg-mongodb:27017/eventdb?authSource=admin
+      SPRING_DATA_REDIS_HOST: bkg-redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  booking-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: booking-service
+    container_name: booking-service
+    ports:
+      - "8083:8083"
+    environment:
+      <<: *common-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://bkg-postgres:5432/bookingdb
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_DATA_REDIS_HOST: bkg-redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
+      GRPC_CLIENT_EVENT_SERVICE_ADDRESS: static://event-service:9093
+      GRPC_CLIENT_EVENT_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8083/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  payment-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: payment-service
+    container_name: payment-service
+    ports:
+      - "8084:8084"
+    environment:
+      <<: *common-env
+      SPRING_DATASOURCE_URL: jdbc:postgresql://bkg-postgres:5432/paymentdb
+      SPRING_DATASOURCE_USERNAME: admin
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_DATA_REDIS_HOST: bkg-redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8084/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  notification-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: notification-service
+    container_name: notification-service
+    ports:
+      - "8086:8086"
+    environment:
+      <<: *common-env
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
+      SPRING_MAIL_HOST: bkg-mailhog
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8086/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  analytics-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: analytics-service
+    container_name: analytics-service
+    ports:
+      - "8087:8087"
+    environment:
+      <<: *common-env
+      SPRING_DATA_MONGODB_URI: mongodb://admin:admin@bkg-mongodb:27017/analyticsdb?authSource=admin
+      SPRING_DATA_REDIS_HOST: bkg-redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8087/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  ticket-service:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: ticket-service
+    container_name: ticket-service
+    ports:
+      - "8088:8088"
+    environment:
+      <<: *common-env
+      SPRING_DATA_MONGODB_URI: mongodb://admin:admin@bkg-mongodb:27017/ticketdb?authSource=admin
+      SPRING_DATA_REDIS_HOST: bkg-redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8088/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  # ==================== API GATEWAY ====================
+  graphql-gateway:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/Dockerfile.service
+      args:
+        SERVICE_NAME: graphql-gateway
+    container_name: graphql-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      <<: *common-env
+      SPRING_DATA_REDIS_HOST: bkg-redis
+      # JWT: gateway uses Spring Security standard properties (not custom security.jwt.*)
+      JWT_ISSUER_URI: http://localhost:8080/realms/booking-platform
+      JWT_JWK_SET_URI: http://bkg-keycloak:8080/realms/booking-platform/protocol/openid-connect/certs
+      # gRPC client addresses
+      GRPC_CLIENT_USER_SERVICE_ADDRESS: static://user-service:9091
+      GRPC_CLIENT_USER_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
+      GRPC_CLIENT_EVENT_SERVICE_ADDRESS: static://event-service:9093
+      GRPC_CLIENT_EVENT_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
+      GRPC_CLIENT_BOOKING_SERVICE_ADDRESS: static://booking-service:9094
+      GRPC_CLIENT_BOOKING_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
+      GRPC_CLIENT_PAYMENT_SERVICE_ADDRESS: static://payment-service:9095
+      GRPC_CLIENT_PAYMENT_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
+      GRPC_CLIENT_TICKET_SERVICE_ADDRESS: static://ticket-service:9096
+      GRPC_CLIENT_TICKET_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
+      GRPC_CLIENT_ANALYTICS_SERVICE_ADDRESS: static://analytics-service:9097
+      GRPC_CLIENT_ANALYTICS_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
+    depends_on:
+      config-service:
+        condition: service_healthy
+      eureka-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      event-service:
+        condition: service_healthy
+      booking-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+      analytics-service:
+        condition: service_healthy
+      ticket-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
+      <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+# ==================== NETWORKS ====================
+# bkg-network is defined in docker-compose.startup.yaml
+# and shared via docker-compose.yaml include
