@@ -3,9 +3,11 @@ package com.booking.platform.user_service.service.impl;
 import com.booking.platform.user_service.config.CacheConfig;
 import com.booking.platform.user_service.properties.KeycloakProperties;
 import com.booking.platform.user_service.constants.KeycloakConstants;
+import com.booking.platform.user_service.exception.InternalException;
 import com.booking.platform.user_service.exception.user.UserAlreadyExistsException;
 import com.booking.platform.user_service.exception.user.UserNotFoundException;
 import com.booking.platform.user_service.service.KeycloakUserService;
+import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +21,7 @@ import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -105,9 +108,9 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
         try {
             return getUsersResource().get(userId).toRepresentation();
-        } catch (Exception e) {
+        } catch (NotFoundException e) {
             log.warn("User not found with ID: {}", userId);
-            throw new UserNotFoundException("User not found with ID: " + userId);
+            throw UserNotFoundException.forId(userId);
         }
     }
 
@@ -118,7 +121,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
         List<UserRepresentation> users = getUsersResource().searchByUsername(username, true);
         if (users.isEmpty()) {
-            throw new UserNotFoundException("User not found with username: " + username);
+            throw UserNotFoundException.forUsername(username);
         }
         return users.get(0);
     }
@@ -130,7 +133,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
         List<UserRepresentation> users = getUsersResource().searchByEmail(email, true);
         if (users.isEmpty()) {
-            throw new UserNotFoundException("User not found with email: " + email);
+            throw UserNotFoundException.forEmail(email);
         }
         return users.get(0);
     }
@@ -209,20 +212,20 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     private String handleCreateUserResponse(Response response, String email) {
         int status = response.getStatus();
 
-        if (status == 201) {
+        if (status == Response.Status.CREATED.getStatusCode()) {
             String userId = extractUserIdFromResponse(response);
             log.info("User created successfully with ID: {}", userId);
             return userId;
         }
 
-        if (status == 409) {
+        if (status == Response.Status.CONFLICT.getStatusCode()) {
             log.warn("User already exists with email: {}", email);
             throw new UserAlreadyExistsException("User with email " + email + " already exists");
         }
 
         String error = response.readEntity(String.class);
         log.error("Failed to create user. Status: {}, Error: {}", status, error);
-        throw new RuntimeException("Failed to create user: " + error);
+        throw new InternalException("Failed to create user: " + error);
     }
 
     private void updateBasicFields(UserRepresentation user, String firstName, String lastName, String email) {
@@ -264,10 +267,10 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     }
 
     private String extractUserIdFromResponse(Response response) {
-        String location = response.getHeaderString("Location");
+        String location = response.getHeaderString(HttpHeaders.LOCATION);
         if (location != null) {
             return location.substring(location.lastIndexOf('/') + 1);
         }
-        throw new RuntimeException("Could not extract user ID from response");
+        throw new InternalException("Could not extract user ID from response");
     }
 }

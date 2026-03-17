@@ -32,7 +32,7 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
         log.debug("Fetching user by ID: {}", userId);
 
         return userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+                .orElseThrow(() -> UserNotFoundException.forId(userId));
     }
 
     @Cacheable(value = CacheConfig.CACHE_USER_BY_USERNAME, key = "#a0")
@@ -41,7 +41,7 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
         log.debug("Fetching user by username: {}", username);
 
         return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UserNotFoundException("User not found with username: " + username));
+                .orElseThrow(() -> UserNotFoundException.forUsername(username));
     }
 
     @Cacheable(value = CacheConfig.CACHE_USER_BY_EMAIL, key = "#a0")
@@ -50,10 +50,8 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
         log.debug("Fetching user by email: {}", email);
 
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+                .orElseThrow(() -> UserNotFoundException.forEmail(email));
     }
-
-    // ==================== DatabaseUserService Methods ====================
 
     @Override
     public List<UserEntity> getAllUsers() {
@@ -107,8 +105,6 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
         return exists;
     }
 
-    // ==================== User Attributes ====================
-
     @Override
     public List<UserAttributeEntity> getUserAttributes(String userId) {
         log.debug("Fetching all attributes for user ID: {}", userId);
@@ -122,4 +118,5 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
 
         return userAttributeRepository.findByUserIdAndName(userId, attributeName);
     }
+
 }

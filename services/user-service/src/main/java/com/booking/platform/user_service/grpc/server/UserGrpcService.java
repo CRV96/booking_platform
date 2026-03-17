@@ -25,6 +25,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
+    private static final int MIN_PAGE_SIZE = 1;
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final KeycloakUserService keycloakUserService;
     private final UserGrpcMapper userGrpcMapper;
     private final AttributeMapper attributeMapper;
@@ -120,7 +123,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
     }
 
     private int clampPageSize(int pageSize) {
-        return Math.min(Math.max(pageSize, 1), 100);
+        return Math.min(Math.max(pageSize, MIN_PAGE_SIZE), MAX_PAGE_SIZE);
     }
 
     private void sendUserResponse(UserRepresentation user, StreamObserver<UserResponse> responseObserver) {

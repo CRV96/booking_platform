@@ -12,6 +12,18 @@ public class UserNotFoundException extends UserServiceException {
         super(message);
     }
 
+    public static UserNotFoundException forId(String userId) {
+        return new UserNotFoundException("User not found with ID: " + userId);
+    }
+
+    public static UserNotFoundException forUsername(String username) {
+        return new UserNotFoundException("User not found with username: " + username);
+    }
+
+    public static UserNotFoundException forEmail(String email) {
+        return new UserNotFoundException("User not found with email: " + email);
+    }
+
     @Override
     public Status.Code getGrpcStatusCode() {
         return Status.Code.NOT_FOUND;

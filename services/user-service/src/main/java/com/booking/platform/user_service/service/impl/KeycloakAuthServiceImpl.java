@@ -26,6 +26,19 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @EnableConfigurationProperties(KeycloakAuthProperties.class)
 public class KeycloakAuthServiceImpl implements AuthService<TokenResponseDTO> {
 
+    // Form field names (Keycloak OAuth2 token endpoint)
+    private static final String FORM_GRANT_TYPE = "grant_type";
+    private static final String FORM_CLIENT_ID = "client_id";
+    private static final String FORM_USERNAME = "username";
+    private static final String FORM_PASSWORD = "password";
+    private static final String FORM_REFRESH_TOKEN = "refresh_token";
+
+    // Error messages
+    private static final String ERROR_INVALID_CREDENTIALS = "Invalid username or password";
+    private static final String ERROR_INVALID_REFRESH_TOKEN = "Invalid or expired refresh token";
+    private static final String ERROR_AUTH_FAILED = "Authentication failed: %s";
+    private static final String ERROR_REFRESH_FAILED = "Token refresh failed: %s";
+
     private final WebClient webClient;
     private final KeycloakAuthProperties authProperties;
 
@@ -38,10 +51,10 @@ public class KeycloakAuthServiceImpl implements AuthService<TokenResponseDTO> {
                     .uri(authProperties.getTokenEndpoint())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(BodyInserters
-                            .fromFormData("grant_type", KeycloakConstants.GRANT_TYPE_PASSWORD)
-                            .with("client_id", authProperties.clientId())
-                            .with("username", username)
-                            .with("password", password))
+                            .fromFormData(FORM_GRANT_TYPE, KeycloakConstants.GRANT_TYPE_PASSWORD)
+                            .with(FORM_CLIENT_ID, authProperties.clientId())
+                            .with(FORM_USERNAME, username)
+                            .with(FORM_PASSWORD, password))
                     .retrieve()
                     .bodyToMono(TokenResponseDTO.class)
                     .block();
@@ -51,10 +64,10 @@ public class KeycloakAuthServiceImpl implements AuthService<TokenResponseDTO> {
 
         } catch (WebClientResponseException.Unauthorized | WebClientResponseException.BadRequest e) {
             log.warn("Invalid credentials for user: {}", username);
-            throw new InvalidCredentialsException("Invalid username or password");
+            throw new InvalidCredentialsException(ERROR_INVALID_CREDENTIALS);
         } catch (Exception e) {
             log.error("Login failed for user: {}", username, e);
-            throw new AuthenticationException("Authentication failed: " + e.getMessage());
+            throw new AuthenticationException(String.format(ERROR_AUTH_FAILED, e.getMessage()));
         }
     }
 
@@ -67,9 +80,9 @@ public class KeycloakAuthServiceImpl implements AuthService<TokenResponseDTO> {
                     .uri(authProperties.getTokenEndpoint())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(BodyInserters
-                            .fromFormData("grant_type", KeycloakConstants.GRANT_TYPE_REFRESH_TOKEN)
-                            .with("client_id", authProperties.clientId())
-                            .with("refresh_token", refreshToken))
+                            .fromFormData(FORM_GRANT_TYPE, KeycloakConstants.GRANT_TYPE_REFRESH_TOKEN)
+                            .with(FORM_CLIENT_ID, authProperties.clientId())
+                            .with(FORM_REFRESH_TOKEN, refreshToken))
                     .retrieve()
                     .bodyToMono(TokenResponseDTO.class)
                     .block();
@@ -79,10 +92,10 @@ public class KeycloakAuthServiceImpl implements AuthService<TokenResponseDTO> {
 
         } catch (WebClientResponseException.BadRequest e) {
             log.warn("Invalid or expired refresh token");
-            throw new InvalidTokenException("Invalid or expired refresh token");
+            throw new InvalidTokenException(ERROR_INVALID_REFRESH_TOKEN);
         } catch (Exception e) {
             log.error("Token refresh failed", e);
-            throw new AuthenticationException("Token refresh failed: " + e.getMessage());
+            throw new AuthenticationException(String.format(ERROR_REFRESH_FAILED, e.getMessage()));
         }
     }
 
@@ -95,8 +108,8 @@ public class KeycloakAuthServiceImpl implements AuthService<TokenResponseDTO> {
                     .uri(authProperties.getLogoutEndpoint())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(BodyInserters
-                            .fromFormData("client_id", authProperties.clientId())
-                            .with("refresh_token", refreshToken))
+                            .fromFormData(FORM_CLIENT_ID, authProperties.clientId())
+                            .with(FORM_REFRESH_TOKEN, refreshToken))
                     .retrieve()
                     .toBodilessEntity()
                     .block();
@@ -109,4 +122,5 @@ public class KeycloakAuthServiceImpl implements AuthService<TokenResponseDTO> {
             return false;
         }
     }
+
 }

@@ -7,13 +7,7 @@ public interface KeycloakConstants {
 
     // Groups
     String GROUP_CUSTOMERS = "customers";
-    String GROUP_ADMINS = "admins";
-    String GROUP_ORGANIZERS = "organizers";
-
-    // Roles
-    String ROLE_USER = "user";
-    String ROLE_ADMIN = "admin";
-    String ROLE_ORGANIZER = "organizer";
+    String GROUP_EMPLOYEES = "employees";
 
     // Grant Types
     String GRANT_TYPE_PASSWORD = "password";
