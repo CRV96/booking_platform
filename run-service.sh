@@ -150,5 +150,14 @@ else
     echo -e "${GREEN}Starting $SERVICE_NAME...${NC}"
 fi
 
-# Run with 1Password environment
-op run --env-file=".env" -- bash -c "$MVN_CMD"
+# ─── Run mode ───────────────────────────────────────────────────────────────
+# Default: run directly using exported environment variables.
+# To use 1Password CLI for secret injection, uncomment the "op run" line
+# and comment out the plain "eval" line below.
+# ────────────────────────────────────────────────────────────────────────────
+
+# Plain mode (default) — uses environment variables from your shell
+eval "$MVN_CMD"
+
+# 1Password mode (optional) — injects secrets from .env via 1Password CLI
+# op run --env-file=".env" -- bash -c "$MVN_CMD"
