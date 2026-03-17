@@ -78,6 +78,17 @@
             "access.token.claim": "true",
             "id.token.claim": "true"
           }
+        },
+        {
+          "name": "preferred-language",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "claim.name": "preferred_language",
+            "user.attribute": "preferredLanguage",
+            "access.token.claim": "true",
+            "id.token.claim": "true"
+          }
         }
       ]
     }
