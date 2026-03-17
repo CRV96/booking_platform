@@ -55,10 +55,27 @@ jobs:
             **/target/site/jacoco/
             **/target/surefire-reports/
 
+  # ==================== DOCKER ====================
+  docker:
+    name: Docker Build
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: >
+          docker build
+          -f infrastructure/docker/Dockerfile.service
+          --build-arg SERVICE_NAME=user-service
+          -t booking-platform/user-service:ci
+          .
+
   # ==================== SONARQUBE ====================
   sonar:
     name: SonarQube Analysis
-    needs: test
+    needs: [test, docker]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
@@ -87,20 +104,3 @@ jobs:
           -Dsonar.host.url=https://sonarcloud.io
           -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
           -Dsonar.token=${{ secrets.SONAR_TOKEN }}
-
-  # ==================== DOCKER ====================
-  docker:
-    name: Docker Build
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: >
-          docker build
-          -f infrastructure/docker/Dockerfile.service
-          --build-arg SERVICE_NAME=user-service
-          -t booking-platform/user-service:ci
-          .
