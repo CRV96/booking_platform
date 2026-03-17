@@ -7,15 +7,14 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-    name: Build, Test & Analyze
-    runs-on: ubuntu-latest
 
+  # ==================== BUILD ====================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Full history for SonarQube blame analysis
 
       - name: Set up Java 21
         uses: actions/setup-java@v4
@@ -24,11 +23,63 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Build & Test
+      - name: Compile
+        run: mvn clean compile -B
+
+  # ==================== TEST ====================
+  test:
+    name: Test
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Test with coverage
         run: mvn clean verify -B
 
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          retention-days: 1
+          path: |
+            **/target/classes/
+            **/target/site/jacoco/
+            **/target/surefire-reports/
+
+  # ==================== SONARQUBE ====================
+  sonar:
+    name: SonarQube Analysis
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
       - name: SonarQube Analysis
-        if: env.SONAR_TOKEN != ''
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: >
@@ -37,7 +88,16 @@ jobs:
           -Dsonar.organization=${{ secrets.SONAR_ORGANIZATION }}
           -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
-      - name: Docker Build Verification
+  # ==================== DOCKER ====================
+  docker:
+    name: Docker Build
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
         run: >
           docker build
           -f infrastructure/docker/Dockerfile.service
