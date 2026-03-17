@@ -68,12 +68,14 @@ public class JwtContextInterceptor implements ServerInterceptor {
                 String userId = jwt.getSubject();
                 String username = jwt.getClaimAsString("preferred_username");
                 String email = jwt.getClaimAsString("email");
+                String locale = jwt.getClaimAsString("preferred_language");
                 List<String> roles = extractRoles(jwt);
 
                 Context context = Context.current()
                         .withValue(GrpcUserContext.USER_ID, userId)
                         .withValue(GrpcUserContext.USERNAME, username)
                         .withValue(GrpcUserContext.EMAIL, email)
+                        .withValue(GrpcUserContext.LOCALE, locale)
                         .withValue(GrpcUserContext.ROLES, roles)
                         .withValue(GrpcUserContext.JWT_TOKEN, token)
                         .withValue(GrpcUserContext.JWT_ID, jwt.getId())
