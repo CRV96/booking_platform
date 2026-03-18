@@ -11,7 +11,9 @@ public record ValidationProperties(
     int minPasswordLength,
     int maxPasswordLength,
     int maxNameLength,
-    int maxEmailLength
+    int maxEmailLength,
+    int minPageSize,
+    int maxPageSize
 ) {
     /**
      * Default values if not specified in configuration.
@@ -31,6 +33,12 @@ public record ValidationProperties(
         }
         if (maxEmailLength <= 0) {
             maxEmailLength = 255;
+        }
+        if (minPageSize <= 0) {
+            minPageSize = 1;
+        }
+        if (maxPageSize <= 0) {
+            maxPageSize = 100;
         }
     }
 }

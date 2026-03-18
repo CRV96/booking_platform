@@ -31,7 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
 
-    private final AuthService<TokenResponseDTO> authService;
+    private final AuthService authService;
     private final KeycloakUserService keycloakUserService;
     private final UserGrpcMapper userGrpcMapper;
     private final AttributeMapper attributeMapper;
@@ -97,11 +97,11 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
         TokenResponseDTO tokens = authService.refreshToken(request.getRefreshToken());
 
         AuthResponse response = AuthResponse.newBuilder()
-                .setAccessToken(tokens.access_token())
-                .setRefreshToken(tokens.refresh_token())
-                .setExpiresIn(tokens.expires_in())
-                .setRefreshExpiresIn(tokens.refresh_expires_in())
-                .setTokenType(tokens.token_type())
+                .setAccessToken(tokens.accessToken())
+                .setRefreshToken(tokens.refreshToken())
+                .setExpiresIn(tokens.expiresIn())
+                .setRefreshExpiresIn(tokens.refreshExpiresIn())
+                .setTokenType(tokens.tokenType())
                 .build();
 
         responseObserver.onNext(response);
@@ -134,11 +134,11 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
 
     private AuthResponse buildAuthResponse(TokenResponseDTO tokens, UserRepresentation user, List<String> roles) {
         return AuthResponse.newBuilder()
-                .setAccessToken(tokens.access_token())
-                .setRefreshToken(tokens.refresh_token())
-                .setExpiresIn(tokens.expires_in())
-                .setRefreshExpiresIn(tokens.refresh_expires_in())
-                .setTokenType(tokens.token_type())
+                .setAccessToken(tokens.accessToken())
+                .setRefreshToken(tokens.refreshToken())
+                .setExpiresIn(tokens.expiresIn())
+                .setRefreshExpiresIn(tokens.refreshExpiresIn())
+                .setTokenType(tokens.tokenType())
                 .setUser(userGrpcMapper.toUserInfo(user, roles))
                 .build();
     }

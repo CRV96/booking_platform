@@ -3,27 +3,29 @@ package com.booking.platform.user_service.constants;
 /**
  * Constants for user attribute names stored in Keycloak.
  */
-public interface UserAttributes {
+public final class UserAttributes {
+
+    private UserAttributes() {}
 
     // Contact Information
-    String PHONE_NUMBER = "phoneNumber";
-    String COUNTRY = "country";
+    public static final String PHONE_NUMBER = "phoneNumber";
+    public static final String COUNTRY = "country";
 
     // Preferences
-    String PREFERRED_LANGUAGE = "preferredLanguage";
-    String PREFERRED_CURRENCY = "preferredCurrency";
-    String TIMEZONE = "timezone";
+    public static final String PREFERRED_LANGUAGE = "preferredLanguage";
+    public static final String PREFERRED_CURRENCY = "preferredCurrency";
+    public static final String TIMEZONE = "timezone";
 
     // Profile
-    String DATE_OF_BIRTH = "dateOfBirth";
-    String BILLING_ADDRESS = "billingAddress";
-    String PROFILE_PICTURE_URL = "profilePictureUrl";
+    public static final String DATE_OF_BIRTH = "dateOfBirth";
+    public static final String BILLING_ADDRESS = "billingAddress";
+    public static final String PROFILE_PICTURE_URL = "profilePictureUrl";
 
     // Notification Settings
-    String EMAIL_NOTIFICATIONS = "emailNotifications";
-    String SMS_NOTIFICATIONS = "smsNotifications";
+    public static final String EMAIL_NOTIFICATIONS = "emailNotifications";
+    public static final String SMS_NOTIFICATIONS = "smsNotifications";
 
     // Favorites
-    String FAVORITE_EVENT_IDS = "favoriteEventIds";
-    String FAVORITE_VENUE_IDS = "favoriteVenueIds";
+    public static final String FAVORITE_EVENT_IDS = "favoriteEventIds";
+    public static final String FAVORITE_VENUE_IDS = "favoriteVenueIds";
 }

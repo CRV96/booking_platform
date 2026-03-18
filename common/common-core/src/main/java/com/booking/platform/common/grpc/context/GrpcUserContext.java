@@ -28,6 +28,7 @@ public final class GrpcUserContext {
     public static final Context.Key<String> JWT_TOKEN = Context.key("jwt-token");
     public static final Context.Key<String> JWT_ID = Context.key("jwt-id");
     public static final Context.Key<Instant> JWT_EXPIRY = Context.key("jwt-expiry");
+    public static final Context.Key<String> LOCALE = Context.key("jwt-locale");
 
     public static String getUserId() {
         return USER_ID.get();
@@ -56,6 +57,10 @@ public final class GrpcUserContext {
 
     public static Instant getJwtExpiry() {
         return JWT_EXPIRY.get();
+    }
+
+    public static String getLocale() {
+        return LOCALE.get();
     }
 
     public static boolean isAuthenticated() {

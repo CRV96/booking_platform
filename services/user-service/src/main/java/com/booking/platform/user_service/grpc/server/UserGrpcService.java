@@ -3,12 +3,14 @@ package com.booking.platform.user_service.grpc.server;
 import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.user_service.mapper.AttributeMapper;
 import com.booking.platform.user_service.mapper.UserGrpcMapper;
+import com.booking.platform.user_service.properties.ValidationProperties;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.UserValidator;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.keycloak.representations.idm.UserRepresentation;
 
 import java.util.List;
@@ -23,12 +25,14 @@ import java.util.Map;
 @GrpcService
 @Slf4j
 @RequiredArgsConstructor
+@EnableConfigurationProperties(ValidationProperties.class)
 public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
     private final KeycloakUserService keycloakUserService;
     private final UserGrpcMapper userGrpcMapper;
     private final AttributeMapper attributeMapper;
     private final UserValidator userValidator;
+    private final ValidationProperties validationProperties;
 
     @Override
     public void getUser(GetUserRequest request, StreamObserver<UserResponse> responseObserver) {
@@ -120,7 +124,7 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
     }
 
     private int clampPageSize(int pageSize) {
-        return Math.min(Math.max(pageSize, 1), 100);
+        return Math.min(Math.max(pageSize, validationProperties.minPageSize()), validationProperties.maxPageSize());
     }
 
     private void sendUserResponse(UserRepresentation user, StreamObserver<UserResponse> responseObserver) {

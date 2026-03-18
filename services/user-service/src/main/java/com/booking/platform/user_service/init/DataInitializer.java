@@ -1,5 +1,6 @@
 package com.booking.platform.user_service.init;
 
+import com.booking.platform.user_service.constants.KeycloakConstants;
 import com.booking.platform.user_service.constants.UserAttributes;
 import com.booking.platform.user_service.properties.KeycloakProperties;
 import com.booking.platform.user_service.service.KeycloakUserService;
@@ -47,9 +48,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DataInitializer implements ApplicationRunner {
 
-    private static final String GROUP_CUSTOMERS = "customers";
-    private static final String GROUP_EMPLOYEES = "employees";
-    private static final int  SKIP_THRESHOLD   = 4; // realm-imported test users
+    private static final int SKIP_THRESHOLD = 4; // realm-imported test users
 
     private final KeycloakUserService keycloakUserService;
     private final Keycloak            keycloak;
@@ -61,19 +60,23 @@ public class DataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        int existing = keycloakUserService.getUserCount(null);
-        if (existing > SKIP_THRESHOLD) {
-            log.info("DataInitializer: {} users already exist — skipping seed", existing);
-            return;
+        try {
+            int existing = keycloakUserService.getUserCount(null);
+            if (existing > SKIP_THRESHOLD) {
+                log.info("DataInitializer: {} users already exist — skipping seed", existing);
+                return;
+            }
+
+            log.info("DataInitializer: seeding 50 customers and 10 employees...");
+
+            seedCustomers();
+            seedEmployees();
+
+            log.info("DataInitializer: seeding complete — {} users now in Keycloak",
+                    keycloakUserService.getUserCount(null));
+        } catch (Exception e) {
+            log.warn("DataInitializer: Keycloak is unavailable, skipping data seed — {}", e.getMessage());
         }
-
-        log.info("DataInitializer: seeding 50 customers and 10 employees...");
-
-        seedCustomers();
-        seedEmployees();
-
-        log.info("DataInitializer: seeding complete — {} users now in Keycloak",
-                keycloakUserService.getUserCount(null));
     }
 
     // =========================================================================
@@ -270,7 +273,7 @@ public class DataInitializer implements ApplicationRunner {
             user.setLastName(lastName);
             user.setEnabled(true);
             user.setEmailVerified(true);
-            user.setGroups(List.of(GROUP_EMPLOYEES));
+            user.setGroups(List.of(KeycloakConstants.GROUP_EMPLOYEES));
 
             CredentialRepresentation credential = new CredentialRepresentation();
             credential.setType(CredentialRepresentation.PASSWORD);

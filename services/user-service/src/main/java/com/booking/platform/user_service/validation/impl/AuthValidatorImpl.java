@@ -2,27 +2,27 @@ package com.booking.platform.user_service.validation.impl;
 
 import com.booking.platform.common.grpc.user.LoginRequest;
 import com.booking.platform.common.grpc.user.RegisterRequest;
+import com.booking.platform.user_service.constants.ValidationMessages;
 import com.booking.platform.user_service.exception.ValidationException;
 import com.booking.platform.user_service.properties.ValidationProperties;
 import com.booking.platform.user_service.validation.AuthValidator;
-import lombok.RequiredArgsConstructor;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
 
 /**
  * Validator for authentication-related gRPC requests.
  */
 @Component
-@RequiredArgsConstructor
 @EnableConfigurationProperties(ValidationProperties.class)
-public class AuthValidatorImpl implements AuthValidator {
+public class AuthValidatorImpl extends BaseValidator implements AuthValidator {
 
-    private final ValidationProperties validationProperties;
-    private Pattern emailPattern;
+    public AuthValidatorImpl(ValidationProperties validationProperties, MessageSource messageSource) {
+        super(validationProperties, messageSource);
+    }
 
     @Override
     public void validateRegisterRequest(RegisterRequest request) {
@@ -30,39 +30,39 @@ public class AuthValidatorImpl implements AuthValidator {
 
         // Email validation
         if (isBlank(request.getEmail())) {
-            errors.add("Email is required");
+            errors.add(msg(ValidationMessages.EMAIL_REQUIRED));
         } else {
             if (request.getEmail().length() > validationProperties.maxEmailLength()) {
-                errors.add("Email must not exceed " + validationProperties.maxEmailLength() + " characters");
+                errors.add(msg(ValidationMessages.EMAIL_TOO_LONG, validationProperties.maxEmailLength()));
             }
             if (!getEmailPattern().matcher(request.getEmail()).matches()) {
-                errors.add("Invalid email format");
+                errors.add(msg(ValidationMessages.EMAIL_INVALID_FORMAT));
             }
         }
 
         // Password validation
         if (isBlank(request.getPassword())) {
-            errors.add("Password is required");
+            errors.add(msg(ValidationMessages.PASSWORD_REQUIRED));
         } else {
             if (request.getPassword().length() < validationProperties.minPasswordLength()) {
-                errors.add("Password must be at least " + validationProperties.minPasswordLength() + " characters");
+                errors.add(msg(ValidationMessages.PASSWORD_TOO_SHORT, validationProperties.minPasswordLength()));
             }
             if (request.getPassword().length() > validationProperties.maxPasswordLength()) {
-                errors.add("Password must not exceed " + validationProperties.maxPasswordLength() + " characters");
+                errors.add(msg(ValidationMessages.PASSWORD_TOO_LONG, validationProperties.maxPasswordLength()));
             }
         }
 
         // Name validation
         if (isBlank(request.getFirstName())) {
-            errors.add("First name is required");
+            errors.add(msg(ValidationMessages.FIRST_NAME_REQUIRED));
         } else if (request.getFirstName().length() > validationProperties.maxNameLength()) {
-            errors.add("First name must not exceed " + validationProperties.maxNameLength() + " characters");
+            errors.add(msg(ValidationMessages.FIRST_NAME_TOO_LONG, validationProperties.maxNameLength()));
         }
 
         if (isBlank(request.getLastName())) {
-            errors.add("Last name is required");
+            errors.add(msg(ValidationMessages.LAST_NAME_REQUIRED));
         } else if (request.getLastName().length() > validationProperties.maxNameLength()) {
-            errors.add("Last name must not exceed " + validationProperties.maxNameLength() + " characters");
+            errors.add(msg(ValidationMessages.LAST_NAME_TOO_LONG, validationProperties.maxNameLength()));
         }
 
         throwIfErrors(errors);
@@ -73,11 +73,11 @@ public class AuthValidatorImpl implements AuthValidator {
         List<String> errors = new ArrayList<>();
 
         if (isBlank(request.getUsername())) {
-            errors.add("Username is required");
+            errors.add(msg(ValidationMessages.USERNAME_REQUIRED));
         }
 
         if (isBlank(request.getPassword())) {
-            errors.add("Password is required");
+            errors.add(msg(ValidationMessages.PASSWORD_REQUIRED));
         }
 
         throwIfErrors(errors);
@@ -86,24 +86,7 @@ public class AuthValidatorImpl implements AuthValidator {
     @Override
     public void validateRefreshToken(String refreshToken) {
         if (isBlank(refreshToken)) {
-            throw new ValidationException("Refresh token is required");
-        }
-    }
-
-    private Pattern getEmailPattern() {
-        if (emailPattern == null) {
-            emailPattern = Pattern.compile(validationProperties.emailPattern());
-        }
-        return emailPattern;
-    }
-
-    private boolean isBlank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    private void throwIfErrors(List<String> errors) {
-        if (!errors.isEmpty()) {
-            throw new ValidationException(String.join("; ", errors));
+            throw new ValidationException(msg(ValidationMessages.REFRESH_TOKEN_REQUIRED));
         }
     }
 }

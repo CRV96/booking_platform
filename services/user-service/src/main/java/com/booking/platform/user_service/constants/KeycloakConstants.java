@@ -3,19 +3,15 @@ package com.booking.platform.user_service.constants;
 /**
  * Constants for Keycloak-specific values.
  */
-public interface KeycloakConstants {
+public final class KeycloakConstants {
+
+    private KeycloakConstants() {}
 
     // Groups
-    String GROUP_CUSTOMERS = "customers";
-    String GROUP_ADMINS = "admins";
-    String GROUP_ORGANIZERS = "organizers";
-
-    // Roles
-    String ROLE_USER = "user";
-    String ROLE_ADMIN = "admin";
-    String ROLE_ORGANIZER = "organizer";
+    public static final String GROUP_CUSTOMERS = "customers";
+    public static final String GROUP_EMPLOYEES = "employees";
 
     // Grant Types
-    String GRANT_TYPE_PASSWORD = "password";
-    String GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
+    public static final String GRANT_TYPE_PASSWORD = "password";
+    public static final String GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
 }
