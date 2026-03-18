@@ -60,19 +60,23 @@ public class DataInitializer implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        int existing = keycloakUserService.getUserCount(null);
-        if (existing > SKIP_THRESHOLD) {
-            log.info("DataInitializer: {} users already exist — skipping seed", existing);
-            return;
+        try {
+            int existing = keycloakUserService.getUserCount(null);
+            if (existing > SKIP_THRESHOLD) {
+                log.info("DataInitializer: {} users already exist — skipping seed", existing);
+                return;
+            }
+
+            log.info("DataInitializer: seeding 50 customers and 10 employees...");
+
+            seedCustomers();
+            seedEmployees();
+
+            log.info("DataInitializer: seeding complete — {} users now in Keycloak",
+                    keycloakUserService.getUserCount(null));
+        } catch (Exception e) {
+            log.warn("DataInitializer: Keycloak is unavailable, skipping data seed — {}", e.getMessage());
         }
-
-        log.info("DataInitializer: seeding 50 customers and 10 employees...");
-
-        seedCustomers();
-        seedEmployees();
-
-        log.info("DataInitializer: seeding complete — {} users now in Keycloak",
-                keycloakUserService.getUserCount(null));
     }
 
     // =========================================================================
