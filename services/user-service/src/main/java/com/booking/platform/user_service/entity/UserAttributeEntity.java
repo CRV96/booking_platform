@@ -1,5 +1,6 @@
 package com.booking.platform.user_service.entity;
 
+import com.booking.platform.user_service.constants.EntityColumns;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,23 +11,23 @@ import org.hibernate.annotations.Immutable;
  * DO NOT use this for writes - use Keycloak Admin API instead.
  */
 @Entity
-@Table(name = "user_attribute")
+@Table(name = EntityColumns.UserAttribute.TABLE)
 @Immutable
 @Getter
 @NoArgsConstructor
 public class UserAttributeEntity {
 
     @Id
-    @Column(name = "id", length = 36)
+    @Column(name = EntityColumns.UserAttribute.ID, length = 36)
     private String id;
 
-    @Column(name = "name", length = 255)
+    @Column(name = EntityColumns.UserAttribute.NAME, length = 255)
     private String name;
 
-    @Column(name = "value", length = 255)
+    @Column(name = EntityColumns.UserAttribute.VALUE, length = 255)
     private String value;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    @JoinColumn(name = EntityColumns.UserAttribute.USER_ID, referencedColumnName = EntityColumns.User.ID)
     private UserEntity user;
 }
