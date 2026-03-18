@@ -1,6 +1,8 @@
 package com.booking.platform.ticket_service.repository;
 
 import com.booking.platform.ticket_service.document.TicketDocument;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -22,4 +24,12 @@ public interface TicketRepository extends MongoRepository<TicketDocument, String
      * Finds a ticket by its human-readable ticket number (e.g. {@code TKT-20240215-A1B2C3}).
      */
     Optional<TicketDocument> findByTicketNumber(String ticketNumber);
+
+    List<TicketDocument> findByUserId(String userId);
+
+    Optional<TicketDocument> findByQrCodeData(String qrCodeData);
+
+    boolean existsByBookingId(String bookingId);
+
+    Page<TicketDocument> findByUserId(String userId, Pageable pageable);
 }

@@ -1,5 +1,6 @@
 package com.booking.platform.ticket_service.document;
 
+import com.booking.platform.ticket_service.constants.TicketConstants;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -18,7 +19,7 @@ import java.time.Instant;
  * <p>Multiple tickets can belong to the same booking (e.g. 3 VIP seats → 3 tickets).
  * The {@link #bookingId} field is indexed for efficient lookup by booking.</p>
  */
-@Document(collection = "tickets")
+@Document(collection = TicketConstants.COLLECTION_NAME)
 @Getter
 @Setter
 @NoArgsConstructor

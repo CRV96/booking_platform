@@ -160,4 +160,4 @@ fi
 eval "$MVN_CMD"
 
 # 1Password mode (optional) — injects secrets from .env via 1Password CLI
- op run --env-file=".env" -- bash -c "$MVN_CMD"
+op run --env-file=".env" -- bash -c "$MVN_CMD"
