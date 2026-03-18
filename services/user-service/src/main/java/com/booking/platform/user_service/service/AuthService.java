@@ -1,12 +1,13 @@
 package com.booking.platform.user_service.service;
 
+import com.booking.platform.user_service.dto.TokenResponseDTO;
 import com.booking.platform.user_service.exception.auth.InvalidCredentialsException;
 import com.booking.platform.user_service.exception.auth.InvalidTokenException;
 
 /**
  * Service for handling authentication operations with Keycloak.
  */
-public interface AuthService<RESPONSE> {
+public interface AuthService {
 
     /**
      * Authenticates a user with username/password and returns tokens.
@@ -16,7 +17,7 @@ public interface AuthService<RESPONSE> {
      * @return Token response
      * @throws InvalidCredentialsException if credentials are invalid
      */
-    RESPONSE login(String username, String password);
+    TokenResponseDTO login(String username, String password);
 
     /**
      * Exchanges a refresh token for new access and refresh tokens.
@@ -25,7 +26,7 @@ public interface AuthService<RESPONSE> {
      * @return New token response
      * @throws InvalidTokenException if the refresh token is invalid or expired
      */
-    RESPONSE refreshToken(String refreshToken);
+    TokenResponseDTO refreshToken(String refreshToken);
 
     /**
      * Invalidates a refresh token (logout).

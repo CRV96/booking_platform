@@ -9,7 +9,7 @@ import java.util.Map;
  * Service for managing users in Keycloak via the Admin API.
  * Extends UserService with Keycloak-specific implementation marker.
  */
-public interface KeycloakUserService extends UserService<UserRepresentation> {
+public interface KeycloakUserService extends UserLookupService<UserRepresentation> {
 
     String createUser(String email, String password, String firstName, String lastName,
                       Map<String, String> attributes);

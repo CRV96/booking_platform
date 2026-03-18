@@ -31,7 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
 
-    private final AuthService<TokenResponseDTO> authService;
+    private final AuthService authService;
     private final KeycloakUserService keycloakUserService;
     private final UserGrpcMapper userGrpcMapper;
     private final AttributeMapper attributeMapper;

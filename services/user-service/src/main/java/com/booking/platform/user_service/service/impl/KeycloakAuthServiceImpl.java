@@ -24,7 +24,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
 @Slf4j
 @RequiredArgsConstructor
 @EnableConfigurationProperties(KeycloakAuthProperties.class)
-public class KeycloakAuthServiceImpl implements AuthService<TokenResponseDTO> {
+public class KeycloakAuthServiceImpl implements AuthService {
 
     // Form field names (Keycloak OAuth2 token endpoint)
     private static final String FORM_GRANT_TYPE = "grant_type";
