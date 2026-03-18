@@ -20,7 +20,7 @@
     <modules>
         <module>common-proto</module>
         <module>common-core</module>
-        <module>common-grpc-security</module>
+        <module>common-security</module>
         <module>common-events</module>
     </modules>
 

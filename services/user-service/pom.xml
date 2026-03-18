@@ -23,7 +23,7 @@
         </dependency>
         <dependency>
             <groupId>com.booking.platform</groupId>
-            <artifactId>common-grpc-security</artifactId>
+            <artifactId>common-security</artifactId>
         </dependency>
 
         <!-- Service Discovery -->

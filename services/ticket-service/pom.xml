@@ -16,16 +16,28 @@
     <description>Ticket generation - QR codes, PDFs, and ticket validation</description>
 
     <dependencies>
-        <!-- Common Core — shared logging (LevelColourConverter) -->
+        <!-- Common Proto — generated gRPC stubs (ticket_service.proto) -->
         <dependency>
             <groupId>com.booking.platform</groupId>
-            <artifactId>common-core</artifactId>
+            <artifactId>common-proto</artifactId>
+        </dependency>
+
+        <!-- Common gRPC Security — JWT interceptor, @PublicEndpoint, GrpcUserContext -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-security</artifactId>
         </dependency>
 
         <!-- Common Events — Protobuf messages + KafkaTopics constants -->
         <dependency>
             <groupId>com.booking.platform</groupId>
             <artifactId>common-events</artifactId>
+        </dependency>
+
+        <!-- MapStruct — object mapping (TicketDocument ↔ proto TicketInfo) -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
         </dependency>
 
         <!-- MongoDB -->

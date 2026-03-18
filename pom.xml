@@ -186,7 +186,7 @@
             </dependency>
             <dependency>
                 <groupId>com.booking.platform</groupId>
-                <artifactId>common-grpc-security</artifactId>
+                <artifactId>common-security</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>
