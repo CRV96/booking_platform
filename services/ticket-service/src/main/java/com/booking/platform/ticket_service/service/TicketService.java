@@ -2,6 +2,8 @@ package com.booking.platform.ticket_service.service;
 
 import com.booking.platform.ticket_service.document.TicketDocument;
 import com.booking.platform.ticket_service.dto.TicketDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -11,16 +13,8 @@ import java.util.List;
 public interface TicketService {
 
     /**
-     * Generates {@code quantity} tickets for a confirmed booking.
+     * Generates tickets for a confirmed booking.
      * Each ticket gets a unique ticket number and QR code data.
-     *
-     * @param bookingId    UUID of the confirmed booking
-     * @param eventId      event ID from event-service
-     * @param userId       Keycloak user ID of the ticket holder
-     * @param seatCategory seat category name (e.g. "VIP")
-     * @param quantity     number of tickets to generate
-     * @param eventTitle   event title for display on tickets
-     * @return list of generated tickets
      */
     List<TicketDocument> generateTickets(TicketDTO ticket);
 
@@ -32,6 +26,8 @@ public interface TicketService {
     TicketDocument getByTicketNumber(String ticketNumber);
 
     List<TicketDocument> getTicketsByUserId(String userId);
+
+    Page<TicketDocument> getTicketsByUserId(String userId, Pageable pageable);
 
     TicketDocument validateTicket(String ticketNumber);
 

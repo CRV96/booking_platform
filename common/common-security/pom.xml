@@ -13,8 +13,8 @@
     <artifactId>common-security</artifactId>
     <packaging>jar</packaging>
 
-    <name>Common gRPC Security</name>
-    <description>Shared gRPC server security infrastructure: JWT validation, interceptors, mTLS, token blacklist</description>
+    <name>Common Security</name>
+    <description>Shared server security infrastructure: JWT validation, interceptors, mTLS, token blacklist</description>
 
     <dependencies>
         <!-- Sibling modules -->

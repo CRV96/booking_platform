@@ -30,10 +30,10 @@ show_usage() {
     echo "Usage: ./build-service.sh <module-name> [options]"
     echo ""
     echo "Modules:"
-    echo "  common              - All common modules (proto, core, grpc-security)"
+    echo "  common              - All common modules (proto, core, security)"
     echo "  common-proto        - Shared protobuf definitions and gRPC stubs"
     echo "  common-core         - Shared base classes and utilities"
-    echo "  common-grpc-security - Shared gRPC server security infrastructure"
+    echo "  common-security     - Shared server security infrastructure"
     echo "  config-service      - Configuration server"
     echo "  eureka-service      - Service discovery"
     echo "  graphql-gateway     - GraphQL API gateway"
@@ -111,7 +111,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Common sub-modules
-COMMON_MODULES="common/common-proto,common/common-core,common/common-grpc-security"
+COMMON_MODULES="common/common-proto,common/common-core,common/common-security"
 
 # Services lists
 INFRA_SERVICES="services/config-service,services/eureka-service"
@@ -128,8 +128,8 @@ case $MODULE_NAME in
     common-core)
         MODULE_PATH="common/common-core"
         ;;
-    common-grpc-security)
-        MODULE_PATH="common/common-grpc-security"
+    common-security)
+        MODULE_PATH="common/common-security"
         ;;
     config-service|eureka-service|graphql-gateway|user-service|event-service|booking-service|payment-service|ticket-service|notification-service|analytics-service)
         MODULE_PATH="services/$MODULE_NAME"

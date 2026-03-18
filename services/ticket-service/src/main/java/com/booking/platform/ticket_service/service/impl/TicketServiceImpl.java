@@ -12,6 +12,8 @@ import com.booking.platform.ticket_service.service.TicketService;
 import com.booking.platform.ticket_service.validation.BookingValidation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -90,6 +92,15 @@ public class TicketServiceImpl implements TicketService {
         log.debug("Retrieved {} tickets for user '{}'", ticketDocuments.size(), userId);
 
         return ticketDocuments;
+    }
+
+    /** Retrieves tickets for a specific user with pagination. */
+    @Override
+    public Page<TicketDocument> getTicketsByUserId(String userId, Pageable pageable) {
+        Page<TicketDocument> ticketPage = ticketRepository.findByUserId(userId, pageable);
+        log.debug("Retrieved {} tickets (page {}) for user '{}'",
+                ticketPage.getNumberOfElements(), pageable.getPageNumber(), userId);
+        return ticketPage;
     }
 
     /** Validates a ticket by its ticket number. Marks the ticket as USED if valid. */
