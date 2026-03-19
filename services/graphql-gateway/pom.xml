@@ -85,9 +85,19 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!--
+            Common Security — shared Roles enum, JWT utilities.
+            Excludes the gRPC server starter because the gateway is a gRPC client only.
+        -->
         <dependency>
             <groupId>com.booking.platform</groupId>
             <artifactId>common-security</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>net.devh</groupId>
+                    <artifactId>grpc-server-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

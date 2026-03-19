@@ -35,6 +35,11 @@
 			"key": "bookingId",
 			"value": "",
 			"type": "string"
+		},
+		{
+			"key": "ticketNumber",
+			"value": "",
+			"type": "string"
 		}
 	],
 	"item": [
@@ -898,6 +903,302 @@
 							"graphql": {
 								"query": "query MyBookings($page: Int, $pageSize: Int) {\n  myBookings(page: $page, pageSize: $pageSize) {\n    bookings {\n      id\n      eventTitle\n      status\n      seatCategory\n      quantity\n      totalPrice\n      currency\n      createdAt\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
 								"variables": "{\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "My Tickets (customer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('My tickets returned', function() {",
+									"    pm.expect(jsonData.data).to.have.property('myTickets');",
+									"    pm.expect(jsonData.data.myTickets).to.have.property('tickets');",
+									"    pm.expect(jsonData.data.myTickets.tickets).to.be.an('array');",
+									"    pm.expect(jsonData.data.myTickets).to.have.property('totalCount');",
+									"});",
+									"if (jsonData.data && jsonData.data.myTickets && jsonData.data.myTickets.tickets.length > 0) {",
+									"    var ticket = jsonData.data.myTickets.tickets[0];",
+									"    pm.collectionVariables.set('ticketNumber', ticket.ticketNumber);",
+									"    console.log('Saved ticketNumber:', ticket.ticketNumber);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query MyTickets($page: Int, $pageSize: Int) {\n  myTickets(page: $page, pageSize: $pageSize) {\n    tickets {\n      id\n      bookingId\n      eventId\n      ticketNumber\n      qrCodeData\n      seatCategory\n      seatNumber\n      status\n      eventTitle\n      createdAt\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Tickets by Booking (employee)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Tickets by booking returned', function() {",
+									"    pm.expect(jsonData.data).to.have.property('ticketsByBooking');",
+									"    pm.expect(jsonData.data.ticketsByBooking).to.be.an('array');",
+									"});",
+									"if (jsonData.data && jsonData.data.ticketsByBooking && jsonData.data.ticketsByBooking.length > 0) {",
+									"    var ticket = jsonData.data.ticketsByBooking[0];",
+									"    pm.collectionVariables.set('ticketNumber', ticket.ticketNumber);",
+									"    console.log('Saved ticketNumber:', ticket.ticketNumber);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query TicketsByBooking($bookingId: ID!) {\n  ticketsByBooking(bookingId: $bookingId) {\n    id\n    bookingId\n    eventId\n    userId\n    ticketNumber\n    qrCodeData\n    seatCategory\n    seatNumber\n    status\n    eventTitle\n    createdAt\n  }\n}",
+								"variables": "{\n  \"bookingId\": \"{{bookingId}}\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Tickets by User (employee)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Tickets by user returned', function() {",
+									"    pm.expect(jsonData.data).to.have.property('ticketsByUser');",
+									"    pm.expect(jsonData.data.ticketsByUser).to.have.property('tickets');",
+									"    pm.expect(jsonData.data.ticketsByUser.tickets).to.be.an('array');",
+									"    pm.expect(jsonData.data.ticketsByUser).to.have.property('totalCount');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query TicketsByUser($userId: ID!, $page: Int, $pageSize: Int) {\n  ticketsByUser(userId: $userId, page: $page, pageSize: $pageSize) {\n    tickets {\n      id\n      bookingId\n      eventId\n      userId\n      ticketNumber\n      qrCodeData\n      seatCategory\n      status\n      eventTitle\n      createdAt\n    }\n    totalCount\n    page\n    pageSize\n    totalPages\n  }\n}",
+								"variables": "{\n  \"userId\": \"{{userId}}\",\n  \"page\": 0,\n  \"pageSize\": 10\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Get Ticket by Number (employee)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"pm.test('Ticket returned successfully', function() {",
+									"    pm.expect(jsonData.data).to.have.property('ticket');",
+									"    pm.expect(jsonData.data.ticket).to.have.property('ticketNumber');",
+									"    pm.expect(jsonData.data.ticket).to.have.property('status');",
+									"    pm.expect(jsonData.data.ticket).to.have.property('eventTitle');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "query GetTicket($ticketNumber: String!) {\n  ticket(ticketNumber: $ticketNumber) {\n    id\n    bookingId\n    eventId\n    userId\n    ticketNumber\n    qrCodeData\n    seatCategory\n    seatNumber\n    status\n    eventTitle\n    createdAt\n  }\n}",
+								"variables": "{\n  \"ticketNumber\": \"{{ticketNumber}}\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Validate Ticket (employee)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.validateTicket) {",
+									"    var ticket = jsonData.data.validateTicket;",
+									"    pm.test('Ticket validated successfully', function() {",
+									"        pm.expect(ticket.status).to.eql('USED');",
+									"        pm.expect(ticket.ticketNumber).to.be.a('string');",
+									"    });",
+									"    console.log('Validated ticket:', ticket.ticketNumber, '→ status:', ticket.status);",
+									"} else {",
+									"    pm.test('Validate ticket failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation ValidateTicket($ticketNumber: String!) {\n  validateTicket(ticketNumber: $ticketNumber) {\n    id\n    ticketNumber\n    status\n    eventTitle\n    seatCategory\n    createdAt\n  }\n}",
+								"variables": "{\n  \"ticketNumber\": \"{{ticketNumber}}\"\n}"
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/graphql",
+							"host": ["{{baseUrl}}"],
+							"path": ["graphql"]
+						}
+					}
+				},
+				{
+					"name": "Cancel Ticket (employee)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"var jsonData = pm.response.json();",
+									"if (jsonData.data && jsonData.data.cancelTicket) {",
+									"    var ticket = jsonData.data.cancelTicket;",
+									"    pm.test('Ticket cancelled successfully', function() {",
+									"        pm.expect(ticket.status).to.eql('CANCELLED');",
+									"        pm.expect(ticket.ticketNumber).to.be.a('string');",
+									"    });",
+									"    console.log('Cancelled ticket:', ticket.ticketNumber, '→ status:', ticket.status);",
+									"} else {",
+									"    pm.test('Cancel ticket failed', function() {",
+									"        pm.expect.fail(JSON.stringify(jsonData.errors));",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "graphql",
+							"graphql": {
+								"query": "mutation CancelTicket($ticketNumber: String!) {\n  cancelTicket(ticketNumber: $ticketNumber) {\n    id\n    ticketNumber\n    status\n    eventTitle\n    seatCategory\n    createdAt\n  }\n}",
+								"variables": "{\n  \"ticketNumber\": \"{{ticketNumber}}\"\n}"
 							}
 						},
 						"url": {
