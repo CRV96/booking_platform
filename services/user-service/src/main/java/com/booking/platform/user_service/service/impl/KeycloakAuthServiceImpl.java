@@ -1,8 +1,8 @@
 package com.booking.platform.user_service.service.impl;
 
+import com.booking.platform.common.enums.Keycloak;
 import com.booking.platform.user_service.dto.TokenResponseDTO;
 import com.booking.platform.user_service.properties.KeycloakAuthProperties;
-import com.booking.platform.user_service.constants.KeycloakConstants;
 import com.booking.platform.user_service.exception.auth.AuthenticationException;
 import com.booking.platform.user_service.exception.auth.InvalidCredentialsException;
 import com.booking.platform.user_service.exception.auth.InvalidTokenException;
@@ -51,7 +51,7 @@ public class KeycloakAuthServiceImpl implements AuthService {
                     .uri(authProperties.getTokenEndpoint())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(BodyInserters
-                            .fromFormData(FORM_GRANT_TYPE, KeycloakConstants.GRANT_TYPE_PASSWORD)
+                            .fromFormData(FORM_GRANT_TYPE, Keycloak.GRANT_TYPE_PASSWORD.getValue())
                             .with(FORM_CLIENT_ID, authProperties.clientId())
                             .with(FORM_USERNAME, username)
                             .with(FORM_PASSWORD, password))
@@ -80,7 +80,7 @@ public class KeycloakAuthServiceImpl implements AuthService {
                     .uri(authProperties.getTokenEndpoint())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(BodyInserters
-                            .fromFormData(FORM_GRANT_TYPE, KeycloakConstants.GRANT_TYPE_REFRESH_TOKEN)
+                            .fromFormData(FORM_GRANT_TYPE, Keycloak.GRANT_TYPE_REFRESH_TOKEN.getValue())
                             .with(FORM_CLIENT_ID, authProperties.clientId())
                             .with(FORM_REFRESH_TOKEN, refreshToken))
                     .retrieve()

@@ -1,6 +1,6 @@
 package com.booking.platform.graphql_gateway.graphql.resolver;
 
-import com.booking.platform.graphql_gateway.constants.Roles;
+import com.booking.platform.common.enums.Roles;
 import com.booking.platform.graphql_gateway.dto.event.CreateEventInput;
 import com.booking.platform.graphql_gateway.dto.event.Event;
 import com.booking.platform.graphql_gateway.dto.event.EventConnection;
@@ -102,7 +102,7 @@ public class EventResolver {
 
     @MutationMapping
     public Event createEvent(@Argument("input") CreateEventInput input) {
-        authService.requireRole(Roles.EMPLOYEE);
+        authService.requireRole(Roles.EMPLOYEE.getValue());
         log.info("GraphQL mutation: createEvent title='{}'", input.title());
 
         return Event.fromGrpc(eventClient.createEvent(new EventCreateRequest(
@@ -119,7 +119,7 @@ public class EventResolver {
     public Event updateEvent(
             @Argument("id") String id,
             @Argument("input") UpdateEventInput input) {
-        authService.requireRole(Roles.EMPLOYEE);
+        authService.requireRole(Roles.EMPLOYEE.getValue());
         log.info("GraphQL mutation: updateEvent({})", id);
 
         return Event.fromGrpc(eventClient.updateEvent(new EventUpdateRequest(
@@ -135,7 +135,7 @@ public class EventResolver {
 
     @MutationMapping
     public Event publishEvent(@Argument("id") String id) {
-        authService.requireRole(Roles.EMPLOYEE);
+        authService.requireRole(Roles.EMPLOYEE.getValue());
         log.info("GraphQL mutation: publishEvent({})", id);
 
         return Event.fromGrpc(eventClient.publishEvent(id).getEvent());
@@ -143,7 +143,7 @@ public class EventResolver {
 
     @MutationMapping
     public Event cancelEvent(@Argument("id") String id) {
-        authService.requireRole(Roles.EMPLOYEE);
+        authService.requireRole(Roles.EMPLOYEE.getValue());
         log.info("GraphQL mutation: cancelEvent({})", id);
 
         return Event.fromGrpc(eventClient.cancelEvent(id).getEvent());

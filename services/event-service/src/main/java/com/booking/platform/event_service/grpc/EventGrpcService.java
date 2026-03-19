@@ -1,9 +1,9 @@
 package com.booking.platform.event_service.grpc;
 
+import com.booking.platform.common.enums.Roles;
 import com.booking.platform.common.grpc.context.GrpcUserContext;
 import com.booking.platform.common.grpc.event.*;
 import com.booking.platform.common.security.PublicEndpoint;
-import com.booking.platform.event_service.constants.Roles;
 import com.booking.platform.event_service.document.EventDocument;
 import com.booking.platform.event_service.dto.OrganizerDto;
 import com.booking.platform.event_service.exception.PermissionDeniedException;
@@ -84,7 +84,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
     public void createEvent(CreateEventRequest request, StreamObserver<EventResponse> responseObserver) {
         log.debug("gRPC CreateEvent: title='{}'", request.getTitle());
 
-        requireRole(Roles.EMPLOYEE);
+        requireRole(Roles.EMPLOYEE.getValue());
 
         OrganizerDto organizer = OrganizerDto.builder()
                 .userId(GrpcUserContext.getUserId())
@@ -104,7 +104,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
     public void updateEvent(UpdateEventRequest request, StreamObserver<EventResponse> responseObserver) {
         log.debug("gRPC UpdateEvent: id='{}'", request.getEventId());
 
-        requireRole(Roles.EMPLOYEE);
+        requireRole(Roles.EMPLOYEE.getValue());
 
         EventDocument event = eventService.updateEvent(request.getEventId(), request);
 
@@ -118,7 +118,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
     public void publishEvent(PublishEventRequest request, StreamObserver<EventResponse> responseObserver) {
         log.debug("gRPC PublishEvent: id='{}'", request.getEventId());
 
-        requireRole(Roles.EMPLOYEE);
+        requireRole(Roles.EMPLOYEE.getValue());
 
         EventDocument event = eventService.publishEvent(request.getEventId());
 
@@ -132,7 +132,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
     public void cancelEvent(CancelEventRequest request, StreamObserver<EventResponse> responseObserver) {
         log.debug("gRPC CancelEvent: id='{}'", request.getEventId());
 
-        requireRole(Roles.EMPLOYEE);
+        requireRole(Roles.EMPLOYEE.getValue());
 
         String reason = request.hasReason() ? request.getReason() : null;
         EventDocument event = eventService.cancelEvent(request.getEventId(), reason);

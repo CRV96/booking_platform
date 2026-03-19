@@ -1,8 +1,12 @@
 package com.booking.platform.ticket_service.document;
 
+import com.booking.platform.ticket_service.constants.TicketConstants;
+import com.booking.platform.ticket_service.document.enums.TicketStatus;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -18,7 +22,7 @@ import java.time.Instant;
  * <p>Multiple tickets can belong to the same booking (e.g. 3 VIP seats → 3 tickets).
  * The {@link #bookingId} field is indexed for efficient lookup by booking.</p>
  */
-@Document(collection = "tickets")
+@Document(collection = TicketConstants.COLLECTION_NAME)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -37,6 +41,7 @@ public class TicketDocument {
     private String eventId;
 
     /** Keycloak user ID of the ticket holder. */
+    @Indexed
     private String userId;
 
     /**
@@ -68,4 +73,13 @@ public class TicketDocument {
     /** Timestamp when the ticket was created. */
     @CreatedDate
     private Instant createdAt;
+
+    /** Timestamp of the last modification (e.g. cancellation time). */
+    @LastModifiedDate
+    private Instant lastModifiedAt;
+
+    /** Optimistic locking version — prevents concurrent status updates. */
+    @Version
+    private Long version;
+
 }

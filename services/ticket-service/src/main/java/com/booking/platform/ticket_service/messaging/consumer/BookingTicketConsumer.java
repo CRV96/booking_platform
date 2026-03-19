@@ -3,6 +3,7 @@ package com.booking.platform.ticket_service.messaging.consumer;
 import com.booking.platform.common.events.BookingConfirmedEvent;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.ticket_service.document.TicketDocument;
+import com.booking.platform.ticket_service.dto.TicketDTO;
 import com.booking.platform.ticket_service.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,32 +35,32 @@ public class BookingTicketConsumer {
     )
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
-        log.info("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', userId='{}', category='{}', qty={} | partition={}, offset={}",
-                event.getBookingId(),
-                event.getEventId(),
-                event.getUserId(),
-                event.getSeatCategory(),
-                event.getQuantity(),
-                record.partition(),
-                record.offset());
+
+        log.debug("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', category='{}', qty={}, partition={}, offset={}",
+                event.getBookingId(), event.getEventId(), event.getSeatCategory(), event.getQuantity(),
+                record.partition(), record.offset());
 
         try {
             List<TicketDocument> tickets = ticketService.generateTickets(
-                    event.getBookingId(),
-                    event.getEventId(),
-                    event.getUserId(),
-                    event.getSeatCategory(),
-                    event.getQuantity(),
-                    event.getEventTitle()
+                    TicketDTO.builder()
+                            .bookingId(event.getBookingId())
+                            .eventId(event.getEventId())
+                            .userId(event.getUserId())
+                            .seatCategory(event.getSeatCategory())
+                            .quantity(event.getQuantity())
+                            .eventTitle(event.getEventTitle())
+                            .build()
             );
 
-            log.info("Generated {} tickets for booking '{}': {}",
+            log.debug("Generated {} tickets for booking '{}': {}",
                     tickets.size(),
                     event.getBookingId(),
                     tickets.stream().map(TicketDocument::getTicketNumber).toList());
+
         } catch (Exception e) {
             log.error("Failed to generate tickets for booking '{}': {}",
                     event.getBookingId(), e.getMessage());
+
             throw e;  // re-throw to trigger retry + DLT
         }
     }

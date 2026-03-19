@@ -2,7 +2,6 @@ package com.booking.platform.user_service.service.impl;
 
 import com.booking.platform.user_service.config.CacheConfig;
 import com.booking.platform.user_service.properties.KeycloakProperties;
-import com.booking.platform.user_service.constants.KeycloakConstants;
 import com.booking.platform.user_service.exception.InternalException;
 import com.booking.platform.user_service.exception.user.UserAlreadyExistsException;
 import com.booking.platform.user_service.exception.user.UserNotFoundException;
@@ -23,12 +22,13 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static com.booking.platform.common.enums.Keycloak.EMPLOYEES_GROUP;
 
 /**
  * Keycloak Admin API implementation for user management.
@@ -186,7 +186,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         user.setLastName(lastName);
         user.setEnabled(true);
         user.setEmailVerified(false);
-        user.setGroups(List.of(KeycloakConstants.GROUP_CUSTOMERS));
+        user.setGroups(List.of(EMPLOYEES_GROUP.getValue()));
 
         if (attributes != null && !attributes.isEmpty()) {
             Map<String, List<String>> userAttributes = new HashMap<>();

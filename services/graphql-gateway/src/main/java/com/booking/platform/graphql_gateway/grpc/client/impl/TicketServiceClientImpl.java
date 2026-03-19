@@ -1,0 +1,89 @@
+package com.booking.platform.graphql_gateway.grpc.client.impl;
+
+import com.booking.platform.common.grpc.ticket.*;
+import com.booking.platform.graphql_gateway.constants.TicketServiceConst;
+import com.booking.platform.graphql_gateway.grpc.client.TicketClient;
+import lombok.extern.slf4j.Slf4j;
+import net.devh.boot.grpc.client.inject.GrpcClient;
+import org.springframework.stereotype.Service;
+
+/**
+ * gRPC client implementation for calling ticket-service.
+ * JWT is forwarded automatically by {@code JwtForwardingClientInterceptor}.
+ */
+@Service
+@Slf4j
+public class TicketServiceClientImpl implements TicketClient {
+
+    @GrpcClient(TicketServiceConst.TicketGRPCConst.TICKET_SERVICE_GRPC_CLIENT)
+    private TicketServiceGrpc.TicketServiceBlockingStub ticketServiceStub;
+
+    @Override
+    public GetMyTicketsResponse getMyTickets(int page, int pageSize) {
+        log.debug("Calling ticket-service: GetMyTickets page={}, size={}", page, pageSize);
+
+        return ticketServiceStub.getMyTickets(
+                GetMyTicketsRequest.newBuilder()
+                        .setPage(page)
+                        .setPageSize(pageSize)
+                        .build()
+        );
+    }
+
+    @Override
+    public GetTicketsByBookingResponse getTicketsByBooking(String bookingId) {
+        log.debug("Calling ticket-service: GetTicketsByBooking bookingId='{}'", bookingId);
+
+        return ticketServiceStub.getTicketsByBooking(
+                GetTicketsByBookingRequest.newBuilder()
+                        .setBookingId(bookingId)
+                        .build()
+        );
+    }
+
+    @Override
+    public GetTicketsByUserResponse getTicketsByUser(String userId, int page, int pageSize) {
+        log.debug("Calling ticket-service: GetTicketsByUser userId='{}', page={}, size={}", userId, page, pageSize);
+
+        return ticketServiceStub.getTicketsByUser(
+                GetTicketsByUserRequest.newBuilder()
+                        .setUserId(userId)
+                        .setPage(page)
+                        .setPageSize(pageSize)
+                        .build()
+        );
+    }
+
+    @Override
+    public TicketResponse getTicketByNumber(String ticketNumber) {
+        log.debug("Calling ticket-service: GetTicketByNumber ticketNumber='{}'", ticketNumber);
+
+        return ticketServiceStub.getTicketByNumber(
+                GetTicketByNumberRequest.newBuilder()
+                        .setTicketNumber(ticketNumber)
+                        .build()
+        );
+    }
+
+    @Override
+    public TicketResponse validateTicket(String ticketNumber) {
+        log.debug("Calling ticket-service: ValidateTicket ticketNumber='{}'", ticketNumber);
+
+        return ticketServiceStub.validateTicket(
+                ValidateTicketRequest.newBuilder()
+                        .setTicketNumber(ticketNumber)
+                        .build()
+        );
+    }
+
+    @Override
+    public TicketResponse cancelTicket(String ticketNumber) {
+        log.debug("Calling ticket-service: CancelTicket ticketNumber='{}'", ticketNumber);
+
+        return ticketServiceStub.cancelTicket(
+                CancelTicketRequest.newBuilder()
+                        .setTicketNumber(ticketNumber)
+                        .build()
+        );
+    }
+}

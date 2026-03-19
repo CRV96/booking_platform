@@ -1,6 +1,5 @@
 package com.booking.platform.user_service.init;
 
-import com.booking.platform.user_service.constants.KeycloakConstants;
 import com.booking.platform.user_service.constants.UserAttributes;
 import com.booking.platform.user_service.properties.KeycloakProperties;
 import com.booking.platform.user_service.service.KeycloakUserService;
@@ -18,6 +17,8 @@ import org.springframework.stereotype.Component;
 import jakarta.ws.rs.core.Response;
 import java.util.List;
 import java.util.Map;
+
+import static com.booking.platform.common.enums.Keycloak.EMPLOYEES_GROUP;
 
 /**
  * Seeds Keycloak with sample users on startup.
@@ -273,7 +274,7 @@ public class DataInitializer implements ApplicationRunner {
             user.setLastName(lastName);
             user.setEnabled(true);
             user.setEmailVerified(true);
-            user.setGroups(List.of(KeycloakConstants.GROUP_EMPLOYEES));
+            user.setGroups(List.of(EMPLOYEES_GROUP.getValue()));
 
             CredentialRepresentation credential = new CredentialRepresentation();
             credential.setType(CredentialRepresentation.PASSWORD);

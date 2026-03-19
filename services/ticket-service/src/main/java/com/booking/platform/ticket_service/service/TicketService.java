@@ -1,6 +1,9 @@
 package com.booking.platform.ticket_service.service;
 
 import com.booking.platform.ticket_service.document.TicketDocument;
+import com.booking.platform.ticket_service.dto.TicketDTO;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
@@ -10,22 +13,28 @@ import java.util.List;
 public interface TicketService {
 
     /**
-     * Generates {@code quantity} tickets for a confirmed booking.
+     * Generates tickets for a confirmed booking.
      * Each ticket gets a unique ticket number and QR code data.
-     *
-     * @param bookingId    UUID of the confirmed booking
-     * @param eventId      event ID from event-service
-     * @param userId       Keycloak user ID of the ticket holder
-     * @param seatCategory seat category name (e.g. "VIP")
-     * @param quantity     number of tickets to generate
-     * @param eventTitle   event title for display on tickets
-     * @return list of generated tickets
      */
-    List<TicketDocument> generateTickets(String bookingId, String eventId, String userId,
-                                          String seatCategory, int quantity, String eventTitle);
+    List<TicketDocument> generateTickets(TicketDTO ticket);
 
     /**
      * Retrieves all tickets for a given booking.
      */
     List<TicketDocument> getTicketsByBooking(String bookingId);
+
+    /** Retrieves a ticket by its unique ticket number. */
+    TicketDocument getByTicketNumber(String ticketNumber);
+
+    /** Retrieves all tickets for a given user. */
+    List<TicketDocument> getTicketsByUserId(String userId);
+
+    /** Retrieves tickets for a given user with pagination. */
+    Page<TicketDocument> getTicketsByUserId(String userId, Pageable pageable);
+
+    /** Validates a ticket and marks it as USED. Throws if already used or cancelled. */
+    TicketDocument validateTicket(String ticketNumber);
+
+    /** Cancels a ticket and marks it as CANCELLED. Throws if already used. */
+    TicketDocument cancelTicket(String ticketNumber);
 }
