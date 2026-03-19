@@ -2,9 +2,10 @@ package com.booking.platform.event_service.cache;
 
 import com.booking.platform.event_service.config.CacheConfig;
 import com.booking.platform.event_service.document.EventDocument;
-import com.booking.platform.event_service.document.EventStatus;
+import com.booking.platform.event_service.document.enums.EventStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -36,11 +37,14 @@ public class FeaturedEventsCacheService {
 
     private final MongoTemplate mongoTemplate;
 
+    @Value("${cache.featured-events.limit:20}")
+    private int featuredEventsLimit;
+
     /**
      * Refreshes the featured events cache every 2 minutes.
      * Fetches the next 20 upcoming published events sorted by dateTime ascending.
      */
-    @Scheduled(fixedRateString = "${cache.featured-events.refresh-rate-ms:120000}")
+    @Scheduled(fixedDelayString = "${cache.featured-events.refresh-delay-ms:120000}")
     @CachePut(value = CacheConfig.CACHE_EVENTS_FEATURED, key = "'" + FEATURED_CACHE_KEY + "'")
     public List<EventDocument> refreshFeaturedEvents() {
         log.debug("Refreshing featured events cache");
@@ -50,7 +54,7 @@ public class FeaturedEventsCacheService {
                         .and("dateTime").gte(Instant.now())
         )
                 .with(Sort.by(Sort.Direction.ASC, "dateTime"))
-                .limit(20);
+                .limit(featuredEventsLimit);
 
         List<EventDocument> featured = mongoTemplate.find(query, EventDocument.class);
 

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** Embedded document for event venue information (name, address, geo-coordinates). */
 @Data
 @Builder
 @NoArgsConstructor

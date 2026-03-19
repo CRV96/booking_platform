@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** Embedded document for event organizer identity (denormalized from user-service/Keycloak). */
 @Data
 @Builder
 @NoArgsConstructor

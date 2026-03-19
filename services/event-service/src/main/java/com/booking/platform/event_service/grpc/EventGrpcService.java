@@ -31,13 +31,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
 
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final EventService eventService;
     private final EventMapper eventMapper;
 
     // =========================================================================
     // PUBLIC ENDPOINTS
     // =========================================================================
-
     @PublicEndpoint
     @Override
     public void getEvent(GetEventRequest request, StreamObserver<EventResponse> responseObserver) {
@@ -58,7 +60,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
         List<EventDocument> events = eventService.searchEvents(request);
 
         int page = Math.max(request.getPage(), 0);
-        int pageSize = request.getPageSize() > 0 ? Math.min(request.getPageSize(), 100) : 20;
+        int pageSize = normalizePageSize(request.getPageSize());
         int totalCount = events.size();
         int totalPages = pageSize > 0 ? (int) Math.ceil((double) totalCount / pageSize) : 0;
 
@@ -79,7 +81,6 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
     // =========================================================================
     // EMPLOYEE-ONLY ENDPOINTS
     // =========================================================================
-
     @Override
     public void createEvent(CreateEventRequest request, StreamObserver<EventResponse> responseObserver) {
         log.debug("gRPC CreateEvent: title='{}'", request.getTitle());
@@ -93,11 +94,10 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
                 .build();
 
         EventDocument event = eventService.createEvent(request, organizer);
+        log.info("gRPC CreateEvent completed: id='{}', title='{}'", event.getId(), event.getTitle());
 
         responseObserver.onNext(buildEventResponse(event));
         responseObserver.onCompleted();
-
-        log.info("gRPC CreateEvent completed: id='{}', title='{}'", event.getId(), event.getTitle());
     }
 
     @Override
@@ -105,13 +105,13 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
         log.debug("gRPC UpdateEvent: id='{}'", request.getEventId());
 
         requireRole(Roles.EMPLOYEE.getValue());
+        requireOwnership(request.getEventId());
 
         EventDocument event = eventService.updateEvent(request.getEventId(), request);
+        log.info("gRPC UpdateEvent completed: id='{}'", event.getId());
 
         responseObserver.onNext(buildEventResponse(event));
         responseObserver.onCompleted();
-
-        log.info("gRPC UpdateEvent completed: id='{}'", event.getId());
     }
 
     @Override
@@ -121,11 +121,10 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
         requireRole(Roles.EMPLOYEE.getValue());
 
         EventDocument event = eventService.publishEvent(request.getEventId());
+        log.info("gRPC PublishEvent completed: id='{}', title='{}'", event.getId(), event.getTitle());
 
         responseObserver.onNext(buildEventResponse(event));
         responseObserver.onCompleted();
-
-        log.info("gRPC PublishEvent completed: id='{}', title='{}'", event.getId(), event.getTitle());
     }
 
     @Override
@@ -133,20 +132,19 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
         log.debug("gRPC CancelEvent: id='{}'", request.getEventId());
 
         requireRole(Roles.EMPLOYEE.getValue());
+        requireOwnership(request.getEventId());
 
-        String reason = request.hasReason() ? request.getReason() : null;
+        String reason = request.getReason().isEmpty() ? null : request.getReason();
         EventDocument event = eventService.cancelEvent(request.getEventId(), reason);
+        log.info("gRPC CancelEvent completed: id='{}', reason='{}'", event.getId(), reason);
 
         responseObserver.onNext(buildEventResponse(event));
         responseObserver.onCompleted();
-
-        log.info("gRPC CancelEvent completed: id='{}', reason='{}'", event.getId(), reason);
     }
 
     // =========================================================================
     // INTERNAL — service-to-service only (booking-service)
     // =========================================================================
-
     @Override
     public void updateSeatAvailability(UpdateSeatAvailabilityRequest request,
                                        StreamObserver<UpdateSeatAvailabilityResponse> responseObserver) {
@@ -159,11 +157,12 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
                 request.getDelta()
         );
 
-        int remainingSeats = event.getSeatCategories().stream()
-                .filter(sc -> sc.getName().equals(request.getSeatCategoryName()))
-                .mapToInt(sc -> sc.getAvailableSeats())
-                .findFirst()
-                .orElse(0);
+        int remainingSeats = event.getSeatCategories() == null ? 0
+                : event.getSeatCategories().stream()
+                        .filter(sc -> sc.getName().equals(request.getSeatCategoryName()))
+                        .mapToInt(sc -> sc.getAvailableSeats() != null ? sc.getAvailableSeats() : 0)
+                        .findFirst()
+                        .orElse(0);
 
         UpdateSeatAvailabilityResponse response = UpdateSeatAvailabilityResponse.newBuilder()
                 .setSuccess(true)
@@ -177,6 +176,10 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
     // =========================================================================
     // HELPERS
     // =========================================================================
+    private int normalizePageSize(int requested) {
+        if (requested <= 0) return DEFAULT_PAGE_SIZE;
+        return Math.min(requested, MAX_PAGE_SIZE);
+    }
 
     private EventResponse buildEventResponse(EventDocument event) {
         return EventResponse.newBuilder()
@@ -196,4 +199,19 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
                     "Access denied: role '" + role + "' is required");
         }
     }
+
+    /**
+     * Enforces that the authenticated user is the organizer of the given event.
+     * Throws {@link PermissionDeniedException} if the user is not the event owner.
+     */
+    private void requireOwnership(String eventId) {
+        EventDocument event = eventService.getEvent(eventId);
+        String userId = GrpcUserContext.getUserId();
+        if (event.getOrganizer() == null || !userId.equals(event.getOrganizer().getUserId())) {
+            log.warn("Ownership denied for user '{}' on event '{}'", userId, eventId);
+            throw new PermissionDeniedException(
+                    "Access denied: only the event organizer can perform this operation");
+        }
+    }
+
 }

@@ -4,7 +4,7 @@ import com.booking.platform.common.grpc.event.CreateEventRequest;
 import com.booking.platform.common.grpc.event.SeatCategoryInfo;
 import com.booking.platform.common.grpc.event.VenueInfo;
 import com.booking.platform.event_service.document.EventDocument;
-import com.booking.platform.event_service.document.EventStatus;
+import com.booking.platform.event_service.document.enums.EventStatus;
 import com.booking.platform.event_service.dto.OrganizerDto;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.service.EventService;

@@ -1,9 +1,9 @@
 package com.booking.platform.event_service.messaging;
 
 import com.booking.platform.common.events.KafkaTopics;
-import com.booking.platform.event_service.document.EventCategory;
+import com.booking.platform.event_service.document.enums.EventCategory;
 import com.booking.platform.event_service.document.EventDocument;
-import com.booking.platform.event_service.document.EventStatus;
+import com.booking.platform.event_service.document.enums.EventStatus;
 import com.booking.platform.event_service.document.OrganizerInfo;
 import com.booking.platform.event_service.document.VenueInfo;
 import com.booking.platform.event_service.messaging.publisher.impl.KafkaEventPublisher;

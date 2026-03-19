@@ -1,7 +1,7 @@
 package com.booking.platform.event_service.validator.impl;
 
 import com.booking.platform.common.grpc.event.CreateEventRequest;
-import com.booking.platform.event_service.document.EventCategory;
+import com.booking.platform.event_service.document.enums.EventCategory;
 import com.booking.platform.event_service.document.EventDocument;
 import com.booking.platform.event_service.exception.ValidationException;
 import com.booking.platform.event_service.validator.EventValidator;
@@ -34,11 +34,17 @@ public class EventValidatorImpl implements EventValidator {
             throw new ValidationException("Event must have at least one seat category");
         }
         request.getSeatCategoriesList().forEach(sc -> {
+            if (sc.getName().isBlank()) {
+                throw new ValidationException("Seat category name must not be blank");
+            }
             if (sc.getPrice() < 0) {
                 throw new ValidationException("Seat category price must not be negative: " + sc.getName());
             }
             if (sc.getTotalSeats() <= 0) {
                 throw new ValidationException("Seat category totalSeats must be positive: " + sc.getName());
+            }
+            if (sc.getCurrency().isBlank()) {
+                throw new ValidationException("Seat category currency must not be blank: " + sc.getName());
             }
         });
     }

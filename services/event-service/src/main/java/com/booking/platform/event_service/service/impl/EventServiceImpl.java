@@ -6,6 +6,8 @@ import com.booking.platform.common.grpc.event.SeatCategoryInfo;
 import com.booking.platform.common.grpc.event.UpdateEventRequest;
 import com.booking.platform.event_service.config.CacheConfig;
 import com.booking.platform.event_service.document.*;
+import com.booking.platform.event_service.document.enums.EventCategory;
+import com.booking.platform.event_service.document.enums.EventStatus;
 import com.booking.platform.event_service.dto.OrganizerDto;
 import com.booking.platform.event_service.exception.EventNotFoundException;
 import com.booking.platform.event_service.exception.InsufficientSeatsException;
@@ -36,6 +38,9 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class EventServiceImpl implements EventService {
+
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 100;
 
     private final EventRepository eventRepository;
     private final MongoTemplate mongoTemplate;
@@ -204,8 +209,12 @@ public class EventServiceImpl implements EventService {
         }
 
         int page = Math.max(request.getPage(), 0);
-        int pageSize = request.getPageSize() > 0 ? Math.min(request.getPageSize(), 100) : 20;
-        query.skip((long) page * pageSize).limit(pageSize);
+        int pageSize = request.getPageSize() > 0 ? Math.min(request.getPageSize(), MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+
+        // Cap the total offset to prevent expensive skip operations on large datasets
+        long maxSkippableResults = 5000L;
+        long skip = Math.min((long) page * pageSize, maxSkippableResults);
+        query.skip(skip).limit(pageSize);
 
         return mongoTemplate.find(query, EventDocument.class);
     }
