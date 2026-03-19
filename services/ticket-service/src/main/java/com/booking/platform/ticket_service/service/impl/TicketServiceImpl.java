@@ -2,7 +2,7 @@ package com.booking.platform.ticket_service.service.impl;
 
 import com.booking.platform.ticket_service.constants.TicketConstants;
 import com.booking.platform.ticket_service.document.TicketDocument;
-import com.booking.platform.ticket_service.document.TicketStatus;
+import com.booking.platform.ticket_service.document.enums.TicketStatus;
 import com.booking.platform.ticket_service.dto.TicketDTO;
 import com.booking.platform.ticket_service.exception.TicketAlreadyUsedException;
 import com.booking.platform.ticket_service.exception.TicketCancelledException;
@@ -42,13 +42,13 @@ public class TicketServiceImpl implements TicketService {
     private final BookingValidation bookingValidation;
 
     /**
-     * Generates tickets for a confirmed booking. Ensures idempotency by checking if tickets
-     * already exist for the given booking ID before generating new ones.
+     * Generates tickets for a confirmed booking.
      * @param source DTO containing booking and ticket details
      * @return list of generated (or existing) tickets for the booking
      */
     @Override
     public List<TicketDocument> generateTickets(TicketDTO source) {
+        bookingValidation.validateTicketRequest(source);
 
         // Idempotency: if tickets already exist for this booking, return them
         List<TicketDocument> existing = ticketRepository.findByBookingId(source.bookingId());
@@ -57,8 +57,6 @@ public class TicketServiceImpl implements TicketService {
                     source.bookingId(), existing.size());
             return existing;
         }
-
-        bookingValidation.validateTicketRequest(source);
 
         List<TicketDocument> saved = ticketRepository.saveAll(generateTicketsForBooking(source));
 
@@ -72,6 +70,8 @@ public class TicketServiceImpl implements TicketService {
     /** Retrieves all tickets associated with a specific booking ID. */
     @Override
     public List<TicketDocument> getTicketsByBooking(String bookingId) {
+        bookingValidation.validateBookingId(bookingId);
+
         final List<TicketDocument> ticketDocuments = ticketRepository.findByBookingId(bookingId);
         log.debug("Retrieved {} tickets for booking '{}'", ticketDocuments.size(), bookingId);
 
@@ -81,6 +81,7 @@ public class TicketServiceImpl implements TicketService {
     /** Retrieves a ticket by its unique ticket number. */
     @Override
     public TicketDocument getByTicketNumber(String ticketNumber) {
+        log.debug("Retrieving ticket by ticket number '{}'", ticketNumber);
         return ticketRepository.findByTicketNumber(ticketNumber)
                 .orElseThrow(() -> new TicketNotFoundException(ticketNumber));
     }
@@ -106,6 +107,8 @@ public class TicketServiceImpl implements TicketService {
     /** Validates a ticket by its ticket number. Marks the ticket as USED if valid. */
     @Override
     public TicketDocument validateTicket(String ticketNumber) {
+        bookingValidation.validateTicketNumber(ticketNumber);
+
         TicketDocument ticket = ticketRepository.findByTicketNumber(ticketNumber)
                 .orElseThrow(() -> new TicketNotFoundException(ticketNumber));
 
@@ -125,6 +128,8 @@ public class TicketServiceImpl implements TicketService {
     /** Cancels a ticket by its ticket number. Marks the ticket as CANCELLED if valid. */
     @Override
     public TicketDocument cancelTicket(String ticketNumber) {
+        bookingValidation.validateTicketNumber(ticketNumber);
+
         TicketDocument ticket = ticketRepository.findByTicketNumber(ticketNumber)
                 .orElseThrow(() -> new TicketNotFoundException(ticketNumber));
 
@@ -153,6 +158,9 @@ public class TicketServiceImpl implements TicketService {
                 .replace("-", "")
                 .substring(0, TicketConstants.TICKET_NUMBER_SUFFIX_LENGTH)
                 .toUpperCase();
+
+        log.debug("Generated ticket number suffix: '{}'", suffix);
+
         return TicketConstants.TICKET_NUMBER_PREFIX + "-" + datePrefix + "-" + suffix;
     }
 
@@ -163,6 +171,9 @@ public class TicketServiceImpl implements TicketService {
     private List<TicketDocument> generateTicketsForBooking(TicketDTO source) {
         List<TicketDocument> tickets = new ArrayList<>(source.quantity());
         String datePrefix = LocalDate.now().format(DATE_FORMAT);
+
+        log.debug("Generating {} tickets for booking '{}', event '{}', user '{}'",
+                source.quantity(), source.bookingId(), source.eventId(), source.userId());
 
         for (int i = 0; i < source.quantity(); i++) {
             String ticketNumber = generateTicketNumber(datePrefix);
@@ -181,6 +192,9 @@ public class TicketServiceImpl implements TicketService {
 
             tickets.add(ticket);
         }
+
+        log.debug("Generated ticket numbers for booking '{}': {}",
+                source.bookingId(), tickets.stream().map(TicketDocument::getTicketNumber).toList());
 
         return tickets;
     }

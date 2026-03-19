@@ -36,7 +36,7 @@ public interface TicketProtoMapper {
     }
 
     default List<TicketInfo> toProtoList(List<TicketDocument> docs) {
-        if (docs == null) return List.of();
+        if (docs == null || docs.isEmpty()) return List.of();
         return docs.stream().map(this::toProto).toList();
     }
 

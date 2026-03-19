@@ -23,13 +23,18 @@ public interface TicketService {
      */
     List<TicketDocument> getTicketsByBooking(String bookingId);
 
+    /** Retrieves a ticket by its unique ticket number. */
     TicketDocument getByTicketNumber(String ticketNumber);
 
+    /** Retrieves all tickets for a given user. */
     List<TicketDocument> getTicketsByUserId(String userId);
 
+    /** Retrieves tickets for a given user with pagination. */
     Page<TicketDocument> getTicketsByUserId(String userId, Pageable pageable);
 
+    /** Validates a ticket and marks it as USED. Throws if already used or cancelled. */
     TicketDocument validateTicket(String ticketNumber);
 
+    /** Cancels a ticket and marks it as CANCELLED. Throws if already used. */
     TicketDocument cancelTicket(String ticketNumber);
 }

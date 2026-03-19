@@ -23,19 +23,31 @@ public class BookingValidationImpl implements BookingValidation {
         validateRequired(source.bookingId(), "bookingId");
         validateRequired(source.eventId(), "eventId");
         validateRequired(source.userId(), "userId");
+        validateRequired(source.seatCategory(), "seatCategory");
+        validateRequired(source.eventTitle(), "eventTitle");
         validateQuantity(source.quantity());
+    }
+
+    @Override
+    public void validateBookingId(String bookingId) {
+        validateRequired(bookingId, "bookingId");
+    }
+
+    @Override
+    public void validateTicketNumber(String ticketNumber) {
+        validateRequired(ticketNumber, "ticketNumber");
     }
 
     private void validateRequired(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            log.warn("Validation failed: {} is required", fieldName);
+            log.debug("Validation failed: {} is required", fieldName);
             throw new InvalidTicketOperationException(fieldName + " is required");
         }
     }
 
     private void validateQuantity(int quantity) {
         if (quantity <= 0 || quantity > ticketProperties.maxQuantityPerBooking()) {
-            log.warn("Invalid booking quantity: {}", quantity);
+            log.debug("Invalid booking quantity: {}", quantity);
             throw new InvalidTicketOperationException(
                     "Booking quantity must be between 1 and " + ticketProperties.maxQuantityPerBooking());
         }

@@ -27,9 +27,5 @@ public interface TicketRepository extends MongoRepository<TicketDocument, String
 
     List<TicketDocument> findByUserId(String userId);
 
-    Optional<TicketDocument> findByQrCodeData(String qrCodeData);
-
-    boolean existsByBookingId(String bookingId);
-
     Page<TicketDocument> findByUserId(String userId, Pageable pageable);
 }

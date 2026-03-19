@@ -1,11 +1,12 @@
 package com.booking.platform.ticket_service.document;
 
 import com.booking.platform.ticket_service.constants.TicketConstants;
+import com.booking.platform.ticket_service.document.enums.TicketStatus;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -40,6 +41,7 @@ public class TicketDocument {
     private String eventId;
 
     /** Keycloak user ID of the ticket holder. */
+    @Indexed
     private String userId;
 
     /**
@@ -72,12 +74,12 @@ public class TicketDocument {
     @CreatedDate
     private Instant createdAt;
 
-    /** Keycloak user ID of the last modifier (e.g. for cancellations). */
-    @LastModifiedBy
-    private String lastModifiedBy;
-
     /** Timestamp of the last modification (e.g. cancellation time). */
     @LastModifiedDate
     private Instant lastModifiedAt;
+
+    /** Optimistic locking version — prevents concurrent status updates. */
+    @Version
+    private Long version;
 
 }

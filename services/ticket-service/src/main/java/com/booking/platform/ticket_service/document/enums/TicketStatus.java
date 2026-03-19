@@ -1,4 +1,4 @@
-package com.booking.platform.ticket_service.document;
+package com.booking.platform.ticket_service.document.enums;
 
 /**
  * Lifecycle status of a ticket.

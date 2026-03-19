@@ -36,8 +36,9 @@ public class BookingTicketConsumer {
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
 
-        log.debug("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', category='{}', qty={}",
-                event.getBookingId(), event.getEventId(), event.getSeatCategory(), event.getQuantity());
+        log.debug("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', category='{}', qty={}, partition={}, offset={}",
+                event.getBookingId(), event.getEventId(), event.getSeatCategory(), event.getQuantity(),
+                record.partition(), record.offset());
 
         try {
             List<TicketDocument> tickets = ticketService.generateTickets(

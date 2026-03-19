@@ -5,6 +5,7 @@ import com.booking.platform.common.grpc.context.GrpcUserContext;
 import com.booking.platform.common.grpc.ticket.*;
 import com.booking.platform.ticket_service.document.TicketDocument;
 import com.booking.platform.common.exceptions.PermissionDeniedException;
+import com.booking.platform.ticket_service.exception.InvalidTicketOperationException;
 import com.booking.platform.ticket_service.mapper.TicketProtoMapper;
 import com.booking.platform.ticket_service.service.TicketService;
 import io.grpc.stub.StreamObserver;
@@ -74,7 +75,6 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
         requireRole(Roles.EMPLOYEE);
 
         log.debug("gRPC GetTicketsByBooking: bookingId='{}'", request.getBookingId());
-
         List<TicketDocument> tickets = ticketService.getTicketsByBooking(request.getBookingId());
 
         GetTicketsByBookingResponse response = GetTicketsByBookingResponse.newBuilder()
@@ -127,11 +127,10 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
         log.debug("gRPC ValidateTicket: ticketNumber='{}'", request.getTicketNumber());
 
         TicketDocument ticket = ticketService.validateTicket(request.getTicketNumber());
+        log.info("gRPC ValidateTicket completed: ticket '{}' marked as USED", request.getTicketNumber());
 
         responseObserver.onNext(buildTicketResponse(ticket));
         responseObserver.onCompleted();
-
-        log.info("gRPC ValidateTicket completed: ticket '{}' marked as USED", request.getTicketNumber());
     }
 
     @Override
@@ -142,12 +141,11 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
         log.debug("gRPC CancelTicket: ticketNumber='{}'", request.getTicketNumber());
 
         TicketDocument ticket = ticketService.cancelTicket(request.getTicketNumber());
+        log.info("gRPC CancelTicket completed: ticket '{}' status='{}'",
+                request.getTicketNumber(), ticket.getStatus());
 
         responseObserver.onNext(buildTicketResponse(ticket));
         responseObserver.onCompleted();
-
-        log.info("gRPC CancelTicket completed: ticket '{}' status='{}'",
-                request.getTicketNumber(), ticket.getStatus());
     }
 
     // =========================================================================
@@ -169,6 +167,10 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
                 .build();
     }
 
+    /**
+     * Clamps the requested page size to [{@code 1}..{@value MAX_PAGE_SIZE}],
+     * defaulting to {@value DEFAULT_PAGE_SIZE} when the client sends 0 or a negative value.
+     */
     private int normalizePageSize(int requested) {
         if (requested <= 0) return DEFAULT_PAGE_SIZE;
         return Math.min(requested, MAX_PAGE_SIZE);
@@ -180,7 +182,7 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
     private String requireUserId() {
         String userId = GrpcUserContext.getUserId();
         if (userId == null || userId.isBlank()) {
-            throw new IllegalArgumentException("Authenticated user ID is required");
+            throw new InvalidTicketOperationException("Authenticated user ID is required");
         }
         return userId;
     }
