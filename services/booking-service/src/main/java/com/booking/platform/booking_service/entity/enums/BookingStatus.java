@@ -1,4 +1,4 @@
-package com.booking.platform.booking_service.entity;
+package com.booking.platform.booking_service.entity.enums;
 
 /**
  * Full production-grade status machine for a booking.

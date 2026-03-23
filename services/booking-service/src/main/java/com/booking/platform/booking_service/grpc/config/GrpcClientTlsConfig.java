@@ -1,4 +1,4 @@
-package com.booking.platform.booking_service.config;
+package com.booking.platform.booking_service.grpc.config;
 
 import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;

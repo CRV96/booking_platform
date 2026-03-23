@@ -2,11 +2,12 @@ package com.booking.platform.booking_service.service;
 
 import com.booking.platform.booking_service.base.BaseIntegrationTest;
 import com.booking.platform.booking_service.entity.BookingEntity;
-import com.booking.platform.booking_service.entity.BookingStatus;
+import com.booking.platform.booking_service.entity.enums.BookingStatus;
 import com.booking.platform.booking_service.exception.BookingAlreadyCancelledException;
 import com.booking.platform.booking_service.exception.BookingNotFoundException;
 import com.booking.platform.booking_service.exception.EventNotAvailableException;
 import com.booking.platform.booking_service.grpc.client.EventServiceClient;
+import com.booking.platform.booking_service.service.impl.BookingServiceImpl;
 import com.booking.platform.common.grpc.event.*;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;

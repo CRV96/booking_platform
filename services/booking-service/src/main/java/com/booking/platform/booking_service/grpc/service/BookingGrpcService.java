@@ -1,4 +1,4 @@
-package com.booking.platform.booking_service.grpc;
+package com.booking.platform.booking_service.grpc.service;
 
 import com.booking.platform.booking_service.entity.BookingEntity;
 import com.booking.platform.booking_service.mapper.BookingMapper;

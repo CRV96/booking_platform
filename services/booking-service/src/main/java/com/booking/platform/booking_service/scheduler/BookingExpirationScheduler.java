@@ -3,6 +3,7 @@ package com.booking.platform.booking_service.scheduler;
 import com.booking.platform.booking_service.entity.BookingEntity;
 import com.booking.platform.booking_service.lock.DistributedLockService;
 import com.booking.platform.booking_service.lock.LockHandle;
+import com.booking.platform.booking_service.properties.BookingExpirationProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
 import lombok.RequiredArgsConstructor;

@@ -96,7 +96,7 @@ public class PaymentEventConsumer {
                 record.offset());
 
         UUID bookingId = UUID.fromString(event.getBookingId());
-        bookingService.markRefunded(bookingId);
+        bookingService.markBookingAsRefunded(bookingId);
 
         log.info("Booking marked as REFUNDED: bookingId='{}'", event.getBookingId());
     }

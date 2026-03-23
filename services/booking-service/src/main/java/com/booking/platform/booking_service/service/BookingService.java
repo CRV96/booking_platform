@@ -68,5 +68,5 @@ public interface BookingService {
      *
      * @param bookingId the booking that was refunded
      */
-    void markRefunded(UUID bookingId);
+    void markBookingAsRefunded(UUID bookingId);
 }

@@ -1,5 +1,6 @@
 package com.booking.platform.booking_service.lock;
 
+import com.booking.platform.booking_service.properties.DistributedLockProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;

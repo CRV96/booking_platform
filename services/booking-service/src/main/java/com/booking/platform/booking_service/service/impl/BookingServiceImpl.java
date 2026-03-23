@@ -1,13 +1,14 @@
-package com.booking.platform.booking_service.service;
+package com.booking.platform.booking_service.service.impl;
 
 import com.booking.platform.booking_service.entity.BookingEntity;
-import com.booking.platform.booking_service.entity.BookingStatus;
+import com.booking.platform.booking_service.entity.enums.BookingStatus;
 import com.booking.platform.booking_service.exception.*;
 import com.booking.platform.booking_service.grpc.client.EventServiceClient;
 import com.booking.platform.booking_service.lock.DistributedLockService;
 import com.booking.platform.booking_service.lock.LockHandle;
 import com.booking.platform.booking_service.messaging.publisher.BookingEventPublisher;
 import com.booking.platform.booking_service.repository.BookingRepository;
+import com.booking.platform.booking_service.service.BookingService;
 import com.booking.platform.common.grpc.event.EventResponse;
 import com.booking.platform.common.grpc.event.SeatCategoryInfo;
 import io.grpc.StatusRuntimeException;
@@ -285,7 +286,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public void markRefunded(UUID bookingId) {
+    public void markBookingAsRefunded(UUID bookingId) {
         Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
         if (optional.isEmpty()) {
             log.debug("Booking '{}' no longer exists, skipping refund completion", bookingId);

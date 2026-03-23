@@ -4,7 +4,7 @@ import com.booking.platform.common.grpc.event.CreateEventRequest;
 import com.booking.platform.common.grpc.event.SearchEventsRequest;
 import com.booking.platform.common.grpc.event.SeatCategoryInfo;
 import com.booking.platform.common.grpc.event.UpdateEventRequest;
-import com.booking.platform.event_service.config.CacheConfig;
+import com.booking.platform.event_service.cache.config.CacheConfig;
 import com.booking.platform.event_service.constants.DocumentConst;
 import com.booking.platform.event_service.document.*;
 import com.booking.platform.event_service.document.enums.EventCategory;
@@ -33,8 +33,6 @@ import org.springframework.data.mongodb.core.query.TextCriteria;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 

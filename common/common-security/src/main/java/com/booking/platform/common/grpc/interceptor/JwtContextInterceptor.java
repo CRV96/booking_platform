@@ -1,6 +1,7 @@
 package com.booking.platform.common.grpc.interceptor;
 
 import com.booking.platform.common.grpc.context.GrpcUserContext;
+import com.booking.platform.common.grpc.interceptor.config.InterceptorOrder;
 import com.booking.platform.common.security.JwtValidatorService;
 import com.booking.platform.common.security.PublicEndpointRegistry;
 import io.grpc.*;

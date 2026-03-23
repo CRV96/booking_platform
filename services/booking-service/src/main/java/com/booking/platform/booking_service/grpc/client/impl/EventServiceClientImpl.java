@@ -1,5 +1,6 @@
-package com.booking.platform.booking_service.grpc.client;
+package com.booking.platform.booking_service.grpc.client.impl;
 
+import com.booking.platform.booking_service.grpc.client.EventServiceClient;
 import com.booking.platform.common.grpc.event.*;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
