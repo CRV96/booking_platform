@@ -1,7 +1,7 @@
 package com.booking.platform.booking_service.repository;
 
 import com.booking.platform.booking_service.entity.BookingEntity;
-import com.booking.platform.booking_service.entity.BookingStatus;
+import com.booking.platform.booking_service.entity.enums.BookingStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

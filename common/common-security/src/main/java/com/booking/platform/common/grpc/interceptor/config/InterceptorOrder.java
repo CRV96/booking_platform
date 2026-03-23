@@ -1,4 +1,4 @@
-package com.booking.platform.common.grpc.interceptor;
+package com.booking.platform.common.grpc.interceptor.config;
 
 /**
  * Defines the execution order for gRPC server interceptors.

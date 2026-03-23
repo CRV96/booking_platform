@@ -1,6 +1,6 @@
 package com.booking.platform.analytics_service.controller;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Api;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants.Api;
 import com.booking.platform.analytics_service.dto.response.*;
 import com.booking.platform.analytics_service.service.AnalyticsQueryService;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package com.booking.platform.booking_service.scheduler;
+package com.booking.platform.booking_service.properties;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -23,4 +23,7 @@ public class BookingExpirationProperties {
 
     /** Maximum number of expired bookings to process per scheduler tick. */
     private int batchSize = 100;
+
+    /** How long a PENDING booking holds seats before auto-cancellation (default 10 minutes). */
+    private Duration holdDuration = Duration.ofMinutes(10);
 }

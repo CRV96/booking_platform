@@ -1,6 +1,6 @@
 package com.booking.platform.event_service.cache;
 
-import com.booking.platform.event_service.config.CacheConfig;
+import com.booking.platform.event_service.cache.config.CacheConfig;
 import com.booking.platform.event_service.constants.DocumentConst;
 import com.booking.platform.event_service.document.EventDocument;
 import com.booking.platform.event_service.document.enums.EventStatus;

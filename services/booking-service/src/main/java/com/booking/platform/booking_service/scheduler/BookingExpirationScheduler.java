@@ -1,8 +1,10 @@
 package com.booking.platform.booking_service.scheduler;
 
+import com.booking.platform.booking_service.constants.EntityConst;
 import com.booking.platform.booking_service.entity.BookingEntity;
 import com.booking.platform.booking_service.lock.DistributedLockService;
 import com.booking.platform.booking_service.lock.LockHandle;
+import com.booking.platform.booking_service.properties.BookingExpirationProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
 import lombok.RequiredArgsConstructor;
@@ -31,7 +33,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BookingExpirationScheduler {
 
-    private static final String SCHEDULER_LOCK_KEY = "lock:scheduler:booking-expiration";
+    private static final String SCHEDULER_LOCK_KEY = EntityConst.RedisKeys.SCHEDULER_LOCK_BOOKING_EXPIRATION;
 
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;

@@ -1,4 +1,4 @@
-package com.booking.platform.booking_service.lock;
+package com.booking.platform.booking_service.properties;
 
 import lombok.Getter;
 import lombok.Setter;

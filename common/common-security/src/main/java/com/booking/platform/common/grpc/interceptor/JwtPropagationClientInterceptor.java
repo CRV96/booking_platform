@@ -1,4 +1,4 @@
-package com.booking.platform.booking_service.grpc.interceptor;
+package com.booking.platform.common.grpc.interceptor;
 
 import com.booking.platform.common.grpc.context.GrpcUserContext;
 import io.grpc.*;

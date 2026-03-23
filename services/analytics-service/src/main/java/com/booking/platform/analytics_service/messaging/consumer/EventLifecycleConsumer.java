@@ -1,6 +1,6 @@
 package com.booking.platform.analytics_service.messaging.consumer;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants;
 import com.booking.platform.analytics_service.dto.EventDto;
 import com.booking.platform.analytics_service.service.EventAnalyticsProcessor;
 import com.booking.platform.common.events.*;
@@ -27,7 +27,7 @@ public class EventLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.EVENT_CREATED,
-            containerFactory = BkgAnalyticsConstants.Event.CREATED_FACTORY
+            containerFactory = AnalyticsConstants.Event.CREATED_FACTORY
     )
     public void onEventCreated(ConsumerRecord<String, EventCreatedEvent> record) {
         EventCreatedEvent event = record.value();
@@ -48,7 +48,7 @@ public class EventLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.EVENT_UPDATED,
-            containerFactory = BkgAnalyticsConstants.Event.UPDATED_FACTORY
+            containerFactory = AnalyticsConstants.Event.UPDATED_FACTORY
     )
     public void onEventUpdated(ConsumerRecord<String, EventUpdatedEvent> record) {
         EventUpdatedEvent event = record.value();
@@ -68,7 +68,7 @@ public class EventLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.EVENT_PUBLISHED,
-            containerFactory = BkgAnalyticsConstants.Event.PUBLISHED_FACTORY
+            containerFactory = AnalyticsConstants.Event.PUBLISHED_FACTORY
     )
     public void onEventPublished(ConsumerRecord<String, EventPublishedEvent> record) {
         EventPublishedEvent event = record.value();
@@ -89,7 +89,7 @@ public class EventLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.EVENT_CANCELLED,
-            containerFactory = BkgAnalyticsConstants.Event.CANCELLED_FACTORY
+            containerFactory = AnalyticsConstants.Event.CANCELLED_FACTORY
     )
     public void onEventCancelled(ConsumerRecord<String, EventCancelledEvent> record) {
         EventCancelledEvent event = record.value();

@@ -1,7 +1,7 @@
 package com.booking.platform.analytics_service.service.impl;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Booking;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants.Booking;
 import com.booking.platform.analytics_service.dto.BookingDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.BookingAnalyticsProcessor;
@@ -36,16 +36,16 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     @Override
     public void processBookingCreated(BookingDto booking) {
         saveRawEvent(Booking.CREATED_EVENT, booking.topic(), booking.key(), Map.of(
-                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
-                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId(),
+                AnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
+                AnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId(),
                 Booking.PAYLOAD_TOTAL_PRICE, booking.totalPrice(),
-                BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency()));
+                AnalyticsConstants.PAYLOAD_CURRENCY, booking.currency()));
 
         // event_stats: increment totalBookings
         upsertEventStats(booking.eventId(), new Update()
                 .inc(Booking.TOTAL_BOOKINGS, 1)
-                .setOnInsert(BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency())
-                .currentDate(BkgAnalyticsConstants.LAST_UPDATED));
+                .setOnInsert(AnalyticsConstants.PAYLOAD_CURRENCY, booking.currency())
+                .currentDate(AnalyticsConstants.LAST_UPDATED));
 
         // daily_metrics: increment bookingsCreated
         upsertDailyMetrics(new Update().inc(Booking.BOOKINGS_CREATED, 1));
@@ -61,20 +61,20 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     @Override
     public void processBookingConfirmed(BookingDto booking) {
         saveRawEvent(Booking.CONFIRMED_EVENT, booking.topic(), booking.key(), Map.of(
-                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
-                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId(),
+                AnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
+                AnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId(),
                 Booking.PAYLOAD_TOTAL_PRICE, booking.totalPrice(),
-                BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency(),
-                BkgAnalyticsConstants.PAYLOAD_EVENT_TITLE, booking.eventTitle(),
+                AnalyticsConstants.PAYLOAD_CURRENCY, booking.currency(),
+                AnalyticsConstants.PAYLOAD_EVENT_TITLE, booking.eventTitle(),
                 Booking.PAYLOAD_SEAT_CATEGORY, booking.seatCategory()));
 
         // event_stats: increment confirmedBookings + totalRevenue
         upsertEventStats(booking.eventId(), new Update()
                 .inc(Booking.CONFIRMED_BOOKINGS, 1)
                 .inc(Booking.TOTAL_REVENUE, booking.totalPrice())
-                .set(BkgAnalyticsConstants.PAYLOAD_EVENT_TITLE, booking.eventTitle())
-                .setOnInsert(BkgAnalyticsConstants.PAYLOAD_CURRENCY, booking.currency())
-                .currentDate(BkgAnalyticsConstants.LAST_UPDATED));
+                .set(AnalyticsConstants.PAYLOAD_EVENT_TITLE, booking.eventTitle())
+                .setOnInsert(AnalyticsConstants.PAYLOAD_CURRENCY, booking.currency())
+                .currentDate(AnalyticsConstants.LAST_UPDATED));
 
         // daily_metrics: increment bookingsConfirmed + totalRevenue
         upsertDailyMetrics(new Update()
@@ -92,13 +92,13 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     @Override
     public void processBookingCancelled(BookingDto booking) {
         saveRawEvent(Booking.CANCELLED_EVENT, booking.topic(), booking.key(), Map.of(
-                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
-                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId()));
+                AnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
+                AnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId()));
 
         // event_stats: increment cancelledBookings
         upsertEventStats(booking.eventId(), new Update()
                 .inc(Booking.CANCELLED_BOOKINGS, 1)
-                .currentDate(BkgAnalyticsConstants.LAST_UPDATED));
+                .currentDate(AnalyticsConstants.LAST_UPDATED));
 
         // daily_metrics: increment bookingsCancelled
         upsertDailyMetrics(new Update().inc(Booking.BOOKINGS_CANCELLED, 1));

@@ -1,7 +1,7 @@
 package com.booking.platform.analytics_service.service.impl;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Event;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants.Event;
 import com.booking.platform.analytics_service.dto.EventDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.EventAnalyticsProcessor;
@@ -36,16 +36,16 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     @Override
     public void processEventCreated(EventDto event) {
         saveRawEvent(Event.CREATED_EVENT, event.topic(), event.key(), Map.of(
-                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
+                AnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
                 Event.PAYLOAD_TITLE, event.title(),
                 Event.PAYLOAD_CATEGORY, event.category()));
 
         // event_stats: initialize entry for this event
         upsertEventStats(event.eventId(), new Update()
-                .setOnInsert(BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId())
-                .setOnInsert(BkgAnalyticsConstants.PAYLOAD_EVENT_TITLE, event.title())
+                .setOnInsert(AnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId())
+                .setOnInsert(AnalyticsConstants.PAYLOAD_EVENT_TITLE, event.title())
                 .setOnInsert(Event.PAYLOAD_CATEGORY, event.category())
-                .currentDate(BkgAnalyticsConstants.LAST_UPDATED));
+                .currentDate(AnalyticsConstants.LAST_UPDATED));
 
         // daily_metrics: increment eventsCreated
         upsertDailyMetrics(new Update().inc(Event.EVENTS_CREATED, 1));
@@ -59,7 +59,7 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     @Override
     public void processEventUpdated(EventDto event) {
         saveRawEvent(Event.UPDATED_EVENT, event.topic(), event.key(), Map.of(
-                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
+                AnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
                 Event.PAYLOAD_CHANGED_FIELDS, event.changedFields()));
 
         // EventUpdated only goes to the raw log — no materialized view updates needed
@@ -69,7 +69,7 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     @Override
     public void processEventPublished(EventDto event) {
         saveRawEvent(Event.PUBLISHED_EVENT, event.topic(), event.key(), Map.of(
-                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
+                AnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
                 Event.PAYLOAD_TITLE, event.title(),
                 Event.PAYLOAD_CATEGORY, event.category()));
 
@@ -85,8 +85,8 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     @Override
     public void processEventCancelled(EventDto event) {
         saveRawEvent(Event.CANCELLED_EVENT, event.topic(), event.key(), Map.of(
-                BkgAnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
-                BkgAnalyticsConstants.PAYLOAD_REASON, event.reason()));
+                AnalyticsConstants.PAYLOAD_EVENT_ID, event.eventId(),
+                AnalyticsConstants.PAYLOAD_REASON, event.reason()));
 
         // daily_metrics: increment eventsCancelled
         upsertDailyMetrics(new Update().inc(Event.EVENTS_CANCELLED, 1));

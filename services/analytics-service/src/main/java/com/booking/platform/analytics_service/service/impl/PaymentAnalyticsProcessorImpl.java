@@ -1,6 +1,6 @@
 package com.booking.platform.analytics_service.service.impl;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Payment;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants.Payment;
 import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.PaymentAnalyticsProcessor;
@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
-
-import java.util.Map;
 
 /**
  * Processes payment-domain Kafka events.

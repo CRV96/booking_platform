@@ -1,7 +1,8 @@
-package com.booking.platform.booking_service.grpc;
+package com.booking.platform.booking_service.grpc.service;
 
 import com.booking.platform.booking_service.entity.BookingEntity;
 import com.booking.platform.booking_service.mapper.BookingMapper;
+import com.booking.platform.booking_service.properties.BookingProperties;
 import com.booking.platform.booking_service.service.BookingService;
 import com.booking.platform.common.grpc.booking.*;
 import com.booking.platform.common.grpc.context.GrpcUserContext;
@@ -33,6 +34,7 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
 
     private final BookingService bookingService;
     private final BookingMapper bookingMapper;
+    private final BookingProperties bookingProperties;
 
     // =========================================================================
     // CREATE BOOKING
@@ -56,11 +58,10 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
                 request.getIdempotencyKey()
         );
 
-        responseObserver.onNext(buildBookingResponse(booking));
-        responseObserver.onCompleted();
-
         log.info("gRPC CreateBooking completed: bookingId='{}', event='{}'",
                 booking.getId(), request.getEventId());
+        responseObserver.onNext(buildBookingResponse(booking));
+        responseObserver.onCompleted();
     }
 
     // =========================================================================
@@ -96,7 +97,10 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
                 request.hasStatusFilter() ? request.getStatusFilter() : "ALL");
 
         int page = Math.max(request.getPage(), 0);
-        int pageSize = request.getPageSize() > 0 ? Math.min(request.getPageSize(), 100) : 20;
+        BookingProperties.Pagination pagination = bookingProperties.getPagination();
+        int pageSize = request.getPageSize() > 0
+                ? Math.min(request.getPageSize(), pagination.getMaxPageSize())
+                : pagination.getDefaultPageSize();
         String statusFilter = request.hasStatusFilter() ? request.getStatusFilter() : null;
 
         Page<BookingEntity> bookingPage = bookingService.getUserBookings(
@@ -128,15 +132,14 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
         log.debug("gRPC CancelBooking: user='{}', bookingId='{}'", userId, request.getBookingId());
 
         UUID bookingId = parseUuid(request.getBookingId(), "booking_id");
-        String reason = request.hasReason() ? request.getReason() : null;
+        String reason = request.getReason().isBlank() ? null : request.getReason();
 
         BookingEntity booking = bookingService.cancelBooking(bookingId, userId, reason);
 
-        responseObserver.onNext(buildBookingResponse(booking));
-        responseObserver.onCompleted();
-
         log.info("gRPC CancelBooking completed: bookingId='{}', reason='{}'",
                 bookingId, reason);
+        responseObserver.onNext(buildBookingResponse(booking));
+        responseObserver.onCompleted();
     }
 
     // =========================================================================

@@ -2,7 +2,7 @@ package com.booking.platform.booking_service.scheduler;
 
 import com.booking.platform.booking_service.base.BaseIntegrationTest;
 import com.booking.platform.booking_service.entity.BookingEntity;
-import com.booking.platform.booking_service.entity.BookingStatus;
+import com.booking.platform.booking_service.entity.enums.BookingStatus;
 import com.booking.platform.booking_service.grpc.client.EventServiceClient;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.common.grpc.event.UpdateSeatAvailabilityResponse;

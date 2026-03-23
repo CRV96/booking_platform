@@ -1,5 +1,7 @@
 package com.booking.platform.booking_service.lock;
 
+import com.booking.platform.booking_service.constants.EntityConst;
+import com.booking.platform.booking_service.properties.DistributedLockProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -26,7 +28,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DistributedLockService {
 
-    private static final String LOCK_PREFIX = "lock:seat:";
+    private static final String LOCK_PREFIX = EntityConst.RedisKeys.SEAT_LOCK_PREFIX;
 
     /**
      * Lua script for atomic compare-and-delete (safe unlock).

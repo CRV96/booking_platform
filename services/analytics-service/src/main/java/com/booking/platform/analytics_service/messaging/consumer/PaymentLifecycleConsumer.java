@@ -1,6 +1,6 @@
 package com.booking.platform.analytics_service.messaging.consumer;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants;
 import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.service.PaymentAnalyticsProcessor;
 import com.booking.platform.common.events.*;
@@ -27,7 +27,7 @@ public class PaymentLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.PAYMENT_COMPLETED,
-            containerFactory = BkgAnalyticsConstants.Payment.COMPLETED_FACTORY
+            containerFactory = AnalyticsConstants.Payment.COMPLETED_FACTORY
     )
     public void onPaymentCompleted(ConsumerRecord<String, PaymentCompletedEvent> record) {
         PaymentCompletedEvent event = record.value();
@@ -50,7 +50,7 @@ public class PaymentLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.PAYMENT_FAILED,
-            containerFactory = BkgAnalyticsConstants.Payment.FAILED_FACTORY
+            containerFactory = AnalyticsConstants.Payment.FAILED_FACTORY
     )
     public void onPaymentFailed(ConsumerRecord<String, PaymentFailedEvent> record) {
         PaymentFailedEvent event = record.value();
@@ -72,7 +72,7 @@ public class PaymentLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.PAYMENT_REFUND_COMPLETED,
-            containerFactory = BkgAnalyticsConstants.Payment.REFUND_FACTORY
+            containerFactory = AnalyticsConstants.Payment.REFUND_FACTORY
     )
     public void onRefundCompleted(ConsumerRecord<String, RefundCompletedEvent> record) {
         RefundCompletedEvent event = record.value();

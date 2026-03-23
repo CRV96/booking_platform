@@ -1,6 +1,7 @@
 package com.booking.platform.booking_service.lock;
 
 import com.booking.platform.booking_service.base.BaseIntegrationTest;
+import com.booking.platform.booking_service.properties.DistributedLockProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;

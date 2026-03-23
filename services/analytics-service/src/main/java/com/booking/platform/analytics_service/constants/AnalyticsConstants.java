@@ -16,8 +16,8 @@ package com.booking.platform.analytics_service.constants;
  *   <li>{@link Collection} — MongoDB collection names</li>
  * </ul>
  */
-public final class BkgAnalyticsConstants {
-    private BkgAnalyticsConstants() {}
+public final class AnalyticsConstants {
+    private AnalyticsConstants() {}
 
     // ── Shared payload keys (used when building raw event_log entries) ───────
 

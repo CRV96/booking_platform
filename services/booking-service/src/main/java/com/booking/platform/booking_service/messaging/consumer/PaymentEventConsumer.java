@@ -48,7 +48,7 @@ public class PaymentEventConsumer {
                 record.partition(),
                 record.offset());
 
-        UUID bookingId = UUID.fromString(event.getBookingId());
+        UUID bookingId = parseBookingId(event.getBookingId(), "PAYMENT_COMPLETED");
         bookingService.confirmBooking(bookingId);
 
         log.info("Booking confirmed: bookingId='{}'", event.getBookingId());
@@ -71,7 +71,7 @@ public class PaymentEventConsumer {
                 record.partition(),
                 record.offset());
 
-        UUID bookingId = UUID.fromString(event.getBookingId());
+        UUID bookingId = parseBookingId(event.getBookingId(), "PAYMENT_FAILED");
         bookingService.cancelBookingOnPaymentFailure(bookingId, event.getReason());
 
         log.info("Booking cancelled due to payment failure: bookingId='{}'", event.getBookingId());
@@ -95,9 +95,18 @@ public class PaymentEventConsumer {
                 record.partition(),
                 record.offset());
 
-        UUID bookingId = UUID.fromString(event.getBookingId());
-        bookingService.markRefunded(bookingId);
+        UUID bookingId = parseBookingId(event.getBookingId(), "REFUND_COMPLETED");
+        bookingService.markBookingAsRefunded(bookingId);
 
         log.info("Booking marked as REFUNDED: bookingId='{}'", event.getBookingId());
+    }
+
+    private UUID parseBookingId(String bookingId, String eventType) {
+        try {
+            return UUID.fromString(bookingId);
+        } catch (IllegalArgumentException e) {
+            log.error("[{}] Invalid bookingId '{}', sending to DLT", eventType, bookingId);
+            throw e;
+        }
     }
 }

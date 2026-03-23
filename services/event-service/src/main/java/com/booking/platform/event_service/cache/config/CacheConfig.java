@@ -1,4 +1,4 @@
-package com.booking.platform.event_service.config;
+package com.booking.platform.event_service.cache.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
