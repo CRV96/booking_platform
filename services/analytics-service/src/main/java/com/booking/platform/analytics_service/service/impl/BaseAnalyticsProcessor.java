@@ -1,6 +1,6 @@
 package com.booking.platform.analytics_service.service.impl;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants;
 import com.booking.platform.analytics_service.document.EventLog;
 import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
@@ -65,9 +65,9 @@ public abstract class BaseAnalyticsProcessor {
      * Creates the document if it doesn't exist, otherwise applies the update.
      */
     protected void upsertEventStats(String eventId, Update update) {
-        Query query = Query.query(Criteria.where(BkgAnalyticsConstants.EVENT_ID).is(eventId));
+        Query query = Query.query(Criteria.where(AnalyticsConstants.EVENT_ID).is(eventId));
 
-        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.Collection.EVENT_STATS);
+        mongoTemplate.upsert(query, update, AnalyticsConstants.Collection.EVENT_STATS);
     }
 
     /**
@@ -77,12 +77,12 @@ public abstract class BaseAnalyticsProcessor {
     protected void upsertDailyMetrics(Update update) {
         String today = LocalDate.now(ZoneOffset.UTC).toString();
 
-        Query query = Query.query(Criteria.where(BkgAnalyticsConstants.DATE).is(today));
+        Query query = Query.query(Criteria.where(AnalyticsConstants.DATE).is(today));
 
-        update.setOnInsert(BkgAnalyticsConstants.DATE, today);
-        update.currentDate(BkgAnalyticsConstants.LAST_UPDATED);
+        update.setOnInsert(AnalyticsConstants.DATE, today);
+        update.currentDate(AnalyticsConstants.LAST_UPDATED);
 
-        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.Collection.DAILY_METRICS);
+        mongoTemplate.upsert(query, update, AnalyticsConstants.Collection.DAILY_METRICS);
     }
 
     /**
@@ -90,12 +90,12 @@ public abstract class BaseAnalyticsProcessor {
      * Creates the document if it doesn't exist, otherwise increments counters.
      */
     protected void upsertCategoryStats(String category, Update update) {
-        Query query = Query.query(Criteria.where(BkgAnalyticsConstants.CATEGORY).is(category));
+        Query query = Query.query(Criteria.where(AnalyticsConstants.CATEGORY).is(category));
 
-        update.setOnInsert(BkgAnalyticsConstants.CATEGORY, category);
-        update.currentDate(BkgAnalyticsConstants.LAST_UPDATED);
+        update.setOnInsert(AnalyticsConstants.CATEGORY, category);
+        update.currentDate(AnalyticsConstants.LAST_UPDATED);
 
-        mongoTemplate.upsert(query, update, BkgAnalyticsConstants.Collection.CATEGORY_STATS);
+        mongoTemplate.upsert(query, update, AnalyticsConstants.Collection.CATEGORY_STATS);
     }
 
     /**
@@ -104,11 +104,11 @@ public abstract class BaseAnalyticsProcessor {
      * yet (race condition), the update is silently skipped.
      */
     protected void incrementCategoryStatsByEventId(String eventId, Update update) {
-        Query eventQuery = Query.query(Criteria.where(BkgAnalyticsConstants.EVENT_ID).is(eventId));
-        var eventStats = mongoTemplate.findOne(eventQuery, org.bson.Document.class, BkgAnalyticsConstants.Collection.EVENT_STATS);
+        Query eventQuery = Query.query(Criteria.where(AnalyticsConstants.EVENT_ID).is(eventId));
+        var eventStats = mongoTemplate.findOne(eventQuery, org.bson.Document.class, AnalyticsConstants.Collection.EVENT_STATS);
 
-        if (eventStats != null && eventStats.getString(BkgAnalyticsConstants.CATEGORY) != null) {
-            upsertCategoryStats(eventStats.getString(BkgAnalyticsConstants.CATEGORY), update);
+        if (eventStats != null && eventStats.getString(AnalyticsConstants.CATEGORY) != null) {
+            upsertCategoryStats(eventStats.getString(AnalyticsConstants.CATEGORY), update);
         } else {
             log.debug("Skipping category_stats update — event_stats not yet available for eventId='{}'", eventId);
         }
@@ -116,11 +116,11 @@ public abstract class BaseAnalyticsProcessor {
 
     protected Map<String, Object> getPayload(PaymentDto payment) {
         return Map.of(
-                BkgAnalyticsConstants.PAYLOAD_PAYMENT_ID, payment.paymentId(),
-                BkgAnalyticsConstants.PAYLOAD_BOOKING_ID, payment.bookingId(),
-                BkgAnalyticsConstants.PAYLOAD_AMOUNT, payment.amount(),
-                BkgAnalyticsConstants.PAYLOAD_CURRENCY, payment.currency(),
-                BkgAnalyticsConstants.PAYLOAD_REASON, payment.reason(),
-                BkgAnalyticsConstants.PAYLOAD_REFUND_ID, payment.refundId());
+                AnalyticsConstants.PAYLOAD_PAYMENT_ID, payment.paymentId(),
+                AnalyticsConstants.PAYLOAD_BOOKING_ID, payment.bookingId(),
+                AnalyticsConstants.PAYLOAD_AMOUNT, payment.amount(),
+                AnalyticsConstants.PAYLOAD_CURRENCY, payment.currency(),
+                AnalyticsConstants.PAYLOAD_REASON, payment.reason(),
+                AnalyticsConstants.PAYLOAD_REFUND_ID, payment.refundId());
     }
 }

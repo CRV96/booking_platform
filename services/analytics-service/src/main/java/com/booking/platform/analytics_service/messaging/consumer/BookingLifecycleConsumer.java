@@ -1,6 +1,6 @@
 package com.booking.platform.analytics_service.messaging.consumer;
 
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants;
 import com.booking.platform.analytics_service.dto.BookingDto;
 import com.booking.platform.analytics_service.service.BookingAnalyticsProcessor;
 import com.booking.platform.common.events.*;
@@ -27,7 +27,7 @@ public class BookingLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CREATED,
-            containerFactory = BkgAnalyticsConstants.Booking.CREATED_FACTORY
+            containerFactory = AnalyticsConstants.Booking.CREATED_FACTORY
     )
     public void onBookingCreated(ConsumerRecord<String, BookingCreatedEvent> record) {
         BookingCreatedEvent event = record.value();
@@ -50,7 +50,7 @@ public class BookingLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CONFIRMED,
-            containerFactory = BkgAnalyticsConstants.Booking.CONFIRMED_FACTORY
+            containerFactory = AnalyticsConstants.Booking.CONFIRMED_FACTORY
     )
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
@@ -75,7 +75,7 @@ public class BookingLifecycleConsumer {
 
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CANCELLED,
-            containerFactory = BkgAnalyticsConstants.Booking.CANCELLED_FACTORY
+            containerFactory = AnalyticsConstants.Booking.CANCELLED_FACTORY
     )
     public void onBookingCancelled(ConsumerRecord<String, BookingCancelledEvent> record) {
         BookingCancelledEvent event = record.value();

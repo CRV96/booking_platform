@@ -1,11 +1,11 @@
 package com.booking.platform.analytics_service.service.impl;
 
 import com.booking.platform.analytics_service.config.CacheConfig;
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants;
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Booking;
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Collection;
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Event;
-import com.booking.platform.analytics_service.constants.BkgAnalyticsConstants.Payment;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants.Booking;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants.Collection;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants.Event;
+import com.booking.platform.analytics_service.constants.AnalyticsConstants.Payment;
 import com.booking.platform.analytics_service.dto.response.*;
 import com.booking.platform.analytics_service.service.AnalyticsQueryService;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +40,9 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 match(Criteria.where(Booking.TOTAL_REVENUE).gt(0)),
                 sort(Sort.Direction.DESC, Booking.TOTAL_REVENUE),
                 limit(limit),
-                project(BkgAnalyticsConstants.EVENT_ID, BkgAnalyticsConstants.EVENT_TITLE,
-                        BkgAnalyticsConstants.CATEGORY, Booking.TOTAL_REVENUE,
-                        Booking.CONFIRMED_BOOKINGS, BkgAnalyticsConstants.CURRENCY)
+                project(AnalyticsConstants.EVENT_ID, AnalyticsConstants.EVENT_TITLE,
+                        AnalyticsConstants.CATEGORY, Booking.TOTAL_REVENUE,
+                        Booking.CONFIRMED_BOOKINGS, AnalyticsConstants.CURRENCY)
         );
 
         return mongoTemplate
@@ -63,9 +63,9 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
         String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
 
         Aggregation aggregation = newAggregation(
-                match(Criteria.where(BkgAnalyticsConstants.DATE).gte(startDate)),
-                sort(Sort.Direction.ASC, BkgAnalyticsConstants.DATE),
-                project(BkgAnalyticsConstants.DATE)
+                match(Criteria.where(AnalyticsConstants.DATE).gte(startDate)),
+                sort(Sort.Direction.ASC, AnalyticsConstants.DATE),
+                project(AnalyticsConstants.DATE)
                         .andExpression("ifNull(bookingsCreated, 0)").as(Booking.BOOKINGS_CREATED)
                         .andExpression("ifNull(bookingsConfirmed, 0)").as(Booking.BOOKINGS_CONFIRMED)
                         .andExpression("ifNull(bookingsCancelled, 0)").as(Booking.BOOKINGS_CANCELLED)
@@ -86,7 +86,7 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
         Aggregation aggregation = newAggregation(
                 match(Criteria.where(Booking.TOTAL_REVENUE).gt(0)),
                 sort(Sort.Direction.DESC, Booking.TOTAL_REVENUE),
-                project(BkgAnalyticsConstants.CATEGORY, Booking.TOTAL_REVENUE,
+                project(AnalyticsConstants.CATEGORY, Booking.TOTAL_REVENUE,
                         Booking.TOTAL_BOOKINGS)
         );
 
@@ -156,9 +156,9 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
     public List<EventStatsDetail> getAllEventStats() {
         Aggregation aggregation = newAggregation(
                 match(Criteria.where(Booking.TOTAL_BOOKINGS).gt(0)),
-                sort(Sort.Direction.ASC, BkgAnalyticsConstants.EVENT_TITLE),
-                project(BkgAnalyticsConstants.EVENT_ID, BkgAnalyticsConstants.EVENT_TITLE,
-                        BkgAnalyticsConstants.CATEGORY, BkgAnalyticsConstants.CURRENCY)
+                sort(Sort.Direction.ASC, AnalyticsConstants.EVENT_TITLE),
+                project(AnalyticsConstants.EVENT_ID, AnalyticsConstants.EVENT_TITLE,
+                        AnalyticsConstants.CATEGORY, AnalyticsConstants.CURRENCY)
                         .andExpression("ifNull(totalBookings, 0)").as(Booking.TOTAL_BOOKINGS)
                         .andExpression("ifNull(confirmedBookings, 0)").as(Booking.CONFIRMED_BOOKINGS)
                         .andExpression("ifNull(cancelledBookings, 0)").as(Booking.CANCELLED_BOOKINGS)
@@ -180,9 +180,9 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
     @Cacheable(value = CacheConfig.CACHE_EVENT_STATS, key = "'event:' + #eventId")
     public EventStatsDetail getEventAnalytics(String eventId) {
         Aggregation aggregation = newAggregation(
-                match(Criteria.where(BkgAnalyticsConstants.EVENT_ID).is(eventId)),
-                project(BkgAnalyticsConstants.EVENT_ID, BkgAnalyticsConstants.EVENT_TITLE,
-                        BkgAnalyticsConstants.CATEGORY, BkgAnalyticsConstants.CURRENCY)
+                match(Criteria.where(AnalyticsConstants.EVENT_ID).is(eventId)),
+                project(AnalyticsConstants.EVENT_ID, AnalyticsConstants.EVENT_TITLE,
+                        AnalyticsConstants.CATEGORY, AnalyticsConstants.CURRENCY)
                         .andExpression("ifNull(totalBookings, 0)").as(Booking.TOTAL_BOOKINGS)
                         .andExpression("ifNull(confirmedBookings, 0)").as(Booking.CONFIRMED_BOOKINGS)
                         .andExpression("ifNull(cancelledBookings, 0)").as(Booking.CANCELLED_BOOKINGS)
@@ -210,9 +210,9 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
         String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
 
         Aggregation aggregation = newAggregation(
-                match(Criteria.where(BkgAnalyticsConstants.DATE).gte(startDate)),
-                sort(Sort.Direction.ASC, BkgAnalyticsConstants.DATE),
-                project(BkgAnalyticsConstants.DATE)
+                match(Criteria.where(AnalyticsConstants.DATE).gte(startDate)),
+                sort(Sort.Direction.ASC, AnalyticsConstants.DATE),
+                project(AnalyticsConstants.DATE)
                         .andExpression("ifNull(paymentsCompleted, 0)").as(Payment.PAYMENTS_COMPLETED)
                         .andExpression("ifNull(paymentsFailed, 0)").as(Payment.PAYMENTS_FAILED)
                         .andExpression("ifNull(refundsCompleted, 0)").as(Payment.REFUNDS_COMPLETED)
@@ -237,9 +237,9 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
         String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
 
         Aggregation aggregation = newAggregation(
-                match(Criteria.where(BkgAnalyticsConstants.DATE).gte(startDate)),
-                sort(Sort.Direction.ASC, BkgAnalyticsConstants.DATE),
-                project(BkgAnalyticsConstants.DATE)
+                match(Criteria.where(AnalyticsConstants.DATE).gte(startDate)),
+                sort(Sort.Direction.ASC, AnalyticsConstants.DATE),
+                project(AnalyticsConstants.DATE)
                         .andExpression("ifNull(eventsCreated, 0)").as(Event.EVENTS_CREATED)
                         .andExpression("ifNull(eventsPublished, 0)").as(Event.EVENTS_PUBLISHED)
                         .andExpression("ifNull(eventsCancelled, 0)").as(Event.EVENTS_CANCELLED)
