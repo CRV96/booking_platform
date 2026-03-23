@@ -9,6 +9,7 @@ import com.booking.platform.booking_service.lock.DistributedLockService;
 import com.booking.platform.booking_service.lock.LockHandle;
 import com.booking.platform.booking_service.messaging.publisher.BookingEventPublisher;
 import com.booking.platform.booking_service.properties.BookingExpirationProperties;
+import com.booking.platform.booking_service.properties.BookingProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
 import com.booking.platform.common.grpc.event.EventResponse;
@@ -44,6 +45,7 @@ public class BookingServiceImpl implements BookingService {
     private final EventServiceClient eventServiceClient;
     private final BookingEventPublisher bookingEventPublisher;
     private final BookingExpirationProperties expirationProperties;
+    private final BookingProperties bookingProperties;
 
     @Override
     public BookingEntity createBooking(String userId, String eventId,
@@ -80,7 +82,7 @@ public class BookingServiceImpl implements BookingService {
 
             var eventInfo = eventResponse.getEvent();
 
-            if (!"PUBLISHED".equals(eventInfo.getStatus())) {
+            if (!EntityConst.EventStatus.PUBLISHED.equals(eventInfo.getStatus())) {
                 throw new EventNotAvailableException(eventId,
                         "Event is not in PUBLISHED status: " + eventInfo.getStatus());
             }
@@ -151,7 +153,7 @@ public class BookingServiceImpl implements BookingService {
                                                int pageSize, String statusFilter) {
         PageRequest pageRequest = PageRequest.of(
                 Math.max(page, 0),
-                Math.min(Math.max(pageSize, 1), 100),
+                Math.min(Math.max(pageSize, 1), bookingProperties.getPagination().getMaxPageSize()),
                 Sort.by(Sort.Direction.DESC, EntityConst.Booking.CREATED_AT)
         );
 
@@ -242,7 +244,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.setCancellationReason("HOLD_EXPIRED");
+        booking.setCancellationReason(EntityConst.CancellationReason.HOLD_EXPIRED);
         bookingRepository.save(booking);
 
         // Release seats back to event-service (best-effort)
@@ -274,7 +276,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         booking.setStatus(BookingStatus.CANCELLED);
-        booking.setCancellationReason("PAYMENT_FAILED: " + reason);
+        booking.setCancellationReason(EntityConst.CancellationReason.PAYMENT_FAILED_PREFIX + reason);
         bookingRepository.save(booking);
 
         // Release seats back to event-service (best-effort)
