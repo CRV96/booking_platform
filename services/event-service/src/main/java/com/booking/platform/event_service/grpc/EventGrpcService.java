@@ -8,6 +8,7 @@ import com.booking.platform.event_service.document.EventDocument;
 import com.booking.platform.event_service.dto.OrganizerDto;
 import com.booking.platform.event_service.exception.PermissionDeniedException;
 import com.booking.platform.event_service.mapper.EventMapper;
+import com.booking.platform.event_service.properties.EventProperties;
 import com.booking.platform.event_service.service.EventService;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
@@ -31,11 +32,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
 
-    private static final int DEFAULT_PAGE_SIZE = 20;
-    private static final int MAX_PAGE_SIZE = 100;
-
     private final EventService eventService;
     private final EventMapper eventMapper;
+    private final EventProperties eventProperties;
 
     // =========================================================================
     // PUBLIC ENDPOINTS
@@ -177,8 +176,8 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
     // HELPERS
     // =========================================================================
     private int normalizePageSize(int requested) {
-        if (requested <= 0) return DEFAULT_PAGE_SIZE;
-        return Math.min(requested, MAX_PAGE_SIZE);
+        if (requested <= 0) return eventProperties.pagination().defaultPageSize();
+        return Math.min(requested, eventProperties.pagination().maxPageSize());
     }
 
     private EventResponse buildEventResponse(EventDocument event) {

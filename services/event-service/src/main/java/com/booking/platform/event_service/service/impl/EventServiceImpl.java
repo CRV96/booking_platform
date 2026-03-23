@@ -13,6 +13,7 @@ import com.booking.platform.event_service.exception.EventNotFoundException;
 import com.booking.platform.event_service.exception.InsufficientSeatsException;
 import com.booking.platform.event_service.exception.InvalidEventStateException;
 import com.booking.platform.event_service.messaging.publisher.EventPublisher;
+import com.booking.platform.event_service.properties.EventProperties;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.service.EventService;
 import com.booking.platform.event_service.validator.EventValidator;
@@ -39,13 +40,11 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EventServiceImpl implements EventService {
 
-    private static final int DEFAULT_PAGE_SIZE = 20;
-    private static final int MAX_PAGE_SIZE = 100;
-
     private final EventRepository eventRepository;
     private final MongoTemplate mongoTemplate;
     private final EventValidator eventValidator;
     private final EventPublisher eventPublisher;
+    private final EventProperties eventProperties;
 
     // =========================================================================
     // CREATE — no cache on creation, event starts as DRAFT (not publicly cached)
@@ -208,12 +207,14 @@ public class EventServiceImpl implements EventService {
             query.addCriteria(TextCriteria.forDefaultLanguage().matchingAny(request.getQuery()));
         }
 
+        EventProperties.Pagination pagination = eventProperties.pagination();
         int page = Math.max(request.getPage(), 0);
-        int pageSize = request.getPageSize() > 0 ? Math.min(request.getPageSize(), MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+        int pageSize = request.getPageSize() > 0
+                ? Math.min(request.getPageSize(), pagination.maxPageSize())
+                : pagination.defaultPageSize();
 
         // Cap the total offset to prevent expensive skip operations on large datasets
-        long maxSkippableResults = 5000L;
-        long skip = Math.min((long) page * pageSize, maxSkippableResults);
+        long skip = Math.min((long) page * pageSize, pagination.maxSkippableResults());
         query.skip(skip).limit(pageSize);
 
         return mongoTemplate.find(query, EventDocument.class);
