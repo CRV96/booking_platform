@@ -1,6 +1,7 @@
 package com.booking.platform.event_service.cache;
 
 import com.booking.platform.event_service.config.CacheConfig;
+import com.booking.platform.event_service.constants.DocumentConst;
 import com.booking.platform.event_service.document.EventDocument;
 import com.booking.platform.event_service.document.enums.EventStatus;
 import lombok.RequiredArgsConstructor;
@@ -50,10 +51,10 @@ public class FeaturedEventsCacheService {
         log.debug("Refreshing featured events cache");
 
         Query query = new Query(
-                Criteria.where("status").is(EventStatus.PUBLISHED)
-                        .and("dateTime").gte(Instant.now())
+                Criteria.where(DocumentConst.Event.STATUS).is(EventStatus.PUBLISHED)
+                        .and(DocumentConst.Event.DATE_TIME).gte(Instant.now())
         )
-                .with(Sort.by(Sort.Direction.ASC, "dateTime"))
+                .with(Sort.by(Sort.Direction.ASC, DocumentConst.Event.DATE_TIME))
                 .limit(featuredEventsLimit);
 
         List<EventDocument> featured = mongoTemplate.find(query, EventDocument.class);

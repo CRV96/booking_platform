@@ -118,6 +118,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
         log.debug("gRPC PublishEvent: id='{}'", request.getEventId());
 
         requireRole(Roles.EMPLOYEE.getValue());
+        requireOwnership(request.getEventId());
 
         EventDocument event = eventService.publishEvent(request.getEventId());
         log.info("gRPC PublishEvent completed: id='{}', title='{}'", event.getId(), event.getTitle());
@@ -133,7 +134,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
         requireRole(Roles.EMPLOYEE.getValue());
         requireOwnership(request.getEventId());
 
-        String reason = request.getReason().isEmpty() ? null : request.getReason();
+        String reason = request.getReason().isBlank() ? null : request.getReason();
         EventDocument event = eventService.cancelEvent(request.getEventId(), reason);
         log.info("gRPC CancelEvent completed: id='{}', reason='{}'", event.getId(), reason);
 
