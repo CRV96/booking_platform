@@ -1,5 +1,8 @@
 package com.booking.platform.event_service.document;
 
+import com.booking.platform.event_service.constants.DocumentConst;
+import com.booking.platform.event_service.document.enums.EventCategory;
+import com.booking.platform.event_service.document.enums.EventStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,7 +12,6 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.CompoundIndexes;
-import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.index.TextIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.TextScore;
@@ -21,7 +23,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collection = "events")
+@Document(collection = DocumentConst.Event.COLLECTION_NAME)
 @CompoundIndexes({
         @CompoundIndex(
                 name = "category_status_dateTime",

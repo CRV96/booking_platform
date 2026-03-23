@@ -5,12 +5,17 @@ import com.booking.platform.common.grpc.event.SearchEventsRequest;
 import com.booking.platform.common.grpc.event.SeatCategoryInfo;
 import com.booking.platform.common.grpc.event.UpdateEventRequest;
 import com.booking.platform.event_service.config.CacheConfig;
+import com.booking.platform.event_service.constants.DocumentConst;
 import com.booking.platform.event_service.document.*;
+import com.booking.platform.event_service.document.enums.EventCategory;
+import com.booking.platform.event_service.document.enums.EventStatus;
 import com.booking.platform.event_service.dto.OrganizerDto;
 import com.booking.platform.event_service.exception.EventNotFoundException;
 import com.booking.platform.event_service.exception.InsufficientSeatsException;
 import com.booking.platform.event_service.exception.InvalidEventStateException;
+import com.booking.platform.event_service.exception.ValidationException;
 import com.booking.platform.event_service.messaging.publisher.EventPublisher;
+import com.booking.platform.event_service.properties.EventProperties;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.service.EventService;
 import com.booking.platform.event_service.validator.EventValidator;
@@ -29,6 +34,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -41,6 +47,7 @@ public class EventServiceImpl implements EventService {
     private final MongoTemplate mongoTemplate;
     private final EventValidator eventValidator;
     private final EventPublisher eventPublisher;
+    private final EventProperties eventProperties;
 
     // =========================================================================
     // CREATE — no cache on creation, event starts as DRAFT (not publicly cached)
@@ -95,25 +102,31 @@ public class EventServiceImpl implements EventService {
 
         List<String> changedFields = new ArrayList<>();
 
-        if (request.hasTitle())       { event.setTitle(request.getTitle());                                    changedFields.add("title"); }
-        if (request.hasDescription()) { event.setDescription(request.getDescription());                        changedFields.add("description"); }
-        if (request.hasCategory())    { event.setCategory(EventCategory.valueOf(request.getCategory()));       changedFields.add("category"); }
-        if (request.hasDateTime())    { event.setDateTime(Instant.parse(request.getDateTime()));               changedFields.add("dateTime"); }
-        if (request.hasEndDateTime()) { event.setEndDateTime(Instant.parse(request.getEndDateTime()));         changedFields.add("endDateTime"); }
-        if (request.hasTimezone())    { event.setTimezone(request.getTimezone());                              changedFields.add("timezone"); }
+        if (request.hasTitle())       { event.setTitle(request.getTitle());                                    changedFields.add(DocumentConst.Event.TITLE); }
+        if (request.hasDescription()) { event.setDescription(request.getDescription());                        changedFields.add(DocumentConst.Event.DESCRIPTION); }
+        if (request.hasCategory())    { event.setCategory(EventCategory.valueOf(request.getCategory()));       changedFields.add(DocumentConst.Event.CATEGORY); }
+        if (request.hasDateTime())    { event.setDateTime(eventValidator.parseInstant(request.getDateTime(), DocumentConst.Event.DATE_TIME));    changedFields.add(DocumentConst.Event.DATE_TIME); }
+        if (request.hasEndDateTime()) { event.setEndDateTime(eventValidator.parseInstant(request.getEndDateTime(), DocumentConst.Event.END_DATE_TIME)); changedFields.add(DocumentConst.Event.END_DATE_TIME); }
+        if (request.hasTimezone())    { event.setTimezone(request.getTimezone());                              changedFields.add(DocumentConst.Event.TIMEZONE); }
 
         if (request.hasVenue()) {
             event.setVenue(getVenueInfo(request.getVenue()));
-            changedFields.add("venue");
+            changedFields.add(DocumentConst.Event.VENUE);
         }
 
         if (!request.getSeatCategoriesList().isEmpty()) {
             event.setSeatCategories(getSeatCategories(request.getSeatCategoriesList()));
-            changedFields.add("seatCategories");
+            changedFields.add(DocumentConst.Event.SEAT_CATEGORIES);
         }
 
-        if (!request.getImagesList().isEmpty()) { event.setImages(new ArrayList<>(request.getImagesList())); changedFields.add("images"); }
-        if (!request.getTagsList().isEmpty())   { event.setTags(new ArrayList<>(request.getTagsList()));     changedFields.add("tags"); }
+        if (!request.getImagesList().isEmpty()) { event.setImages(new ArrayList<>(request.getImagesList())); changedFields.add(DocumentConst.Event.IMAGES); }
+        if (!request.getTagsList().isEmpty())   { event.setTags(new ArrayList<>(request.getTagsList()));     changedFields.add(DocumentConst.Event.TAGS); }
+
+        // Validate endDateTime > dateTime if both are present
+        if (event.getDateTime() != null && event.getEndDateTime() != null
+                && !event.getEndDateTime().isAfter(event.getDateTime())) {
+            throw new ValidationException("endDateTime must be after dateTime");
+        }
 
         EventDocument saved = eventRepository.save(event);
         eventPublisher.publishEventUpdated(saved, changedFields);
@@ -203,9 +216,15 @@ public class EventServiceImpl implements EventService {
             query.addCriteria(TextCriteria.forDefaultLanguage().matchingAny(request.getQuery()));
         }
 
+        EventProperties.Pagination pagination = eventProperties.pagination();
         int page = Math.max(request.getPage(), 0);
-        int pageSize = request.getPageSize() > 0 ? Math.min(request.getPageSize(), 100) : 20;
-        query.skip((long) page * pageSize).limit(pageSize);
+        int pageSize = request.getPageSize() > 0
+                ? Math.min(request.getPageSize(), pagination.maxPageSize())
+                : pagination.defaultPageSize();
+
+        // Cap the total offset to prevent expensive skip operations on large datasets
+        long skip = Math.min((long) page * pageSize, pagination.maxSkippableResults());
+        query.skip(skip).limit(pageSize);
 
         return mongoTemplate.find(query, EventDocument.class);
     }
@@ -223,18 +242,18 @@ public class EventServiceImpl implements EventService {
         // Build the atomic query. For decrements, embed the seat-availability guard
         // directly in the filter so the check and the update are a single MongoDB
         // operation — this eliminates the TOCTOU race that causes overselling.
-        Criteria queryCriteria = Criteria.where("_id").is(eventId);
+        Criteria queryCriteria = Criteria.where(DocumentConst.Event.ID).is(eventId);
         if (delta < 0) {
-            queryCriteria = queryCriteria.and("seatCategories").elemMatch(
-                    Criteria.where("name").is(seatCategoryName)
-                            .and("availableSeats").gte(-delta)
+            queryCriteria = queryCriteria.and(DocumentConst.Event.SEAT_CATEGORIES).elemMatch(
+                    Criteria.where(DocumentConst.Event.SEAT_CATEGORIES_NAME).is(seatCategoryName)
+                            .and(DocumentConst.Event.SEAT_CATEGORIES_AVAILABLE_SEATS).gte(-delta)
             );
         } else {
-            queryCriteria = queryCriteria.and("seatCategories.name").is(seatCategoryName);
+            queryCriteria = queryCriteria.and(DocumentConst.Event.SEAT_CATEGORIES_DOT_NAME).is(seatCategoryName);
         }
 
         Query query = new Query(queryCriteria);
-        Update update = new Update().inc("seatCategories.$.availableSeats", delta);
+        Update update = new Update().inc(DocumentConst.Event.SEAT_CATEGORIES_POSITIONAL_AVAILABLE_SEATS, delta);
 
         EventDocument updated = mongoTemplate.findAndModify(
                 query,
@@ -267,8 +286,8 @@ public class EventServiceImpl implements EventService {
                 .category(EventCategory.valueOf(request.getCategory()))
                 .status(EventStatus.DRAFT)
                 .venue(getVenueInfo(request.getVenue()))
-                .dateTime(Instant.parse(request.getDateTime()))
-                .endDateTime(request.getEndDateTime().isBlank() ? null : Instant.parse(request.getEndDateTime()))
+                .dateTime(eventValidator.parseInstant(request.getDateTime(), "dateTime"))
+                .endDateTime(request.getEndDateTime().isBlank() ? null : eventValidator.parseInstant(request.getEndDateTime(), "endDateTime"))
                 .timezone(request.getTimezone())
                 .organizer(getOrganizer(organizer))
                 .seatCategories(getSeatCategories(request.getSeatCategoriesList()))
@@ -312,22 +331,22 @@ public class EventServiceImpl implements EventService {
     private List<Criteria> getCriteriaList(SearchEventsRequest request) {
         List<Criteria> criteriaList = new ArrayList<>();
 
-        criteriaList.add(Criteria.where("status").is(EventStatus.PUBLISHED));
+        criteriaList.add(Criteria.where(DocumentConst.Event.STATUS).is(EventStatus.PUBLISHED));
 
         if (request.hasCategory() && !request.getCategory().isBlank()) {
-            criteriaList.add(Criteria.where("category").is(EventCategory.valueOf(request.getCategory())));
+            criteriaList.add(Criteria.where(DocumentConst.Event.CATEGORY).is(EventCategory.valueOf(request.getCategory())));
         }
 
         if (request.hasCity() && !request.getCity().isBlank()) {
-            criteriaList.add(Criteria.where("venue.city").regex(request.getCity(), "i"));
+            criteriaList.add(Criteria.where(DocumentConst.Event.VENUE_CITY).regex(request.getCity(), "i"));
         }
 
         if (request.hasDateFrom() && !request.getDateFrom().isBlank()) {
-            criteriaList.add(Criteria.where("dateTime").gte(Instant.parse(request.getDateFrom())));
+            criteriaList.add(Criteria.where(DocumentConst.Event.DATE_TIME).gte(eventValidator.parseInstant(request.getDateFrom(), "dateFrom")));
         }
 
         if (request.hasDateTo() && !request.getDateTo().isBlank()) {
-            criteriaList.add(Criteria.where("dateTime").lte(Instant.parse(request.getDateTo())));
+            criteriaList.add(Criteria.where(DocumentConst.Event.DATE_TIME).lte(eventValidator.parseInstant(request.getDateTo(), "dateTo")));
         }
 
         return criteriaList;

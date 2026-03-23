@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/** Embedded document for a seat category (e.g. "VIP", "General Admission") with pricing and availability. */
 @Data
 @Builder
 @NoArgsConstructor

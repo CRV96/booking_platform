@@ -1,7 +1,9 @@
 package com.booking.platform.event_service;
 
+import com.booking.platform.event_service.properties.EventProperties;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @SpringBootApplication(
@@ -11,6 +13,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 		}
 )
 @EnableDiscoveryClient
+@EnableConfigurationProperties(EventProperties.class)
 public class EventServiceApplication {
 
 	public static void main(String[] args) {

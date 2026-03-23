@@ -1,7 +1,7 @@
 package com.booking.platform.event_service.base;
 
-import com.booking.platform.event_service.document.EventCategory;
-import com.booking.platform.event_service.document.EventStatus;
+import com.booking.platform.event_service.document.enums.EventCategory;
+import com.booking.platform.event_service.document.enums.EventStatus;
 import com.booking.platform.event_service.document.OrganizerInfo;
 import com.booking.platform.event_service.document.SeatCategory;
 import com.booking.platform.event_service.document.VenueInfo;

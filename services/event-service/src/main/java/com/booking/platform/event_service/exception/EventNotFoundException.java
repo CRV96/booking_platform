@@ -11,6 +11,10 @@ public class EventNotFoundException extends EventServiceException {
         super("Event not found: " + eventId);
     }
 
+    public EventNotFoundException(String eventId, String operation) {
+        super("Event not found: " + eventId + " (during " + operation + ")");
+    }
+
     @Override
     public Status.Code getGrpcStatusCode() {
         return Status.Code.NOT_FOUND;

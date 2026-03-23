@@ -7,14 +7,12 @@ import com.booking.platform.common.grpc.event.VenueInfo;
 import com.booking.platform.event_service.document.EventDocument;
 import org.mapstruct.Mapper;
 
-import java.time.Instant;
 import java.util.List;
+
+import static com.booking.platform.event_service.util.NullSafetyUtil.*;
 
 /**
  * MapStruct mapper for converting between EventDocument (MongoDB) and EventInfo (Protobuf).
- * <p>
- * Protobuf classes use builders and are immutable — MapStruct can't set fields directly,
- * so we use default methods with manual builder calls instead of the standard annotation-based mapping.
  */
 @Mapper(componentModel = "spring")
 public interface EventMapper {
@@ -93,18 +91,11 @@ public interface EventMapper {
 
         return SeatCategoryInfo.newBuilder()
                 .setName(nullToEmpty(sc.getName()))
-                .setPrice(sc.getPrice() != null ? sc.getPrice() : 0.0)
+                .setPrice(orZero(sc.getPrice()))
                 .setCurrency(nullToEmpty(sc.getCurrency()))
-                .setTotalSeats(sc.getTotalSeats() != null ? sc.getTotalSeats() : 0)
-                .setAvailableSeats(sc.getAvailableSeats() != null ? sc.getAvailableSeats() : 0)
+                .setTotalSeats(orZero(sc.getTotalSeats()))
+                .setAvailableSeats(orZero(sc.getAvailableSeats()))
                 .build();
     }
 
-    default String instantToString(Instant instant) {
-        return instant != null ? instant.toString() : "";
-    }
-
-    default String nullToEmpty(String value) {
-        return value != null ? value : "";
-    }
 }

@@ -7,6 +7,7 @@ import com.booking.platform.common.events.EventUpdatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.VenueSnapshot;
 import com.booking.platform.event_service.document.EventDocument;
+import com.booking.platform.event_service.document.OrganizerInfo;
 import com.booking.platform.event_service.messaging.publisher.EventPublisher;
 import com.google.protobuf.MessageLite;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,9 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+
+import static com.booking.platform.event_service.util.NullSafetyUtil.nullToEmpty;
 
 /**
  * Publishes domain events to Kafka when the event lifecycle changes.
@@ -46,7 +50,6 @@ public class KafkaEventPublisher implements EventPublisher {
     private final KafkaTemplate<String, MessageLite> kafkaTemplate;
 
     // ── Public publish methods ────────────────────────────────────────────────
-
     /**
      * Published after a new event is persisted in DRAFT status.
      * Topic: {@value KafkaTopics#EVENT_CREATED}
@@ -59,7 +62,7 @@ public class KafkaEventPublisher implements EventPublisher {
                 .setCategory(event.getCategory().name())
                 .setVenue(toVenueSnapshot(event))
                 .setDateTime(event.getDateTime().toString())
-                .setOrganizerId(event.getOrganizer().getUserId())
+                .setOrganizerId(nullToEmpty(event.getOrganizer(), OrganizerInfo::getUserId))
                 .setTimestamp(Instant.now().toString())
                 .build();
 
@@ -94,7 +97,7 @@ public class KafkaEventPublisher implements EventPublisher {
                 .setTitle(event.getTitle())
                 .setCategory(event.getCategory().name())
                 .setDateTime(event.getDateTime().toString())
-                .setOrganizerId(event.getOrganizer().getUserId())
+                .setOrganizerId(nullToEmpty(event.getOrganizer(), OrganizerInfo::getUserId))
                 .setTimestamp(Instant.now().toString())
                 .build();
 
@@ -144,9 +147,10 @@ public class KafkaEventPublisher implements EventPublisher {
             return VenueSnapshot.getDefaultInstance();
         }
         return VenueSnapshot.newBuilder()
-                .setName(event.getVenue().getName() != null ? event.getVenue().getName() : "")
-                .setCity(event.getVenue().getCity() != null ? event.getVenue().getCity() : "")
-                .setCountry(event.getVenue().getCountry() != null ? event.getVenue().getCountry() : "")
+                .setName(nullToEmpty(event.getVenue().getName()))
+                .setCity(nullToEmpty(event.getVenue().getCity()))
+                .setCountry(nullToEmpty(event.getVenue().getCountry()))
                 .build();
     }
+
 }
