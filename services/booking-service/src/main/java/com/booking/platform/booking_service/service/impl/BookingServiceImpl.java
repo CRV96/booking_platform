@@ -12,6 +12,7 @@ import com.booking.platform.booking_service.properties.BookingExpirationProperti
 import com.booking.platform.booking_service.properties.BookingProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
+import com.booking.platform.common.grpc.event.EventInfo;
 import com.booking.platform.common.grpc.event.EventResponse;
 import com.booking.platform.common.grpc.event.SeatCategoryInfo;
 import io.grpc.StatusRuntimeException;
@@ -27,6 +28,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 
 /**
  * Core booking business logic.
@@ -72,42 +74,15 @@ public class BookingServiceImpl implements BookingService {
                 return existing.get();
             }
 
-            // 4. Call event-service to validate event + get pricing
-            EventResponse eventResponse;
-            try {
-                eventResponse = eventServiceClient.getEvent(eventId);
-            } catch (StatusRuntimeException e) {
-                throw mapGrpcException(eventId, e);
-            }
+            // 4. Validate event is published and seat category has enough seats
+            var eventInfo = callEventService(() -> eventServiceClient.getEvent(eventId), eventId)
+                    .getEvent();
+            SeatCategoryInfo seatCat = validateEventAndFindSeat(eventId, eventInfo, seatCategory, quantity);
 
-            var eventInfo = eventResponse.getEvent();
+            // 5. Decrement seats atomically in event-service
+            callEventService(() -> eventServiceClient.updateSeatAvailability(eventId, seatCategory, -quantity), eventId);
 
-            if (!EntityConst.EventStatus.PUBLISHED.equals(eventInfo.getStatus())) {
-                throw new EventNotAvailableException(eventId,
-                        "Event is not in PUBLISHED status: " + eventInfo.getStatus());
-            }
-
-            // 5. Find the seat category and validate availability
-            SeatCategoryInfo seatCat = eventInfo.getSeatCategoriesList().stream()
-                    .filter(sc -> sc.getName().equals(seatCategory))
-                    .findFirst()
-                    .orElseThrow(() -> new EventNotAvailableException(eventId,
-                            "Seat category not found: " + seatCategory));
-
-            if (seatCat.getAvailableSeats() < quantity) {
-                throw new EventNotAvailableException(eventId,
-                        "Insufficient seats: requested=" + quantity
-                                + ", available=" + seatCat.getAvailableSeats());
-            }
-
-            // 6. Decrement seats atomically in event-service
-            try {
-                eventServiceClient.updateSeatAvailability(eventId, seatCategory, -quantity);
-            } catch (StatusRuntimeException e) {
-                throw mapGrpcException(eventId, e);
-            }
-
-            // 7. Persist PENDING booking
+            // 6. Persist PENDING booking
             BigDecimal unitPrice = BigDecimal.valueOf(seatCat.getPrice());
             BigDecimal totalPrice = unitPrice.multiply(BigDecimal.valueOf(quantity));
 
@@ -127,7 +102,7 @@ public class BookingServiceImpl implements BookingService {
 
             BookingEntity saved = bookingRepository.save(booking);
             log.info("Booking created: id='{}', event='{}', category='{}', qty={}, total={}",
-                    saved.getId(), eventId, seatCategory, quantity, totalPrice);
+                    saved.getId(), eventId, seatCategory, quantity, saved.getTotalPrice());
 
             // 8. Publish BookingCreatedEvent → triggers payment-service
             bookingEventPublisher.publishBookingCreated(saved);
@@ -181,20 +156,7 @@ public class BookingServiceImpl implements BookingService {
             throw new BookingAlreadyCancelledException(bookingId.toString());
         }
 
-        booking.setStatus(BookingStatus.CANCELLED);
-        booking.setCancellationReason(reason);
-
-        BookingEntity saved = bookingRepository.save(booking);
-
-        // Release seats back to event-service (best-effort)
-        releaseSeats(booking);
-
-        log.info("Booking cancelled: id='{}', reason='{}'", bookingId, reason);
-
-        // Publish BookingCancelledEvent → triggers seat release + cancellation email
-        bookingEventPublisher.publishBookingCancelled(saved);
-
-        return saved;
+        return cancelAndRelease(booking, reason);
     }
 
     @Override
@@ -229,64 +191,16 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void expireBooking(UUID bookingId) {
-        Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
-        if (optional.isEmpty()) {
-            log.debug("Booking '{}' no longer exists, skipping expiration", bookingId);
-            return;
-        }
-
-        BookingEntity booking = optional.get();
-
-        if (booking.getStatus() != BookingStatus.PENDING) {
-            log.debug("Booking '{}' is no longer PENDING (status={}), skipping expiration",
-                    bookingId, booking.getStatus());
-            return;
-        }
-
-        booking.setStatus(BookingStatus.CANCELLED);
-        booking.setCancellationReason(EntityConst.CancellationReason.HOLD_EXPIRED);
-        bookingRepository.save(booking);
-
-        // Release seats back to event-service (best-effort)
-        releaseSeats(booking);
-
-        log.info("Booking expired: id='{}', event='{}', category='{}', qty={}",
-                bookingId, booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
-
-        // Publish BookingCancelledEvent with reason HOLD_EXPIRED → triggers cancellation email
-        bookingEventPublisher.publishBookingCancelled(booking);
+        findPendingBooking(bookingId, "expiration")
+                .ifPresent(booking -> cancelAndRelease(booking, EntityConst.CancellationReason.HOLD_EXPIRED));
     }
 
     @Override
     @Transactional
     public void cancelBookingOnPaymentFailure(UUID bookingId, String reason) {
-        Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
-        if (optional.isEmpty()) {
-            log.debug("Booking '{}' no longer exists, skipping payment failure cancellation", bookingId);
-            return;
-        }
-
-        BookingEntity booking = optional.get();
-
-        // Idempotent: if not PENDING, skip (already cancelled or confirmed)
-        if (booking.getStatus() != BookingStatus.PENDING) {
-            log.debug("Booking '{}' is no longer PENDING (status={}), skipping payment failure cancellation",
-                    bookingId, booking.getStatus());
-            return;
-        }
-
-        booking.setStatus(BookingStatus.CANCELLED);
-        booking.setCancellationReason(EntityConst.CancellationReason.PAYMENT_FAILED_PREFIX + reason);
-        bookingRepository.save(booking);
-
-        // Release seats back to event-service (best-effort)
-        releaseSeats(booking);
-
-        log.info("Booking cancelled due to payment failure: id='{}', reason='{}'",
-                bookingId, reason);
-
-        // Publish BookingCancelledEvent → triggers notification-service (cancellation email)
-        bookingEventPublisher.publishBookingCancelled(booking);
+        findPendingBooking(bookingId, "payment failure cancellation")
+                .ifPresent(booking -> cancelAndRelease(booking,
+                        EntityConst.CancellationReason.PAYMENT_FAILED_PREFIX + reason));
     }
 
     // ─── Refund completion (P4-05) ───────────────────────────────────
@@ -324,6 +238,66 @@ public class BookingServiceImpl implements BookingService {
 
     // ─── Private helpers ─────────────────────────────────────────────
 
+    private SeatCategoryInfo validateEventAndFindSeat(String eventId, EventInfo eventInfo,
+                                                      String seatCategory, int quantity) {
+        if (!EntityConst.EventStatus.PUBLISHED.equals(eventInfo.getStatus())) {
+            throw new EventNotAvailableException(eventId,
+                    "Event is not in PUBLISHED status: " + eventInfo.getStatus());
+        }
+
+        SeatCategoryInfo seatCat = eventInfo.getSeatCategoriesList().stream()
+                .filter(sc -> sc.getName().equals(seatCategory))
+                .findFirst()
+                .orElseThrow(() -> new EventNotAvailableException(eventId,
+                        "Seat category not found: " + seatCategory));
+
+        if (seatCat.getAvailableSeats() < quantity) {
+            throw new EventNotAvailableException(eventId,
+                    "Insufficient seats: requested=" + quantity
+                            + ", available=" + seatCat.getAvailableSeats());
+        }
+
+        return seatCat;
+    }
+
+    /**
+     * Finds a PENDING booking by ID, returning empty if the booking
+     * doesn't exist or is no longer PENDING (idempotent skip).
+     */
+    private Optional<BookingEntity> findPendingBooking(UUID bookingId, String operation) {
+        Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
+        if (optional.isEmpty()) {
+            log.debug("Booking '{}' no longer exists, skipping {}", bookingId, operation);
+            return Optional.empty();
+        }
+
+        BookingEntity booking = optional.get();
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            log.debug("Booking '{}' is no longer PENDING (status={}), skipping {}",
+                    bookingId, booking.getStatus(), operation);
+            return Optional.empty();
+        }
+
+        return Optional.of(booking);
+    }
+
+    /**
+     * Cancels a booking, releases seats, and publishes the cancellation event.
+     * Shared by user cancellation, hold expiration, and payment failure flows.
+     */
+    private BookingEntity cancelAndRelease(BookingEntity booking, String reason) {
+        booking.setStatus(BookingStatus.CANCELLED);
+        booking.setCancellationReason(reason);
+        BookingEntity saved = bookingRepository.save(booking);
+
+        releaseSeats(booking);
+
+        log.info("Booking cancelled: id='{}', reason='{}'", booking.getId(), reason);
+
+        bookingEventPublisher.publishBookingCancelled(saved);
+        return saved;
+    }
+
     private void releaseSeats(BookingEntity booking) {
         try {
             eventServiceClient.updateSeatAvailability(
@@ -335,14 +309,22 @@ public class BookingServiceImpl implements BookingService {
         }
     }
 
-    private BookingServiceException mapGrpcException(String eventId, StatusRuntimeException e) {
-        log.error("Event-service gRPC call failed: {}", e.getStatus(), e);
-        return switch (e.getStatus().getCode()) {
-            case NOT_FOUND -> new EventNotAvailableException(eventId, "Event not found");
-            case FAILED_PRECONDITION -> new EventNotAvailableException(eventId,
-                    e.getStatus().getDescription());
-            default -> new EventNotAvailableException(eventId,
-                    "Event service error: " + e.getStatus().getDescription());
-        };
+    /**
+     * Wraps a gRPC call to event-service, mapping {@link StatusRuntimeException}
+     * to domain exceptions.
+     */
+    private <T> T callEventService(Supplier<T> grpcCall, String eventId) {
+        try {
+            return grpcCall.get();
+        } catch (StatusRuntimeException e) {
+            log.error("Event-service gRPC call failed: {}", e.getStatus(), e);
+            throw switch (e.getStatus().getCode()) {
+                case NOT_FOUND -> new EventNotAvailableException(eventId, "Event not found");
+                case FAILED_PRECONDITION -> new EventNotAvailableException(eventId,
+                        e.getStatus().getDescription());
+                default -> new EventNotAvailableException(eventId,
+                        "Event service error: " + e.getStatus().getDescription());
+            };
+        }
     }
 }
