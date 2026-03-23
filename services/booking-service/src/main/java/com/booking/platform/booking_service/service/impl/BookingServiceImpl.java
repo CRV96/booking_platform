@@ -1,5 +1,6 @@
 package com.booking.platform.booking_service.service.impl;
 
+import com.booking.platform.booking_service.constants.EntityConst;
 import com.booking.platform.booking_service.entity.BookingEntity;
 import com.booking.platform.booking_service.entity.enums.BookingStatus;
 import com.booking.platform.booking_service.exception.*;
@@ -7,6 +8,7 @@ import com.booking.platform.booking_service.grpc.client.EventServiceClient;
 import com.booking.platform.booking_service.lock.DistributedLockService;
 import com.booking.platform.booking_service.lock.LockHandle;
 import com.booking.platform.booking_service.messaging.publisher.BookingEventPublisher;
+import com.booking.platform.booking_service.properties.BookingExpirationProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
 import com.booking.platform.common.grpc.event.EventResponse;
@@ -21,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -38,12 +39,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class BookingServiceImpl implements BookingService {
 
-    private static final Duration HOLD_DURATION = Duration.ofMinutes(10);
-
     private final BookingRepository bookingRepository;
     private final DistributedLockService lockService;
     private final EventServiceClient eventServiceClient;
     private final BookingEventPublisher bookingEventPublisher;
+    private final BookingExpirationProperties expirationProperties;
 
     @Override
     public BookingEntity createBooking(String userId, String eventId,
@@ -120,7 +120,7 @@ public class BookingServiceImpl implements BookingService {
                     .totalPrice(totalPrice)
                     .currency(seatCat.getCurrency())
                     .idempotencyKey(idempotencyKey)
-                    .holdExpiresAt(Instant.now().plus(HOLD_DURATION))
+                    .holdExpiresAt(Instant.now().plus(expirationProperties.getHoldDuration()))
                     .build();
 
             BookingEntity saved = bookingRepository.save(booking);
@@ -152,11 +152,16 @@ public class BookingServiceImpl implements BookingService {
         PageRequest pageRequest = PageRequest.of(
                 Math.max(page, 0),
                 Math.min(Math.max(pageSize, 1), 100),
-                Sort.by(Sort.Direction.DESC, "createdAt")
+                Sort.by(Sort.Direction.DESC, EntityConst.Booking.CREATED_AT)
         );
 
         if (statusFilter != null && !statusFilter.isBlank()) {
-            BookingStatus status = BookingStatus.valueOf(statusFilter);
+            BookingStatus status;
+            try {
+                status = BookingStatus.valueOf(statusFilter);
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Invalid booking status filter: " + statusFilter);
+            }
             return bookingRepository.findByUserIdAndStatus(userId, status, pageRequest);
         }
         return bookingRepository.findByUserId(userId, pageRequest);
@@ -203,7 +208,7 @@ public class BookingServiceImpl implements BookingService {
         }
 
         if (booking.getStatus() != BookingStatus.PENDING) {
-            throw new BookingAlreadyCancelledException(bookingId.toString());
+            throw new InvalidBookingStateException(bookingId.toString(), booking.getStatus(), BookingStatus.PENDING);
         }
 
         booking.setStatus(BookingStatus.CONFIRMED);
