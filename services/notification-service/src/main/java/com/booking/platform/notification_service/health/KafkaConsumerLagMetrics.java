@@ -11,6 +11,7 @@ import org.apache.kafka.clients.admin.ListOffsetsResult;
 import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.stereotype.Component;
 
@@ -48,7 +49,9 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class KafkaConsumerLagMetrics implements MeterBinder {
 
-    private static final String CONSUMER_GROUP     = "notification-service-group";
+    @Value("${spring.kafka.consumer.group-id:notification-service-group}")
+    private static String CONSUMER_GROUP;
+
     private static final String METRIC_NAME        = "kafka.consumer.lag";
     private static final String METRIC_DESCRIPTION = "Number of messages the consumer group is behind the latest offset";
     private static final int    TIMEOUT_SECONDS    = 5;

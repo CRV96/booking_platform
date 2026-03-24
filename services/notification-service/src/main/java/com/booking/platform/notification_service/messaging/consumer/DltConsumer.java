@@ -8,6 +8,7 @@ import com.booking.platform.common.events.EventCreatedEvent;
 import com.booking.platform.common.events.EventPublishedEvent;
 import com.booking.platform.common.events.EventUpdatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.notification_service.constants.NotificationConst;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -41,7 +42,7 @@ public class DltConsumer {
 
     // ── Event DLTs ────────────────────────────────────────────────────────────
 
-    @KafkaListener(topics = KafkaTopics.EVENT_CREATED + "-dlt", groupId = "notification-service-dlt-group", containerFactory = "dltListenerFactory")
+    @KafkaListener(topics = KafkaTopics.EVENT_CREATED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
     public void onEventCreatedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             EventCreatedEvent event = EventCreatedEvent.parseFrom(record.value());
@@ -55,7 +56,7 @@ public class DltConsumer {
         }
     }
 
-    @KafkaListener(topics = KafkaTopics.EVENT_UPDATED + "-dlt", groupId = "notification-service-dlt-group", containerFactory = "dltListenerFactory")
+    @KafkaListener(topics = KafkaTopics.EVENT_UPDATED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
     public void onEventUpdatedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             EventUpdatedEvent event = EventUpdatedEvent.parseFrom(record.value());
@@ -69,7 +70,7 @@ public class DltConsumer {
         }
     }
 
-    @KafkaListener(topics = KafkaTopics.EVENT_PUBLISHED + "-dlt", groupId = "notification-service-dlt-group", containerFactory = "dltListenerFactory")
+    @KafkaListener(topics = KafkaTopics.EVENT_PUBLISHED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
     public void onEventPublishedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             EventPublishedEvent event = EventPublishedEvent.parseFrom(record.value());
@@ -83,7 +84,7 @@ public class DltConsumer {
         }
     }
 
-    @KafkaListener(topics = KafkaTopics.EVENT_CANCELLED + "-dlt", groupId = "notification-service-dlt-group", containerFactory = "dltListenerFactory")
+    @KafkaListener(topics = KafkaTopics.EVENT_CANCELLED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
     public void onEventCancelledDlt(ConsumerRecord<String, byte[]> record) {
         try {
             EventCancelledEvent event = EventCancelledEvent.parseFrom(record.value());
@@ -99,7 +100,7 @@ public class DltConsumer {
 
     // ── Booking DLTs ──────────────────────────────────────────────────────────
 
-    @KafkaListener(topics = KafkaTopics.BOOKING_CREATED + "-dlt", groupId = "notification-service-dlt-group", containerFactory = "dltListenerFactory")
+    @KafkaListener(topics = KafkaTopics.BOOKING_CREATED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
     public void onBookingCreatedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             BookingCreatedEvent event = BookingCreatedEvent.parseFrom(record.value());
@@ -113,7 +114,7 @@ public class DltConsumer {
         }
     }
 
-    @KafkaListener(topics = KafkaTopics.BOOKING_CONFIRMED + "-dlt", groupId = "notification-service-dlt-group", containerFactory = "dltListenerFactory")
+    @KafkaListener(topics = KafkaTopics.BOOKING_CONFIRMED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
     public void onBookingConfirmedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             BookingConfirmedEvent event = BookingConfirmedEvent.parseFrom(record.value());
@@ -128,7 +129,7 @@ public class DltConsumer {
         }
     }
 
-    @KafkaListener(topics = KafkaTopics.BOOKING_CANCELLED + "-dlt", groupId = "notification-service-dlt-group", containerFactory = "dltListenerFactory")
+    @KafkaListener(topics = KafkaTopics.BOOKING_CANCELLED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
     public void onBookingCancelledDlt(ConsumerRecord<String, byte[]> record) {
         try {
             BookingCancelledEvent event = BookingCancelledEvent.parseFrom(record.value());
