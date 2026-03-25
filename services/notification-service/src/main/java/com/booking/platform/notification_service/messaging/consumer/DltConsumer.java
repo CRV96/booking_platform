@@ -8,6 +8,7 @@ import com.booking.platform.common.events.EventCreatedEvent;
 import com.booking.platform.common.events.EventPublishedEvent;
 import com.booking.platform.common.events.EventUpdatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.common.events.PaymentFailedEvent;
 import com.booking.platform.notification_service.constants.NotificationConst;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
@@ -39,8 +40,6 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class DltConsumer {
-
-    // ── Event DLTs ────────────────────────────────────────────────────────────
 
     @KafkaListener(topics = KafkaTopics.EVENT_CREATED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
     public void onEventCreatedDlt(ConsumerRecord<String, byte[]> record) {
@@ -144,7 +143,20 @@ public class DltConsumer {
         }
     }
 
-    // ── Fallback logger ───────────────────────────────────────────────────────
+    @KafkaListener(topics = KafkaTopics.PAYMENT_FAILED + "-dlt", groupId = NotificationConst.DLT_GROUP, containerFactory = NotificationConst.DLT_LISTENER_FACTORY)
+    public void onPaymentFailedDlt(ConsumerRecord<String, byte[]> record) {
+        try {
+            PaymentFailedEvent event = PaymentFailedEvent.parseFrom(record.value());
+            log.error("[DLT] [PAYMENT_FAILED] payment failure notification NOT sent | " +
+                      "paymentId='{}', bookingId='{}', reason='{}', timestamp='{}' | " +
+                      "topic='{}', partition={}, offset={}",
+                    event.getPaymentId(), event.getBookingId(), event.getReason(), event.getTimestamp(),
+                    record.topic(), record.partition(), record.offset());
+        } catch (InvalidProtocolBufferException e) {
+            logPoisonPill(record);
+        }
+    }
+
 
     /**
      * Fallback for poison pills — bytes that cannot be deserialized into a Protobuf message.

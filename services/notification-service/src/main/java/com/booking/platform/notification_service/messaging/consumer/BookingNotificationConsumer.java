@@ -5,6 +5,7 @@ import com.booking.platform.common.events.BookingConfirmedEvent;
 import com.booking.platform.common.events.BookingCreatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentFailedEvent;
+import com.booking.platform.notification_service.constants.NotificationConst;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
 import lombok.RequiredArgsConstructor;
@@ -84,7 +85,7 @@ public class BookingNotificationConsumer {
                 record.offset());
 
         // TODO P3+: replace stub with real email from user-service gRPC lookup
-        String recipientEmail = "user-" + event.getUserId() + "@booking-platform.dev";
+        String recipientEmail = String.format(NotificationConst.DevStubEmails.USER_FORMAT, event.getUserId());
 
         emailService.sendHtml(
                 recipientEmail,
@@ -122,7 +123,7 @@ public class BookingNotificationConsumer {
                 record.offset());
 
         // TODO P3+: replace stub with real email from user-service gRPC lookup
-        String recipientEmail = "user-" + event.getUserId() + "@booking-platform.dev";
+        String recipientEmail = String.format(NotificationConst.DevStubEmails.USER_FORMAT, event.getUserId());
 
         emailService.sendHtml(
                 recipientEmail,

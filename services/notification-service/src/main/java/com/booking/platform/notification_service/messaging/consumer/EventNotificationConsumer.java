@@ -5,6 +5,7 @@ import com.booking.platform.common.events.EventCreatedEvent;
 import com.booking.platform.common.events.EventPublishedEvent;
 import com.booking.platform.common.events.EventUpdatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.notification_service.constants.NotificationConst;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
 import lombok.RequiredArgsConstructor;
@@ -121,7 +122,7 @@ public class EventNotificationConsumer {
         // TODO P3+: query booking-service for all confirmed attendees of this event,
         //           send each one the event-cancelled email with their refund details.
         // For now, send a single stub email so the template and flow can be verified in MailHog.
-        String stubRecipient = "attendees-" + event.getEventId() + "@booking-platform.dev";
+        String stubRecipient = String.format(NotificationConst.DevStubEmails.ATTENDEES_FORMAT, event.getEventId());
 
         emailService.sendHtml(
                 stubRecipient,

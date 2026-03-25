@@ -12,6 +12,8 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import jakarta.mail.MessagingException;
+import java.time.Year;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -63,8 +65,11 @@ public class JavaMailSenderService implements EmailService {
     public void sendHtml(String to, String subject, String templateName, Map<String, Object> variables) {
         try {
             // ── 1. Render template ─────────────────────────────────────────
+            Map<String, Object> enrichedVars = new HashMap<>(variables);
+            enrichedVars.putIfAbsent("year", Year.now().getValue());
+
             Context context = new Context();
-            context.setVariables(variables);
+            context.setVariables(enrichedVars);
             String htmlBody = templateEngine.process(templateName, context);
 
             // ── 2. Build MIME message ──────────────────────────────────────

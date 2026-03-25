@@ -1,6 +1,7 @@
 package com.booking.platform.notification_service.health;
 
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.notification_service.constants.NotificationConst;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
@@ -69,7 +70,8 @@ public class KafkaHealthIndicator implements HealthIndicator {
             KafkaTopics.EVENT_CANCELLED,
             KafkaTopics.BOOKING_CREATED,
             KafkaTopics.BOOKING_CONFIRMED,
-            KafkaTopics.BOOKING_CANCELLED
+            KafkaTopics.BOOKING_CANCELLED,
+            KafkaTopics.PAYMENT_FAILED
     );
 
     private final KafkaAdmin kafkaAdmin;
@@ -89,25 +91,25 @@ public class KafkaHealthIndicator implements HealthIndicator {
 
             if (!missingTopics.isEmpty()) {
                 return Health.down()
-                        .withDetail("brokerStatus", "reachable")
-                        .withDetail("topicCount", topics.size())
-                        .withDetail("requiredTopicsPresent", false)
-                        .withDetail("missingTopics", missingTopics)
+                        .withDetail(NotificationConst.HealthDetails.BROKER_STATUS, NotificationConst.HealthDetails.REACHABLE)
+                        .withDetail(NotificationConst.HealthDetails.TOPIC_COUNT, topics.size())
+                        .withDetail(NotificationConst.HealthDetails.REQUIRED_TOPICS_PRESENT, false)
+                        .withDetail(NotificationConst.HealthDetails.MISSING_TOPICS, missingTopics)
                         .build();
             }
 
             return Health.up()
-                    .withDetail("brokerStatus", "reachable")
-                    .withDetail("topicCount", topics.size())
-                    .withDetail("requiredTopicsPresent", true)
-                    .withDetail("missingTopics", List.of())
+                    .withDetail(NotificationConst.HealthDetails.BROKER_STATUS, NotificationConst.HealthDetails.REACHABLE)
+                    .withDetail(NotificationConst.HealthDetails.TOPIC_COUNT, topics.size())
+                    .withDetail(NotificationConst.HealthDetails.REQUIRED_TOPICS_PRESENT, true)
+                    .withDetail(NotificationConst.HealthDetails.MISSING_TOPICS, List.of())
                     .build();
 
         } catch (Exception e) {
             log.warn("[KAFKA_HEALTH] Broker unreachable: {}", e.getMessage());
             return Health.down()
-                    .withDetail("brokerStatus", "unreachable")
-                    .withDetail("error", e.getMessage())
+                    .withDetail(NotificationConst.HealthDetails.BROKER_STATUS, NotificationConst.HealthDetails.UNREACHABLE)
+                    .withDetail(NotificationConst.HealthDetails.ERROR, e.getMessage())
                     .build();
         }
     }

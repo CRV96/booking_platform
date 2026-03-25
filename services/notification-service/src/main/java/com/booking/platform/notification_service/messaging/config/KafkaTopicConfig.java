@@ -77,4 +77,11 @@ public class KafkaTopicConfig {
     public NewTopic bookingCancelledDlt() {
         return TopicBuilder.name(KafkaTopics.BOOKING_CANCELLED + "-dlt").partitions(1).replicas(1).build();
     }
+
+    // ── Payment DLTs ───────────────────────────────────────────────────────────
+
+    @Bean
+    public NewTopic paymentFailedDlt() {
+        return TopicBuilder.name(KafkaTopics.PAYMENT_FAILED + "-dlt").partitions(1).replicas(1).build();
+    }
 }

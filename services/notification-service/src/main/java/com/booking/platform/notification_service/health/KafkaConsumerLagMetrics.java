@@ -4,7 +4,6 @@ import com.booking.platform.common.events.KafkaTopics;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.ListOffsetsResult;
@@ -15,7 +14,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -46,11 +44,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class KafkaConsumerLagMetrics implements MeterBinder {
-
-    @Value("${spring.kafka.consumer.group-id:notification-service-group}")
-    private static String CONSUMER_GROUP;
 
     private static final String METRIC_NAME        = "kafka.consumer.lag";
     private static final String METRIC_DESCRIPTION = "Number of messages the consumer group is behind the latest offset";
@@ -63,10 +57,22 @@ public class KafkaConsumerLagMetrics implements MeterBinder {
             KafkaTopics.EVENT_CANCELLED,
             KafkaTopics.BOOKING_CREATED,
             KafkaTopics.BOOKING_CONFIRMED,
-            KafkaTopics.BOOKING_CANCELLED
+            KafkaTopics.BOOKING_CANCELLED,
+            KafkaTopics.PAYMENT_FAILED
     );
 
     private final KafkaAdmin kafkaAdmin;
+    private final String consumerGroup;
+    private final int partitionCount;
+
+    public KafkaConsumerLagMetrics(
+            KafkaAdmin kafkaAdmin,
+            @Value("${spring.kafka.consumer.group-id}") String consumerGroup,
+            @Value("${notification.kafka.partition-count:3}") int partitionCount) {
+        this.kafkaAdmin = kafkaAdmin;
+        this.consumerGroup = consumerGroup;
+        this.partitionCount = partitionCount;
+    }
 
     /**
      * Called once by Micrometer on startup to register all lag gauges.
@@ -76,14 +82,13 @@ public class KafkaConsumerLagMetrics implements MeterBinder {
     @Override
     public void bindTo(MeterRegistry registry) {
         for (String topic : MONITORED_TOPICS) {
-            // Topics have 3 partitions (configured in KafkaTopicConfig)
-            for (int partition = 0; partition < 3; partition++) {
+            for (int partition = 0; partition < partitionCount; partition++) {
                 final int p = partition;
                 Gauge.builder(METRIC_NAME, this, m -> m.fetchLag(topic, p))
                         .description(METRIC_DESCRIPTION)
                         .tag("topic", topic)
                         .tag("partition", String.valueOf(partition))
-                        .tag("group", CONSUMER_GROUP)
+                        .tag("group", consumerGroup)
                         .register(registry);
             }
         }
@@ -109,7 +114,7 @@ public class KafkaConsumerLagMetrics implements MeterBinder {
 
             // Committed offset for our consumer group on this partition
             Map<TopicPartition, OffsetAndMetadata> committedOffsets =
-                    adminClient.listConsumerGroupOffsets(CONSUMER_GROUP)
+                    adminClient.listConsumerGroupOffsets(consumerGroup)
                                .partitionsToOffsetAndMetadata()
                                .get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
