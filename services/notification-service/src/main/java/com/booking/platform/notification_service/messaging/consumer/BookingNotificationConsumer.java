@@ -8,6 +8,7 @@ import com.booking.platform.common.events.PaymentFailedEvent;
 import com.booking.platform.notification_service.constants.NotificationConst;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
+import com.booking.platform.notification_service.grpc.client.UserServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -38,6 +39,7 @@ import java.util.Map;
 public class BookingNotificationConsumer {
 
     private final EmailService emailService;
+    private final UserServiceClient userServiceClient;
 
     /**
      * Receives notification when a booking is first created (status: PENDING).
@@ -76,6 +78,7 @@ public class BookingNotificationConsumer {
     )
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
+
         log.info("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', userId='{}', tickets={} | partition={}, offset={}",
                 event.getBookingId(),
                 event.getEventId(),
@@ -84,8 +87,7 @@ public class BookingNotificationConsumer {
                 record.partition(),
                 record.offset());
 
-        // TODO P3+: replace stub with real email from user-service gRPC lookup
-        String recipientEmail = String.format(NotificationConst.DevStubEmails.USER_FORMAT, event.getUserId());
+        final String recipientEmail = getRecipientEmail(event.getUserId());
 
         emailService.sendHtml(
                 recipientEmail,
@@ -102,6 +104,7 @@ public class BookingNotificationConsumer {
                         EmailTemplatesConst.BookingConfirmation.Vars.CURRENCY,      event.getCurrency()
                 )
         );
+        log.debug("Sent booking confirmation email to '{}'", recipientEmail);
     }
 
     /**
@@ -122,8 +125,7 @@ public class BookingNotificationConsumer {
                 record.partition(),
                 record.offset());
 
-        // TODO P3+: replace stub with real email from user-service gRPC lookup
-        String recipientEmail = String.format(NotificationConst.DevStubEmails.USER_FORMAT, event.getUserId());
+        final String recipientEmail = getRecipientEmail(event.getUserId());
 
         emailService.sendHtml(
                 recipientEmail,
@@ -136,6 +138,8 @@ public class BookingNotificationConsumer {
                         EmailTemplatesConst.BookingCancellation.Vars.TIMESTAMP,  event.getTimestamp()
                 )
         );
+
+        log.debug("Sent booking cancellation email to '{}'", recipientEmail);
     }
 
     /**
@@ -162,5 +166,15 @@ public class BookingNotificationConsumer {
         // The BookingCancelledEvent listener (onBookingCancelled) handles the cancellation email.
         // This listener logs the payment failure details for observability.
         // A dedicated payment failure email template can be added in the future.
+    }
+
+    /**
+     * Helper method to fetch the recipient email address for a given userId.
+     */
+    private String getRecipientEmail(String userId) {
+        final String recipientEmail = userServiceClient.getUserEmail(userId);
+        log.debug("Fetched email '{}' for userId '{}'", recipientEmail, userId);
+
+        return recipientEmail;
     }
 }

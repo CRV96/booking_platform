@@ -1,0 +1,28 @@
+{
+  "realm": "booking-platform",
+  "clients": [
+    {
+      "clientId": "notification-service",
+      "name": "Notification Service Client",
+      "description": "Confidential client for notification-service to fetch user data via gRPC",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "notification-service-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-notification-service",
+      "enabled": true,
+      "serviceAccountClientId": "notification-service",
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      }
+    }
+  ]
+}

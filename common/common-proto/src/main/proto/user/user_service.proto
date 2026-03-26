@@ -28,6 +28,9 @@ service UserService {
 
   // Search users with pagination.
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
+
+  // Get a user's email by their ID.
+  rpc GetUserEmail(GetUserEmailRequest) returns (UserEmailResponse);
 }
 
 // ============================================================================
@@ -48,6 +51,14 @@ message GetUserByEmailRequest {
 
 message UserResponse {
   UserInfo user = 1;
+}
+
+message GetUserEmailRequest {
+  string user_id = 1;
+}
+
+message UserEmailResponse {
+  string email = 1;
 }
 
 // ============================================================================

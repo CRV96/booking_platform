@@ -11,6 +11,8 @@ import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
 import org.apache.kafka.common.TopicPartition;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.stereotype.Component;
 
@@ -49,6 +51,9 @@ public class KafkaConsumerLagMetrics implements MeterBinder {
     private static final String METRIC_NAME        = "kafka.consumer.lag";
     private static final String METRIC_DESCRIPTION = "Number of messages the consumer group is behind the latest offset";
     private static final int    TIMEOUT_SECONDS    = 5;
+
+    @Value("${notification.kafka.consumer-lag:false}")
+    private boolean isConsumerLagEnabled;
 
     private static final List<String> MONITORED_TOPICS = List.of(
             KafkaTopics.EVENT_CREATED,
@@ -130,8 +135,10 @@ public class KafkaConsumerLagMetrics implements MeterBinder {
             long committedOffset = committed != null ? committed.offset() : 0;
             long lag             = Math.max(0, latestOffset - committedOffset);
 
-            log.debug("[KAFKA_LAG] topic='{}', partition={}, latest={}, committed={}, lag={}",
-                    topic, partition, latestOffset, committedOffset, lag);
+            if(isConsumerLagEnabled) {
+                log.debug("[KAFKA_LAG] topic='{}', partition={}, latest={}, committed={}, lag={}",
+                        topic, partition, latestOffset, committedOffset, lag);
+            }
 
             return lag;
 

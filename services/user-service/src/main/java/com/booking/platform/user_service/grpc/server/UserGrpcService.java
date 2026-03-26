@@ -123,6 +123,25 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void getUserEmail(GetUserEmailRequest request, StreamObserver<UserEmailResponse> responseObserver) {
+        log.debug("gRPC GetUserEmail request for ID: {}", request.getUserId());
+        UserRepresentation userRepresentation = keycloakUserService.getUserById(request.getUserId());
+
+        if(userRepresentation == null) {
+            log.error("User not found with ID: {}", request.getUserId());
+            responseObserver.onError(new IllegalArgumentException("User not found with ID: " + request.getUserId()));
+            return;
+        }
+
+        UserEmailResponse.Builder responseBuilder= UserEmailResponse.newBuilder()
+                .setEmail(userRepresentation.getEmail());
+
+        log.debug("Fetched email for user ID {}: {}", request.getUserId(), userRepresentation.getEmail());
+        responseObserver.onNext(responseBuilder.build());
+        responseObserver.onCompleted();
+    }
+
     private int clampPageSize(int pageSize) {
         return Math.min(Math.max(pageSize, validationProperties.minPageSize()), validationProperties.maxPageSize());
     }

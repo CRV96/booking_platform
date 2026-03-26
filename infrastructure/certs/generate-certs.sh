@@ -6,7 +6,7 @@
 # This script generates:
 #   1. Root CA (Certificate Authority) - signs all other certificates
 #   2. Server certificates for all gRPC server services
-#   3. Client certificate for graphql-gateway (gRPC client)
+#   3. Client certificate for graphql-gateway, notification-service (gRPC client)
 #
 # Usage: ./generate-certs.sh
 #
@@ -19,6 +19,7 @@
 #   ticket-service.crt/key       - gRPC server (port 9096)
 #   analytics-service.crt/key    - gRPC server (port 9097)
 #   graphql-gateway.crt/key      - gRPC client
+#   notification-service.crt/key - gRPC client
 #
 # Certificates are also copied to each service's src/main/resources/certs/
 #
@@ -127,6 +128,7 @@ generate_cert "analytics-service" "server"
 
 # gRPC client certificates
 generate_cert "graphql-gateway"   "client"
+generate_cert "notification-service" "client"
 
 # =============================================================================
 # Step 3: Copy certificates to each service's resources
@@ -168,6 +170,7 @@ copy_certs_to_service "analytics-service"
 
 # gRPC client
 copy_certs_to_service "graphql-gateway"
+copy_certs_to_service "notification-service"
 
 # =============================================================================
 # Summary
