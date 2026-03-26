@@ -8,6 +8,7 @@ import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.notification_service.constants.NotificationConst;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
+import com.booking.platform.notification_service.grpc.client.UserServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -41,10 +42,10 @@ import java.util.Map;
 public class EventNotificationConsumer {
 
     private final EmailService emailService;
+    private final UserServiceClient userServiceClient;
 
     /**
-     * Receives notification when a new event is created (status: DRAFT).
-     * Log only — organizer's real email requires a user-service gRPC lookup (P3+).
+     * Sends an "event draft created" email to the organizer when a new event is created.
      */
     @KafkaListener(
             topics = KafkaTopics.EVENT_CREATED,
@@ -59,7 +60,25 @@ public class EventNotificationConsumer {
                 event.getOrganizerId(),
                 record.partition(),
                 record.offset());
-        // TODO P3+: fetch organizer email from user-service, send "event draft created" notice
+
+        String organizerEmail = userServiceClient.getUserEmail(event.getOrganizerId());
+
+        emailService.sendHtml(
+                organizerEmail,
+                EmailTemplatesConst.EventCreated.SUBJECT,
+                EmailTemplatesConst.EventCreated.TEMPLATE,
+                Map.of(
+                        EmailTemplatesConst.EventCreated.Vars.EVENT_ID,      event.getEventId(),
+                        EmailTemplatesConst.EventCreated.Vars.TITLE,         event.getTitle(),
+                        EmailTemplatesConst.EventCreated.Vars.CATEGORY,      event.getCategory(),
+                        EmailTemplatesConst.EventCreated.Vars.VENUE_NAME,    event.getVenue().getName(),
+                        EmailTemplatesConst.EventCreated.Vars.VENUE_CITY,    event.getVenue().getCity(),
+                        EmailTemplatesConst.EventCreated.Vars.VENUE_COUNTRY, event.getVenue().getCountry(),
+                        EmailTemplatesConst.EventCreated.Vars.TIMESTAMP,     event.getTimestamp()
+                )
+        );
+
+        log.debug("Sent event-created email to organizer '{}'", organizerEmail);
     }
 
     /**
@@ -81,8 +100,7 @@ public class EventNotificationConsumer {
     }
 
     /**
-     * Receives notification when an event goes live (DRAFT → PUBLISHED).
-     * Log only — follower/attendee emails require a user-service lookup (P3+).
+     * Sends an "event is now live" email to the organizer when an event is published.
      */
     @KafkaListener(
             topics = KafkaTopics.EVENT_PUBLISHED,
@@ -97,7 +115,22 @@ public class EventNotificationConsumer {
                 event.getDateTime(),
                 record.partition(),
                 record.offset());
-        // TODO P3+: send "Event is now live" email to followers
+
+        String organizerEmail = userServiceClient.getUserEmail(event.getOrganizerId());
+
+        emailService.sendHtml(
+                organizerEmail,
+                EmailTemplatesConst.EventPublished.SUBJECT,
+                EmailTemplatesConst.EventPublished.TEMPLATE,
+                Map.of(
+                        EmailTemplatesConst.EventPublished.Vars.EVENT_ID,  event.getEventId(),
+                        EmailTemplatesConst.EventPublished.Vars.TITLE,     event.getTitle(),
+                        EmailTemplatesConst.EventPublished.Vars.CATEGORY,  event.getCategory(),
+                        EmailTemplatesConst.EventPublished.Vars.DATE_TIME, event.getDateTime(),
+                        EmailTemplatesConst.EventPublished.Vars.TIMESTAMP, event.getTimestamp()
+                )
+        );
+        log.debug("Sent event-published email to organizer '{}'", organizerEmail);
     }
 
     /**

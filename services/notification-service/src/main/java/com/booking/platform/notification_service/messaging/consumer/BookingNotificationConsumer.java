@@ -28,10 +28,8 @@ import java.util.Map;
  *   <li>{@code BOOKING_CANCELLED} → sends a cancellation email with refund information</li>
  * </ul>
  *
- * <p>The recipient email is derived from the userId as a placeholder because
- * the user's real email is owned by user-service (not yet integrated here).
- * In P3+, this will be replaced by a gRPC lookup to user-service, or the email
- * will be denormalized into the Protobuf event payload.
+ * <p>The recipient email is fetched from user-service via gRPC using the
+ * userId from each event payload.
  */
 @Slf4j
 @Component
@@ -69,8 +67,7 @@ public class BookingNotificationConsumer {
      * Sends a booking confirmation email when payment succeeds and the booking
      * transitions to CONFIRMED status.
      *
-     * <p>Recipient address is stubbed from userId. In production, fetch the real
-     * email from user-service via gRPC.
+     * <p>Recipient email is fetched from user-service via gRPC.
      */
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CONFIRMED,
@@ -87,7 +84,7 @@ public class BookingNotificationConsumer {
                 record.partition(),
                 record.offset());
 
-        final String recipientEmail = getRecipientEmail(event.getUserId());
+        final String recipientEmail = userServiceClient.getUserEmail(event.getUserId());
 
         emailService.sendHtml(
                 recipientEmail,
@@ -125,7 +122,7 @@ public class BookingNotificationConsumer {
                 record.partition(),
                 record.offset());
 
-        final String recipientEmail = getRecipientEmail(event.getUserId());
+        final String recipientEmail = userServiceClient.getUserEmail(event.getUserId());
 
         emailService.sendHtml(
                 recipientEmail,
@@ -168,13 +165,4 @@ public class BookingNotificationConsumer {
         // A dedicated payment failure email template can be added in the future.
     }
 
-    /**
-     * Helper method to fetch the recipient email address for a given userId.
-     */
-    private String getRecipientEmail(String userId) {
-        final String recipientEmail = userServiceClient.getUserEmail(userId);
-        log.debug("Fetched email '{}' for userId '{}'", recipientEmail, userId);
-
-        return recipientEmail;
-    }
 }
