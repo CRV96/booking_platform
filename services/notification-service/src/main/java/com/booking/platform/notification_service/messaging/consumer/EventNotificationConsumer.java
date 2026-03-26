@@ -22,21 +22,12 @@ import java.util.Set;
 
 /**
  * Kafka consumer for event-domain lifecycle messages.
- *
- * <p>Each method listens to a single topic. Where we have enough data in the
- * event payload to send a useful email, we do so. Where recipient data (organizer
- * or attendee emails) requires a user-service lookup not yet available, we log
- * and leave a TODO for P3+.
- *
- * <p>Design notes:
  * <ul>
  *   <li>Each {@code @KafkaListener} references its own {@code containerFactory} bean,
  *       which holds the correct {@link com.booking.platform.common.events.serialization.ProtobufDeserializer}
  *       parser for that message type.</li>
  *   <li>{@link ConsumerRecord} gives access to topic, partition, offset, and key
  *       for structured logging and debugging.</li>
- *   <li>All methods are void — Spring Kafka handles offset commit automatically
- *       after successful method return (at-least-once delivery semantics).</li>
  * </ul>
  */
 @Slf4j
