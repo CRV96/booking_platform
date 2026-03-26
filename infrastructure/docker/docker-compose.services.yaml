@@ -187,6 +187,10 @@ services:
       <<: *common-env
       SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
       SPRING_MAIL_HOST: bkg-mailhog
+      GRPC_CLIENT_USER_SERVICE_ADDRESS: static://user-service:9091
+      GRPC_CLIENT_USER_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
+      KEYCLOAK_SERVICE_TOKEN_URL: http://bkg-keycloak:8080/realms/booking-platform/protocol/openid-connect/token
+      NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET: notification-service-secret
     depends_on:
       config-service:
         condition: service_healthy

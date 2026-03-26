@@ -116,4 +116,64 @@ public final class EmailTemplatesConst {
 
         private EventReminder() {}
     }
+
+    // ── Event Created ──────────────────────────────────────────────────────────
+
+    /** Sent to the organizer when a new event draft is created. */
+    public static final class EventCreated {
+        public static final String TEMPLATE = "event-created";
+        public static final String SUBJECT  = "Your Event Draft Has Been Created";
+
+        public static final class Vars {
+            public static final String EVENT_ID      = "eventId";
+            public static final String TITLE         = "title";
+            public static final String CATEGORY      = "category";
+            public static final String VENUE_NAME    = "venueName";
+            public static final String VENUE_CITY    = "venueCity";
+            public static final String VENUE_COUNTRY = "venueCountry";
+            public static final String TIMESTAMP     = "timestamp";
+
+            private Vars() {}
+        }
+
+        private EventCreated() {}
+    }
+
+    // ── Event Published ────────────────────────────────────────────────────────
+
+    /** Sent to the organizer when their event goes live. */
+    public static final class EventPublished {
+        public static final String TEMPLATE = "event-published";
+        public static final String SUBJECT  = "Your Event is Now Live!";
+
+        public static final class Vars {
+            public static final String EVENT_ID  = "eventId";
+            public static final String TITLE     = "title";
+            public static final String CATEGORY  = "category";
+            public static final String DATE_TIME = "dateTime";
+            public static final String TIMESTAMP = "timestamp";
+
+            private Vars() {}
+        }
+
+        private EventPublished() {}
+    }
+
+    // ── Event Updated ──────────────────────────────────────────────────────────
+
+    /** Sent to confirmed attendees when attendee-relevant event details change. */
+    public static final class EventUpdated {
+        public static final String TEMPLATE = "event-updated";
+        public static final String SUBJECT  = "Event Update: Details Have Changed";
+
+        public static final class Vars {
+            public static final String EVENT_ID       = "eventId";
+            public static final String CHANGED_FIELDS = "changedFields";
+            public static final String TIMESTAMP      = "timestamp";
+
+            private Vars() {}
+        }
+
+        private EventUpdated() {}
+    }
 }

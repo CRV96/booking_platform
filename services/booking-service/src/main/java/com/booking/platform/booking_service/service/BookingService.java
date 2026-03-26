@@ -1,8 +1,10 @@
 package com.booking.platform.booking_service.service;
 
 import com.booking.platform.booking_service.entity.BookingEntity;
+import com.booking.platform.booking_service.entity.enums.BookingStatus;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -69,4 +71,6 @@ public interface BookingService {
      * @param bookingId the booking that was refunded
      */
     void markBookingAsRefunded(UUID bookingId);
+
+    List<String> getAttendeeIdsForEvent(String eventId, BookingStatus bookingStatus);
 }

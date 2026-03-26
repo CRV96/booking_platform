@@ -9,14 +9,6 @@ option java_outer_classname = "BookingServiceProto";
 // ============================================================================
 // BOOKING SERVICE
 // ============================================================================
-// Handles the full booking lifecycle: creating bookings with seat holds,
-// querying booking state, and cancellations.
-//
-// Called internally by graphql-gateway — not exposed directly to the internet.
-// All mutations go through the choreography saga:
-//   booking-service → Kafka (BookingCreatedEvent) → payment-service
-//   payment-service → Kafka (PaymentCompletedEvent) → booking-service (CONFIRMED)
-
 service BookingService {
   // Initiate a booking: reserves seats, creates a PENDING record, starts the hold timer.
   // Idempotent — repeated requests with the same idempotencyKey return the existing booking.
@@ -30,12 +22,14 @@ service BookingService {
 
   // Cancel a booking. Allowed transitions: PENDING → CANCELLED, CONFIRMED → CANCELLED.
   rpc CancelBooking(CancelBookingRequest) returns (BookingResponse);
+
+  // Get a list of attendees (user IDs) for a given event, filtered by booking status.
+  rpc GetBookingAttendees(GetBookingAttendeesRequest) returns (GetBookingAttendeesResponse);
 }
 
 // ============================================================================
-// CREATE BOOKING
+// Messages
 // ============================================================================
-
 message CreateBookingRequest {
   string event_id = 1;            // MongoDB ObjectId from event-service
   string seat_category = 2;       // Matches SeatCategoryInfo.name in event-service
@@ -43,17 +37,9 @@ message CreateBookingRequest {
   string idempotency_key = 4;     // Client-generated UUID — prevents duplicate submissions
 }
 
-// ============================================================================
-// GET BOOKING
-// ============================================================================
-
 message GetBookingRequest {
   string booking_id = 1;   // UUID string
 }
-
-// ============================================================================
-// GET USER BOOKINGS
-// ============================================================================
 
 message GetUserBookingsRequest {
   string user_id = 1;           // Keycloak subject (sub claim)
@@ -67,26 +53,14 @@ message GetUserBookingsResponse {
   PaginationInfo pagination = 2;
 }
 
-// ============================================================================
-// CANCEL BOOKING
-// ============================================================================
-
 message CancelBookingRequest {
   string booking_id = 1;          // UUID string
   optional string reason = 2;     // Human-readable cancellation reason
 }
 
-// ============================================================================
-// SHARED RESPONSE
-// ============================================================================
-
 message BookingResponse {
   BookingInfo booking = 1;
 }
-
-// ============================================================================
-// SHARED MESSAGES
-// ============================================================================
 
 message BookingInfo {
   string id = 1;                  // UUID string
@@ -111,4 +85,13 @@ message PaginationInfo {
   int32 page = 2;        // 0-indexed
   int32 page_size = 3;
   int32 total_pages = 4;
+}
+
+message GetBookingAttendeesRequest {
+  string event_id = 1;
+  string event_status = 2;
+}
+
+message GetBookingAttendeesResponse {
+  repeated string attendees = 1;
 }

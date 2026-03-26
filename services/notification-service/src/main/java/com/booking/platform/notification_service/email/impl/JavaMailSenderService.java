@@ -12,6 +12,8 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import jakarta.mail.MessagingException;
+import java.time.Year;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -62,11 +64,16 @@ public class JavaMailSenderService implements EmailService {
     @Override
     public void sendHtml(String to, String subject, String templateName, Map<String, Object> variables) {
         try {
+            log.debug("Preparing email to='{}', subject='{}', template='{}'", to, subject, templateName);
             // ── 1. Render template ─────────────────────────────────────────
+            Map<String, Object> enrichedVars = new HashMap<>(variables);
+            enrichedVars.putIfAbsent("year", Year.now().getValue());
+
             Context context = new Context();
-            context.setVariables(variables);
+            context.setVariables(enrichedVars);
             String htmlBody = templateEngine.process(templateName, context);
 
+            log.debug("Rendered email body for to='{}', template='{}': {}", to, templateName, htmlBody);
             // ── 2. Build MIME message ──────────────────────────────────────
             var message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -75,6 +82,7 @@ public class JavaMailSenderService implements EmailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true); // true = isHtml
 
+            log.debug("Built MIME message for to='{}', template='{}'", to, templateName);
             // ── 3. Send ────────────────────────────────────────────────────
             mailSender.send(message);
             log.info("[EMAIL_SENT] to='{}', subject='{}', template='{}'", to, subject, templateName);

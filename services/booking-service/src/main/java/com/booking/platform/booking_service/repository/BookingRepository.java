@@ -62,4 +62,13 @@ public interface BookingRepository extends JpaRepository<BookingEntity, UUID> {
      */
     @Query("SELECT b FROM BookingEntity b WHERE b.status = 'PENDING' AND b.holdExpiresAt < :now")
     List<BookingEntity> findExpiredHolds(@Param("now") Instant now);
+
+
+    /**
+     * Returns the distinct user IDs that have a booking for the given event and status.
+     * Used by notification-service (via gRPC) to find attendees for event cancellation emails.
+     */
+    @Query("SELECT DISTINCT b.userId FROM BookingEntity b WHERE b.eventId = :eventId AND b.status = :status")
+    List<String> findDistinctUserIdsByEventIdAndStatus(@Param("eventId") String eventId, @Param("status") BookingStatus status);
+
 }

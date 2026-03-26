@@ -54,6 +54,11 @@ public class UserServiceImpl implements DatabaseUserService<UserEntity, UserAttr
     }
 
     @Override
+    public List<UserEntity> getUsersByIds(List<String> userIds) {
+        return List.of();
+    }
+
+    @Override
     public List<UserEntity> getAllUsers() {
         log.debug("Fetching all users");
 

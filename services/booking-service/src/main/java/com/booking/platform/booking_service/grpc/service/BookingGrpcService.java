@@ -1,6 +1,7 @@
 package com.booking.platform.booking_service.grpc.service;
 
 import com.booking.platform.booking_service.entity.BookingEntity;
+import com.booking.platform.booking_service.entity.enums.BookingStatus;
 import com.booking.platform.booking_service.mapper.BookingMapper;
 import com.booking.platform.booking_service.properties.BookingProperties;
 import com.booking.platform.booking_service.service.BookingService;
@@ -12,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.data.domain.Page;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -35,10 +37,6 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
     private final BookingService bookingService;
     private final BookingMapper bookingMapper;
     private final BookingProperties bookingProperties;
-
-    // =========================================================================
-    // CREATE BOOKING
-    // =========================================================================
 
     @Override
     public void createBooking(CreateBookingRequest request,
@@ -64,10 +62,6 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
         responseObserver.onCompleted();
     }
 
-    // =========================================================================
-    // GET BOOKING
-    // =========================================================================
-
     @Override
     public void getBooking(GetBookingRequest request,
                            StreamObserver<BookingResponse> responseObserver) {
@@ -82,10 +76,6 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
         responseObserver.onNext(buildBookingResponse(booking));
         responseObserver.onCompleted();
     }
-
-    // =========================================================================
-    // GET USER BOOKINGS
-    // =========================================================================
 
     @Override
     public void getUserBookings(GetUserBookingsRequest request,
@@ -120,10 +110,6 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
         responseObserver.onCompleted();
     }
 
-    // =========================================================================
-    // CANCEL BOOKING
-    // =========================================================================
-
     @Override
     public void cancelBooking(CancelBookingRequest request,
                               StreamObserver<BookingResponse> responseObserver) {
@@ -142,9 +128,17 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
         responseObserver.onCompleted();
     }
 
-    // =========================================================================
-    // HELPERS
-    // =========================================================================
+    @Override
+    public void getBookingAttendees(GetBookingAttendeesRequest request, StreamObserver<GetBookingAttendeesResponse> responseObserver) {
+        log.debug("gRPC GetBookingAttendees for the eventId='{}'", request.getEventId());
+
+        final List<String> attendees = bookingService.getAttendeeIdsForEvent(request.getEventId(), BookingStatus.valueOf(request.getEventStatus()));
+
+        log.debug("Fetched {} attendees for eventId='{}'", attendees.size(), request.getEventId());
+
+        responseObserver.onNext(GetBookingAttendeesResponse.newBuilder().addAllAttendees(attendees).build());
+        responseObserver.onCompleted();
+    }
 
     private BookingResponse buildBookingResponse(BookingEntity booking) {
         return BookingResponse.newBuilder()

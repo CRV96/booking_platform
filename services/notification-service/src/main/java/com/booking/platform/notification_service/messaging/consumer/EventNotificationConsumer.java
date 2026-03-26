@@ -5,33 +5,29 @@ import com.booking.platform.common.events.EventCreatedEvent;
 import com.booking.platform.common.events.EventPublishedEvent;
 import com.booking.platform.common.events.EventUpdatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.notification_service.constants.NotificationConst;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
+import com.booking.platform.notification_service.grpc.client.BookingServiceClient;
+import com.booking.platform.notification_service.grpc.client.UserServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Kafka consumer for event-domain lifecycle messages.
- *
- * <p>Each method listens to a single topic. Where we have enough data in the
- * event payload to send a useful email, we do so. Where recipient data (organizer
- * or attendee emails) requires a user-service lookup not yet available, we log
- * and leave a TODO for P3+.
- *
- * <p>Design notes:
  * <ul>
  *   <li>Each {@code @KafkaListener} references its own {@code containerFactory} bean,
  *       which holds the correct {@link com.booking.platform.common.events.serialization.ProtobufDeserializer}
  *       parser for that message type.</li>
  *   <li>{@link ConsumerRecord} gives access to topic, partition, offset, and key
  *       for structured logging and debugging.</li>
- *   <li>All methods are void — Spring Kafka handles offset commit automatically
- *       after successful method return (at-least-once delivery semantics).</li>
  * </ul>
  */
 @Slf4j
@@ -40,10 +36,12 @@ import java.util.Map;
 public class EventNotificationConsumer {
 
     private final EmailService emailService;
+    private final UserServiceClient userServiceClient;
+    private final BookingServiceClient bookingServiceClient;
+    private static final String CONFIRMED_STATUS = "CONFIRMED";
 
     /**
-     * Receives notification when a new event is created (status: DRAFT).
-     * Log only — organizer's real email requires a user-service gRPC lookup (P3+).
+     * Sends an "event draft created" email to the organizer when a new event is created.
      */
     @KafkaListener(
             topics = KafkaTopics.EVENT_CREATED,
@@ -58,12 +56,35 @@ public class EventNotificationConsumer {
                 event.getOrganizerId(),
                 record.partition(),
                 record.offset());
-        // TODO P3+: fetch organizer email from user-service, send "event draft created" notice
+
+        String organizerEmail = userServiceClient.getUserEmail(event.getOrganizerId());
+
+        emailService.sendHtml(
+                organizerEmail,
+                EmailTemplatesConst.EventCreated.SUBJECT,
+                EmailTemplatesConst.EventCreated.TEMPLATE,
+                Map.of(
+                        EmailTemplatesConst.EventCreated.Vars.EVENT_ID,      event.getEventId(),
+                        EmailTemplatesConst.EventCreated.Vars.TITLE,         event.getTitle(),
+                        EmailTemplatesConst.EventCreated.Vars.CATEGORY,      event.getCategory(),
+                        EmailTemplatesConst.EventCreated.Vars.VENUE_NAME,    event.getVenue().getName(),
+                        EmailTemplatesConst.EventCreated.Vars.VENUE_CITY,    event.getVenue().getCity(),
+                        EmailTemplatesConst.EventCreated.Vars.VENUE_COUNTRY, event.getVenue().getCountry(),
+                        EmailTemplatesConst.EventCreated.Vars.TIMESTAMP,     event.getTimestamp()
+                )
+        );
+
+        log.debug("Sent event-created email to organizer '{}'", organizerEmail);
     }
 
+    /** Fields that are relevant to attendees — only these trigger an update email. */
+    private static final Set<String> ATTENDEE_RELEVANT_FIELDS = Set.of(
+            "dateTime", "endDateTime", "timezone", "venue"
+    );
+
     /**
-     * Receives notification when an event's fields are modified.
-     * Log only — attendee emails require querying booking-service (P3+).
+     * Sends an "event details updated" email to confirmed attendees when
+     * attendee-relevant fields (date, time, venue) are modified.
      */
     @KafkaListener(
             topics = KafkaTopics.EVENT_UPDATED,
@@ -76,12 +97,46 @@ public class EventNotificationConsumer {
                 event.getChangedFieldsList(),
                 record.partition(),
                 record.offset());
-        // TODO P3+: if dateTime or venue changed, notify confirmed attendees
+
+        List<String> relevantChanges = event.getChangedFieldsList().stream()
+                .filter(ATTENDEE_RELEVANT_FIELDS::contains)
+                .toList();
+
+        if (relevantChanges.isEmpty()) {
+            log.debug("No attendee-relevant fields changed for event '{}', skipping notification", event.getEventId());
+            return;
+        }
+
+        final List<String> recipientIds = bookingServiceClient.getBookingAttendees(event.getEventId(), CONFIRMED_STATUS);
+        log.debug("Fetched {} confirmed attendees for event '{}'", recipientIds.size(), event.getEventId());
+
+        if (recipientIds.isEmpty()) {
+            log.debug("No attendees to notify for updated event '{}'", event.getEventId());
+            return;
+        }
+
+        final List<String> recipientEmails = userServiceClient.getUsersEmails(recipientIds);
+        log.debug("Fetched {} attendee emails for event '{}'", recipientEmails.size(), event.getEventId());
+
+        for (String email : recipientEmails) {
+            emailService.sendHtml(
+                    email,
+                    EmailTemplatesConst.EventUpdated.SUBJECT,
+                    EmailTemplatesConst.EventUpdated.TEMPLATE,
+                    Map.of(
+                            EmailTemplatesConst.EventUpdated.Vars.EVENT_ID,       event.getEventId(),
+                            EmailTemplatesConst.EventUpdated.Vars.CHANGED_FIELDS, relevantChanges,
+                            EmailTemplatesConst.EventUpdated.Vars.TIMESTAMP,      event.getTimestamp()
+                    )
+            );
+            log.debug("Sent event-updated email to '{}'", email);
+        }
+
+        log.debug("Sent event-updated email to {} attendees", recipientEmails.size());
     }
 
     /**
-     * Receives notification when an event goes live (DRAFT → PUBLISHED).
-     * Log only — follower/attendee emails require a user-service lookup (P3+).
+     * Sends an "event is now live" email to the organizer when an event is published.
      */
     @KafkaListener(
             topics = KafkaTopics.EVENT_PUBLISHED,
@@ -96,7 +151,22 @@ public class EventNotificationConsumer {
                 event.getDateTime(),
                 record.partition(),
                 record.offset());
-        // TODO P3+: send "Event is now live" email to followers
+
+        String organizerEmail = userServiceClient.getUserEmail(event.getOrganizerId());
+
+        emailService.sendHtml(
+                organizerEmail,
+                EmailTemplatesConst.EventPublished.SUBJECT,
+                EmailTemplatesConst.EventPublished.TEMPLATE,
+                Map.of(
+                        EmailTemplatesConst.EventPublished.Vars.EVENT_ID,  event.getEventId(),
+                        EmailTemplatesConst.EventPublished.Vars.TITLE,     event.getTitle(),
+                        EmailTemplatesConst.EventPublished.Vars.CATEGORY,  event.getCategory(),
+                        EmailTemplatesConst.EventPublished.Vars.DATE_TIME, event.getDateTime(),
+                        EmailTemplatesConst.EventPublished.Vars.TIMESTAMP, event.getTimestamp()
+                )
+        );
+        log.debug("Sent event-published email to organizer '{}'", organizerEmail);
     }
 
     /**
@@ -118,13 +188,22 @@ public class EventNotificationConsumer {
                 record.partition(),
                 record.offset());
 
-        // TODO P3+: query booking-service for all confirmed attendees of this event,
-        //           send each one the event-cancelled email with their refund details.
-        // For now, send a single stub email so the template and flow can be verified in MailHog.
-        String stubRecipient = "attendees-" + event.getEventId() + "@booking-platform.dev";
+        final List<String> recipientIds = bookingServiceClient.getBookingAttendees(event.getEventId(), CONFIRMED_STATUS);
+        log.debug("Fetched {} confirmed attendees for event '{}' from booking-service", recipientIds.size(), event.getEventId());
 
-        emailService.sendHtml(
-                stubRecipient,
+        if(recipientIds.isEmpty()) {
+            log.debug("No attendees to notify for cancelled event '{}'", event.getEventId());
+            return;
+        }
+
+        final List<String> recipientEmails = userServiceClient.getUsersEmails(recipientIds);
+        log.debug("Fetched {} attendee emails for event '{}' from user-service", recipientEmails.size(), event.getEventId());
+
+        int counter = 0;
+
+        for(String email : recipientEmails) {
+            emailService.sendHtml(
+                email,
                 EmailTemplatesConst.EventCancelled.SUBJECT,
                 EmailTemplatesConst.EventCancelled.TEMPLATE,
                 Map.of(
@@ -132,6 +211,13 @@ public class EventNotificationConsumer {
                         EmailTemplatesConst.EventCancelled.Vars.REASON,    event.getReason(),
                         EmailTemplatesConst.EventCancelled.Vars.TIMESTAMP, event.getTimestamp()
                 )
-        );
+            );
+            counter++;
+
+            log.debug("Sent event-cancelled email to '{}'", email);
+        }
+
+        log.debug("Sent event-cancelled email to {} attendees", counter);
+
     }
 }

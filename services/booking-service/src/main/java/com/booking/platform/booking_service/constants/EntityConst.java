@@ -14,7 +14,29 @@ public final class EntityConst {
     public static final class Booking {
         private Booking() {}
 
+        public static final String TABLE_NAME = "bookings";
+
+        public static final String ID = "id";
+        public static final String USER_ID = "user_id";
+        public static final String EVENT_ID = "event_id";
+        public static final String EVENT_TITLE = "event_title";
+        public static final String STATUS = "status";
+        public static final String SEAT_CATEGORY = "seat_category";
+        public static final String QUANTITY = "quantity";
+        public static final String UNIT_PRICE = "unit_price";
+        public static final String TOTAL_PRICE = "total_price";
+        public static final String CURRENCY = "currency";
+        public static final String IDEMPOTENCY_KEY = "idempotency_key";
+        public static final String HOLD_EXPIRES_AT = "hold_expires_at";
+        public static final String CANCELLATION_REASON = "cancellation_reason";
         public static final String CREATED_AT = "createdAt";
+        public static final String CREATED_AT_COLUMN = "created_at";
+        public static final String UPDATED_AT = "updated_at";
+        public static final String VERSION = "version";
+
+        public static final String IDX_USER_ID = "idx_bookings_user_id";
+        public static final String IDX_EVENT_ID = "idx_bookings_event_id";
+        public static final String IDX_STATUS = "idx_bookings_status";
     }
 
     /** Cancellation reason constants used when system-cancelling bookings. */

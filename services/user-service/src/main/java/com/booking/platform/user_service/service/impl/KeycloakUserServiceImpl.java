@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -136,6 +137,25 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
             throw UserNotFoundException.forEmail(email);
         }
         return users.get(0);
+    }
+
+    @Override
+    public List<UserRepresentation> getUsersByIds(List<String> userIds) {
+        if(userIds == null || userIds.isEmpty()) {
+            return List.of();
+        }
+
+        return userIds.stream()
+                .map(id -> {
+                    try {
+                        return getUsersResource().get(id).toRepresentation();
+                    } catch (NotFoundException e) {
+                        log.warn("User not found for ID '{}'", id);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     @Override

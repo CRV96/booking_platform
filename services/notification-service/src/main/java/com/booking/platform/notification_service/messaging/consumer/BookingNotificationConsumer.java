@@ -5,8 +5,10 @@ import com.booking.platform.common.events.BookingConfirmedEvent;
 import com.booking.platform.common.events.BookingCreatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentFailedEvent;
+import com.booking.platform.notification_service.constants.NotificationConst;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
+import com.booking.platform.notification_service.grpc.client.UserServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -26,10 +28,8 @@ import java.util.Map;
  *   <li>{@code BOOKING_CANCELLED} → sends a cancellation email with refund information</li>
  * </ul>
  *
- * <p>The recipient email is derived from the userId as a placeholder because
- * the user's real email is owned by user-service (not yet integrated here).
- * In P3+, this will be replaced by a gRPC lookup to user-service, or the email
- * will be denormalized into the Protobuf event payload.
+ * <p>The recipient email is fetched from user-service via gRPC using the
+ * userId from each event payload.
  */
 @Slf4j
 @Component
@@ -37,6 +37,7 @@ import java.util.Map;
 public class BookingNotificationConsumer {
 
     private final EmailService emailService;
+    private final UserServiceClient userServiceClient;
 
     /**
      * Receives notification when a booking is first created (status: PENDING).
@@ -66,8 +67,7 @@ public class BookingNotificationConsumer {
      * Sends a booking confirmation email when payment succeeds and the booking
      * transitions to CONFIRMED status.
      *
-     * <p>Recipient address is stubbed from userId. In production, fetch the real
-     * email from user-service via gRPC.
+     * <p>Recipient email is fetched from user-service via gRPC.
      */
     @KafkaListener(
             topics = KafkaTopics.BOOKING_CONFIRMED,
@@ -75,6 +75,7 @@ public class BookingNotificationConsumer {
     )
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
+
         log.info("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', userId='{}', tickets={} | partition={}, offset={}",
                 event.getBookingId(),
                 event.getEventId(),
@@ -83,8 +84,7 @@ public class BookingNotificationConsumer {
                 record.partition(),
                 record.offset());
 
-        // TODO P3+: replace stub with real email from user-service gRPC lookup
-        String recipientEmail = "user-" + event.getUserId() + "@booking-platform.dev";
+        final String recipientEmail = userServiceClient.getUserEmail(event.getUserId());
 
         emailService.sendHtml(
                 recipientEmail,
@@ -101,6 +101,7 @@ public class BookingNotificationConsumer {
                         EmailTemplatesConst.BookingConfirmation.Vars.CURRENCY,      event.getCurrency()
                 )
         );
+        log.debug("Sent booking confirmation email to '{}'", recipientEmail);
     }
 
     /**
@@ -121,8 +122,7 @@ public class BookingNotificationConsumer {
                 record.partition(),
                 record.offset());
 
-        // TODO P3+: replace stub with real email from user-service gRPC lookup
-        String recipientEmail = "user-" + event.getUserId() + "@booking-platform.dev";
+        final String recipientEmail = userServiceClient.getUserEmail(event.getUserId());
 
         emailService.sendHtml(
                 recipientEmail,
@@ -135,6 +135,8 @@ public class BookingNotificationConsumer {
                         EmailTemplatesConst.BookingCancellation.Vars.TIMESTAMP,  event.getTimestamp()
                 )
         );
+
+        log.debug("Sent booking cancellation email to '{}'", recipientEmail);
     }
 
     /**
@@ -162,4 +164,5 @@ public class BookingNotificationConsumer {
         // This listener logs the payment failure details for observability.
         // A dedicated payment failure email template can be added in the future.
     }
+
 }
