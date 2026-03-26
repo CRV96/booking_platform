@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -234,6 +235,23 @@ public class BookingServiceImpl implements BookingService {
 
         log.info("Booking REFUNDED: id='{}', eventId='{}', category='{}', total={}",
                 bookingId, booking.getEventId(), booking.getSeatCategory(), booking.getTotalPrice());
+    }
+
+    @Override
+    public List<String> getAttendeeIdsForEvent(String eventId, BookingStatus status) {
+        if(eventId == null || eventId.isBlank()) {
+            throw new IllegalArgumentException("Event ID must not be null or blank");
+        }
+
+        if(status == null) {
+            throw new IllegalArgumentException("Booking status must not be null");
+        }
+
+        final List<String> attendees = bookingRepository.findDistinctUserIdsByEventIdAndStatus(eventId, status);
+
+        log.debug("Found {} attendees for event '{}' and status {}", attendees.size(), eventId, status.name());
+
+        return attendees;
     }
 
     // ─── Private helpers ─────────────────────────────────────────────

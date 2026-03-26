@@ -1,12 +1,15 @@
 package com.booking.platform.notification_service.grpc.client.impl;
 
 import com.booking.platform.common.grpc.user.GetUserEmailRequest;
+import com.booking.platform.common.grpc.user.GetUsersEmailsRequest;
 import com.booking.platform.common.grpc.user.UserEmailResponse;
 import com.booking.platform.common.grpc.user.UserServiceGrpc;
 import com.booking.platform.notification_service.grpc.client.UserServiceClient;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
 
 @Component
 @Slf4j
@@ -20,4 +23,12 @@ public class UserServiceGrpcClient implements UserServiceClient {
         log.debug("Fetching email for user ID: {}", userId);
         return userServiceStub.getUserEmail(GetUserEmailRequest.newBuilder().setUserId(userId).build()).getEmail();
     }
+
+    @Override
+    public List<String> getUsersEmails(List<String> userIds) {
+        log.debug("Fetching emails for user IDs: {}", userIds);
+        return userServiceStub.getUsersEmails(GetUsersEmailsRequest.newBuilder().addAllUserIds(userIds).build()).getUserEmailsList();
+    }
+
+
 }

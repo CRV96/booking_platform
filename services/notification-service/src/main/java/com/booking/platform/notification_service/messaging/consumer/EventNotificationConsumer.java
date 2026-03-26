@@ -8,6 +8,7 @@ import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.notification_service.constants.NotificationConst;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
+import com.booking.platform.notification_service.grpc.client.BookingServiceClient;
 import com.booking.platform.notification_service.grpc.client.UserServiceClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +16,9 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Kafka consumer for event-domain lifecycle messages.
@@ -43,6 +46,8 @@ public class EventNotificationConsumer {
 
     private final EmailService emailService;
     private final UserServiceClient userServiceClient;
+    private final BookingServiceClient bookingServiceClient;
+    private static final String CONFIRMED_STATUS = "CONFIRMED";
 
     /**
      * Sends an "event draft created" email to the organizer when a new event is created.
@@ -81,9 +86,14 @@ public class EventNotificationConsumer {
         log.debug("Sent event-created email to organizer '{}'", organizerEmail);
     }
 
+    /** Fields that are relevant to attendees — only these trigger an update email. */
+    private static final Set<String> ATTENDEE_RELEVANT_FIELDS = Set.of(
+            "dateTime", "endDateTime", "timezone", "venue"
+    );
+
     /**
-     * Receives notification when an event's fields are modified.
-     * Log only — attendee emails require querying booking-service (P3+).
+     * Sends an "event details updated" email to confirmed attendees when
+     * attendee-relevant fields (date, time, venue) are modified.
      */
     @KafkaListener(
             topics = KafkaTopics.EVENT_UPDATED,
@@ -96,7 +106,42 @@ public class EventNotificationConsumer {
                 event.getChangedFieldsList(),
                 record.partition(),
                 record.offset());
-        // TODO P3+: if dateTime or venue changed, notify confirmed attendees
+
+        List<String> relevantChanges = event.getChangedFieldsList().stream()
+                .filter(ATTENDEE_RELEVANT_FIELDS::contains)
+                .toList();
+
+        if (relevantChanges.isEmpty()) {
+            log.debug("No attendee-relevant fields changed for event '{}', skipping notification", event.getEventId());
+            return;
+        }
+
+        final List<String> recipientIds = bookingServiceClient.getBookingAttendees(event.getEventId(), CONFIRMED_STATUS);
+        log.debug("Fetched {} confirmed attendees for event '{}'", recipientIds.size(), event.getEventId());
+
+        if (recipientIds.isEmpty()) {
+            log.debug("No attendees to notify for updated event '{}'", event.getEventId());
+            return;
+        }
+
+        final List<String> recipientEmails = userServiceClient.getUsersEmails(recipientIds);
+        log.debug("Fetched {} attendee emails for event '{}'", recipientEmails.size(), event.getEventId());
+
+        for (String email : recipientEmails) {
+            emailService.sendHtml(
+                    email,
+                    EmailTemplatesConst.EventUpdated.SUBJECT,
+                    EmailTemplatesConst.EventUpdated.TEMPLATE,
+                    Map.of(
+                            EmailTemplatesConst.EventUpdated.Vars.EVENT_ID,       event.getEventId(),
+                            EmailTemplatesConst.EventUpdated.Vars.CHANGED_FIELDS, relevantChanges,
+                            EmailTemplatesConst.EventUpdated.Vars.TIMESTAMP,      event.getTimestamp()
+                    )
+            );
+            log.debug("Sent event-updated email to '{}'", email);
+        }
+
+        log.debug("Sent event-updated email to {} attendees", recipientEmails.size());
     }
 
     /**
@@ -152,13 +197,22 @@ public class EventNotificationConsumer {
                 record.partition(),
                 record.offset());
 
-        // TODO P3+: query booking-service for all confirmed attendees of this event,
-        //           send each one the event-cancelled email with their refund details.
-        // For now, send a single stub email so the template and flow can be verified in MailHog.
-        String stubRecipient = String.format(NotificationConst.DevStubEmails.ATTENDEES_FORMAT, event.getEventId());
+        final List<String> recipientIds = bookingServiceClient.getBookingAttendees(event.getEventId(), CONFIRMED_STATUS);
+        log.debug("Fetched {} confirmed attendees for event '{}' from booking-service", recipientIds.size(), event.getEventId());
 
-        emailService.sendHtml(
-                stubRecipient,
+        if(recipientIds.isEmpty()) {
+            log.debug("No attendees to notify for cancelled event '{}'", event.getEventId());
+            return;
+        }
+
+        final List<String> recipientEmails = userServiceClient.getUsersEmails(recipientIds);
+        log.debug("Fetched {} attendee emails for event '{}' from user-service", recipientEmails.size(), event.getEventId());
+
+        int counter = 0;
+
+        for(String email : recipientEmails) {
+            emailService.sendHtml(
+                email,
                 EmailTemplatesConst.EventCancelled.SUBJECT,
                 EmailTemplatesConst.EventCancelled.TEMPLATE,
                 Map.of(
@@ -166,6 +220,13 @@ public class EventNotificationConsumer {
                         EmailTemplatesConst.EventCancelled.Vars.REASON,    event.getReason(),
                         EmailTemplatesConst.EventCancelled.Vars.TIMESTAMP, event.getTimestamp()
                 )
-        );
+            );
+            counter++;
+
+            log.debug("Sent event-cancelled email to '{}'", email);
+        }
+
+        log.debug("Sent event-cancelled email to {} attendees", counter);
+
     }
 }

@@ -142,6 +142,21 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void getUsersEmails(GetUsersEmailsRequest request, StreamObserver<GetUsersEmailsResponse> responseObserver) {
+        log.debug("gRPC GetUsersEmails request for IDs: {}", request.getUserIdsList());
+        List<UserRepresentation> users = keycloakUserService.getUsersByIds(request.getUserIdsList());
+
+        List<String> emails = users.stream()
+                .map(UserRepresentation::getEmail)
+                .toList();
+
+        log.debug("Fetched emails for user IDs {}: {}", request.getUserIdsList(), emails);
+
+        responseObserver.onNext(GetUsersEmailsResponse.newBuilder().addAllUserEmails(emails).build());
+        responseObserver.onCompleted();
+    }
+
     private int clampPageSize(int pageSize) {
         return Math.min(Math.max(pageSize, validationProperties.minPageSize()), validationProperties.maxPageSize());
     }

@@ -158,4 +158,22 @@ public final class EmailTemplatesConst {
 
         private EventPublished() {}
     }
+
+    // ── Event Updated ──────────────────────────────────────────────────────────
+
+    /** Sent to confirmed attendees when attendee-relevant event details change. */
+    public static final class EventUpdated {
+        public static final String TEMPLATE = "event-updated";
+        public static final String SUBJECT  = "Event Update: Details Have Changed";
+
+        public static final class Vars {
+            public static final String EVENT_ID       = "eventId";
+            public static final String CHANGED_FIELDS = "changedFields";
+            public static final String TIMESTAMP      = "timestamp";
+
+            private Vars() {}
+        }
+
+        private EventUpdated() {}
+    }
 }
