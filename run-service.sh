@@ -8,6 +8,17 @@
 
 set -e
 
+# ─── Load .env ────────────────────────────────────────────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/.env"
+if [ -f "$ENV_FILE" ]; then
+    set -o allexport
+    # shellcheck source=/dev/null
+    source "$ENV_FILE"
+    set +o allexport
+fi
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -150,14 +161,8 @@ else
     echo -e "${GREEN}Starting $SERVICE_NAME...${NC}"
 fi
 
-# ─── Run mode ───────────────────────────────────────────────────────────────
-# Default: run directly using exported environment variables.
-# To use 1Password CLI for secret injection, uncomment the "op run" line
-# and comment out the plain "eval" line below.
-# ────────────────────────────────────────────────────────────────────────────
-
-# Plain mode (default) — uses environment variables from your shell
+# ─── Run ─────────────────────────────────────────────────────────────────────
+# Uses environment variables exported in your shell.
+# Source your .env file before running: export $(grep -v '^#' .env | grep -v '^$' | xargs)
+# ─────────────────────────────────────────────────────────────────────────────
 eval "$MVN_CMD"
-
-# 1Password mode (optional) — injects secrets from .env via 1Password CLI
-op run --env-file=".env" -- bash -c "$MVN_CMD"
