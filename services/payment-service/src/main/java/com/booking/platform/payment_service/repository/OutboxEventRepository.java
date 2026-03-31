@@ -2,6 +2,8 @@ package com.booking.platform.payment_service.repository;
 
 import com.booking.platform.payment_service.entity.OutboxEventEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
@@ -19,6 +21,7 @@ import java.util.UUID;
  *   <li>{@code idx_outbox_published_cleanup} — covers the {@link #deleteByPublishedAtBefore(Instant)} query</li>
  * </ul>
  */
+@Repository
 public interface OutboxEventRepository extends JpaRepository<OutboxEventEntity, UUID> {
 
     /**
@@ -35,5 +38,6 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEventEntity, 
      *
      * <p>Uses the partial index {@code idx_outbox_published_cleanup} for efficient deletion.
      */
+    @Modifying
     void deleteByPublishedAtBefore(Instant cutoff);
 }

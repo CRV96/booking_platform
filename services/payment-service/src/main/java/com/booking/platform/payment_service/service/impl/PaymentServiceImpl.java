@@ -16,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,15 @@ public class PaymentServiceImpl implements PaymentService {
     private final OutboxEventRepository outboxEventRepository;
     private final PaymentGateway paymentGateway;
     private final ObjectMapper objectMapper;
+
+    @Value("${payment.retry.max-attempts:3}")
+    private int maxRetries;
+
+    @Value("${payment.retry.backoff-base-seconds:60}")
+    private long backoffBaseSeconds;
+
+    @Value("${payment.retry.backoff-multiplier:2}")
+    private double backoffMultiplier;
 
     @Override
     public PaymentEntity processPayment(String bookingId, String userId, BigDecimal amount, String currency) {
@@ -206,6 +216,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .currency(currency)
                 .status(PaymentStatus.INITIATED)
                 .idempotencyKey(bookingId)
+                .maxRetries(maxRetries)
                 .build();
         return paymentRepository.save(payment);
     }
@@ -252,7 +263,99 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentEntity payment = paymentRepository.findById(paymentId).orElseThrow();
         payment.setStatus(PaymentStatus.PENDING_RETRY);
         payment.setFailureReason(reason);
+        payment.setNextRetryAt(Instant.now().plusSeconds(computeBackoffSeconds(payment.getRetryCount())));
         return paymentRepository.save(payment);
+    }
+
+    /**
+     * Retries a PENDING_RETRY payment. Called by the scheduler — not part of the public interface.
+     *
+     * <p>Flow:
+     * <ol>
+     *   <li>Increment retryCount, clear nextRetryAt, set status = PROCESSING</li>
+     *   <li>If externalPaymentId is null: createPaymentIntent, then confirmPayment</li>
+     *   <li>If externalPaymentId is set: confirmPayment only (intent already exists on gateway)</li>
+     *   <li>On success: markCompleted (writes outbox event)</li>
+     *   <li>On business failure: markFailed (writes outbox event)</li>
+     *   <li>On gateway unavailable: if retries exhausted → markFailed, else → markPendingRetry with next backoff</li>
+     * </ol>
+     */
+    @Transactional
+    protected void incrementRetryCount(UUID paymentId) {
+        PaymentEntity payment = paymentRepository.findById(paymentId).orElseThrow();
+        payment.setRetryCount(payment.getRetryCount() + 1);
+        payment.setNextRetryAt(null);
+        payment.setStatus(PaymentStatus.PROCESSING);
+        paymentRepository.save(payment);
+    }
+
+    public void retryPayment(PaymentEntity snapshot) {
+        // Step 1: Atomically increment retryCount and move to PROCESSING
+        incrementRetryCount(snapshot.getId());
+
+        // Reload to get the fresh retryCount after the transaction above
+        PaymentEntity payment = paymentRepository.findById(snapshot.getId()).orElseThrow();
+
+        log.info("Payment RETRY attempt {}/{}: id='{}', bookingId='{}'",
+                payment.getRetryCount(), payment.getMaxRetries(), payment.getId(), payment.getBookingId());
+
+        try {
+            GatewayPaymentResponse confirmResponse;
+
+            if (payment.getExternalPaymentId() == null) {
+                // Intent was never created — start from scratch
+                GatewayPaymentResponse createResponse =
+                        paymentGateway.createPaymentIntent(payment.getAmount(), payment.getCurrency(), payment.getBookingId()).join();
+                updateToProcessing(payment.getId(), createResponse);
+                confirmResponse = paymentGateway.confirmPayment(createResponse.externalPaymentId()).join();
+            } else {
+                // Intent already exists on the gateway — just confirm
+                confirmResponse = paymentGateway.confirmPayment(payment.getExternalPaymentId()).join();
+            }
+
+            if ("succeeded".equals(confirmResponse.status())) {
+                markCompleted(payment.getId(), confirmResponse);
+                log.info("Payment COMPLETED (after retry): id='{}', bookingId='{}'",
+                        payment.getId(), payment.getBookingId());
+            } else {
+                markFailed(payment.getId(), "Gateway returned status: " + confirmResponse.status());
+                log.warn("Payment FAILED after retry (unexpected status): id='{}', status='{}'",
+                        payment.getId(), confirmResponse.status());
+            }
+
+        } catch (CompletionException e) {
+            handleRetryGatewayException(payment, e.getCause());
+        } catch (PaymentGatewayUnavailableException e) {
+            handleRetryGatewayException(payment, e);
+        } catch (PaymentGatewayException e) {
+            markFailed(payment.getId(), e.getMessage());
+            logPaymentError(payment.getId(), payment.getBookingId(), e);
+        }
+    }
+
+    private void handleRetryGatewayException(PaymentEntity payment, Throwable cause) {
+        if (cause instanceof PaymentGatewayUnavailableException) {
+            if (payment.getRetryCount() >= payment.getMaxRetries()) {
+                markFailed(payment.getId(), "Max retries exhausted: " + cause.getMessage());
+                log.warn("Payment FAILED (max retries exhausted): id='{}', bookingId='{}', attempts={}",
+                        payment.getId(), payment.getBookingId(), payment.getRetryCount());
+            } else {
+                markPendingRetry(payment.getId(), cause.getMessage());
+                log.warn("Payment PENDING_RETRY (attempt {}/{}): id='{}', bookingId='{}'",
+                        payment.getRetryCount(), payment.getMaxRetries(),
+                        payment.getId(), payment.getBookingId());
+            }
+            return;
+        }
+        // Business failure or unexpected error
+        String reason = cause != null ? cause.getMessage() : "Unknown error";
+        markFailed(payment.getId(), reason);
+        log.error("Payment FAILED during retry: id='{}', bookingId='{}', reason='{}'",
+                payment.getId(), payment.getBookingId(), reason);
+    }
+
+    private long computeBackoffSeconds(int retryCount) {
+        return Math.min((long) (backoffBaseSeconds * Math.pow(backoffMultiplier, retryCount)), 3600);
     }
 
     @Transactional

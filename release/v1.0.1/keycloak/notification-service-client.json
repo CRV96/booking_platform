@@ -1,4 +1,5 @@
 {
+  "ifResourceExists": "SKIP",
   "realm": "booking-platform",
   "clients": [
     {

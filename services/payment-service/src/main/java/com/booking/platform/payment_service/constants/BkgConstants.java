@@ -70,6 +70,9 @@ public final class BkgConstants {
         public static final String FAILURE_REASON = "failure_reason";
         public static final String FAILURE_REASON_COLUMN_DEFINITION = "TEXT";
         public static final String IDEMPOTENCY_KEY = "idempotency_key";
+        public static final String RETRY_COUNT    = "retry_count";
+        public static final String MAX_RETRIES    = "max_retries";
+        public static final String NEXT_RETRY_AT  = "next_retry_at";
     }
 
 }

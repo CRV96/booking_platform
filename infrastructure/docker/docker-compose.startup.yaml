@@ -122,12 +122,33 @@ services:
       KC_METRICS_ENABLED: "true"
 
     volumes:
-      - ../keycloak/realm:/opt/keycloak/data/import
+      - ../../init/keycloak:/opt/keycloak/data/import
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - bkg-network
+
+# ==================== RELEASE MANAGER ====================
+  release-manager:
+    image: alpine:3.19
+    container_name: bkg-release-manager
+    command: >
+      sh -c "apk add --no-cache curl --quiet &&
+             chmod +x /release/scripts/release-manager.sh &&
+             /release/scripts/release-manager.sh"
+    volumes:
+      - ../../release:/release
+      - ../../init:/init
+    environment:
+      KC_ADMIN_USER: ${KC_ADMIN_USER:-admin}
+      KC_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    networks:
+      - bkg-network
+
 # ==================== OBSERVABILITY ====================
   zipkin:
     image: openzipkin/zipkin:3

@@ -121,4 +121,23 @@ public class PaymentEntity {
     @Version
     @Column(name = BkgPaymentsConstants.VERSION, nullable = false)
     private Long version;
+
+    /** Number of retry attempts made so far. Incremented by the retry scheduler on each attempt. */
+    @Column(name = BkgPaymentsConstants.RETRY_COUNT, nullable = false)
+    private int retryCount;
+
+    /**
+     * Maximum number of retry attempts allowed for this payment.
+     * Copied from config at creation time ({@code payment.retry.max-attempts}).
+     */
+    @Column(name = BkgPaymentsConstants.MAX_RETRIES, nullable = false)
+    private int maxRetries;
+
+    /**
+     * Timestamp when the next retry should be attempted.
+     * Set by {@code markPendingRetry()} using exponential backoff.
+     * Null when the payment is not in {@link com.booking.platform.payment_service.entity.enums.PaymentStatus#PENDING_RETRY}.
+     */
+    @Column(name = BkgPaymentsConstants.NEXT_RETRY_AT)
+    private Instant nextRetryAt;
 }

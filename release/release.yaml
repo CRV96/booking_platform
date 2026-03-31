@@ -1,0 +1,23 @@
+# ============================================================================
+# Release Manager Configuration
+# ============================================================================
+#
+# current-version: the version currently applied to this environment.
+#   - Set to "none" on a fresh installation (release-manager will record the
+#     target version after first run without applying individual releases,
+#     since Keycloak --import-realm and Flyway handle the full initial setup).
+#   - Updated automatically by release-manager after each successful run.
+#   - Do not edit this manually after the first run.
+#
+# target-version: the version you want this environment to reach.
+#   - Set to the latest version for a fresh install.
+#   - Set to the desired target when upgrading an existing environment.
+#   - The release-manager will apply all versions between current and target
+#     in order (e.g. current=v1.0.0, target=v1.0.2 → applies v1.0.1, v1.0.2).
+#
+# SQL migrations are handled automatically by Flyway on service startup.
+# The release-manager only handles non-Flyway changes (e.g. Keycloak clients).
+# ============================================================================
+
+current-version: none
+target-version: v1.0.1

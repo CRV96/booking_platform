@@ -140,6 +140,10 @@ public class OutboxPollingPublisher {
         try {
             JsonNode json = objectMapper.readTree(event.getPayload());
 
+            if(json == null || !json.has(BkgOutboxConstants.BOOKING_ID)) {
+                throw new IllegalArgumentException("Invalid payload: missing booking_id");
+            }
+
             return switch (event.getEventType()) {
                 case BkgOutboxConstants.PAYMENT_COMPLETED_EVENT -> PaymentCompletedEvent.newBuilder()
                         .setPaymentId(json.get(BkgOutboxConstants.PAYMENT_ID).asText())

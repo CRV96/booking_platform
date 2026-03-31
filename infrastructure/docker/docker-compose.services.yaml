@@ -196,6 +196,8 @@ services:
         condition: service_healthy
       eureka-service:
         condition: service_healthy
+      release-manager:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8086/actuator/health || exit 1"]
       <<: *common-healthcheck

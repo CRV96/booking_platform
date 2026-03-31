@@ -112,3 +112,30 @@ open http://localhost:8080/graphql
 ```
 
 See [INSTALLATION.md](../INSTALLATION.md) for detailed setup instructions including local development, environment variables, Keycloak configuration, and observability stack.
+
+---
+
+## Database Migrations (v1.0.0 baseline)
+
+Flyway runs these automatically when each service starts. They are kept here as a reference for the v1.0.0 schema baseline.
+
+| Service | Migration | Description |
+|---------|-----------|-------------|
+| booking-service | `V1__create_bookings_table.sql` | `bookings` table — full booking lifecycle with hold expiry and optimistic locking |
+| payment-service | `V1__create_payments_table.sql` | `payments` table — payment lifecycle with Stripe webhook lookup index |
+| payment-service | `V2__create_outbox_events_table.sql` | `outbox_events` table — transactional outbox for guaranteed Kafka publishing |
+
+Scripts: [`migrations/booking-service/`](migrations/booking-service/) and [`migrations/payment-service/`](migrations/payment-service/)
+
+### Fresh installation
+
+Nothing extra to do — Flyway picks up these migrations automatically on first service startup. If you need to apply them manually (e.g. against a pre-existing database):
+
+```bash
+# booking-service database (bookingdb)
+psql -U <user> -d bookingdb -f migrations/booking-service/V1__create_bookings_table.sql
+
+# payment-service database (paymentdb)
+psql -U <user> -d paymentdb -f migrations/payment-service/V1__create_payments_table.sql
+psql -U <user> -d paymentdb -f migrations/payment-service/V2__create_outbox_events_table.sql
+```
