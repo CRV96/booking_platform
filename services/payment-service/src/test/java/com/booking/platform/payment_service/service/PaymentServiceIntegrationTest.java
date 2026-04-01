@@ -12,7 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -35,7 +35,7 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private PaymentService paymentService;
 
-    @MockBean
+    @MockitoBean
     private PaymentGateway paymentGateway;
 
     private static final String BOOKING_ID = "booking-" + UUID.randomUUID();
@@ -445,18 +445,18 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
         Map<String, Object> row = jdbcTemplate.queryForMap(
                 "SELECT * FROM payments WHERE id = ?", id);
 
-        PaymentEntity entity = new PaymentEntity();
-        entity.setId((UUID) row.get("id"));
-        entity.setBookingId((String) row.get("booking_id"));
-        entity.setUserId((String) row.get("user_id"));
-        entity.setAmount((BigDecimal) row.get("amount"));
-        entity.setCurrency((String) row.get("currency"));
-        entity.setStatus(PaymentStatus.valueOf((String) row.get("status")));
-        entity.setExternalPaymentId((String) row.get("external_payment_id"));
-        entity.setPaymentMethod((String) row.get("payment_method"));
-        entity.setFailureReason((String) row.get("failure_reason"));
-        entity.setRetryCount(row.get("retry_count") != null ? (int) row.get("retry_count") : 0);
-        entity.setMaxRetries(row.get("max_retries") != null ? (int) row.get("max_retries") : 3);
-        return entity;
+        return PaymentEntity.builder()
+                .id((UUID) row.get("id"))
+                .bookingId((String) row.get("booking_id"))
+                .userId((String) row.get("user_id"))
+                .amount((BigDecimal) row.get("amount"))
+                .currency((String) row.get("currency"))
+                .status(PaymentStatus.valueOf((String) row.get("status")))
+                .externalPaymentId((String) row.get("external_payment_id"))
+                .paymentMethod((String) row.get("payment_method"))
+                .failureReason((String) row.get("failure_reason"))
+                .retryCount(row.get("retry_count") != null ? (int) row.get("retry_count") : 0)
+                .maxRetries(row.get("max_retries") != null ? (int) row.get("max_retries") : 3)
+                .build();
     }
 }
