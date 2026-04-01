@@ -3,7 +3,8 @@ package com.booking.platform.payment_service.scheduler;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.repository.PaymentRepository;
-import com.booking.platform.payment_service.service.impl.PaymentServiceImpl;
+import com.booking.platform.payment_service.service.PaymentService;
+import jakarta.persistence.OptimisticLockException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,8 +26,10 @@ import java.util.List;
  *   <li>Picks up all due payments in one tick — does not stop on individual failures,
  *       so one stuck payment cannot block others (contrast with {@code OutboxPollingPublisher}
  *       which stops on failure to preserve ordering).</li>
- *   <li>Exponential backoff is managed by {@link PaymentServiceImpl#markPendingRetry};
+ *   <li>Exponential backoff is managed by {@code PaymentStateTransitionService#markPendingRetry};
  *       this scheduler just asks "which ones are due?" via {@code nextRetryAt <= NOW()}.</li>
+ *   <li>{@link OptimisticLockException} is handled gracefully — if another process already
+ *       picked up the same payment, we skip it and move on.</li>
  *   <li>When {@code retryCount >= maxRetries}, the payment transitions to
  *       {@link PaymentStatus#FAILED} and a {@code PaymentFailed} outbox event is written.</li>
  * </ul>
@@ -37,7 +40,7 @@ import java.util.List;
 public class PaymentRetryScheduler {
 
     private final PaymentRepository paymentRepository;
-    private final PaymentServiceImpl paymentService;
+    private final PaymentService paymentService;
 
     @Scheduled(fixedRateString = "${payment.retry.scheduler.interval:60000}")
     public void retryDuePayments() {
@@ -53,6 +56,10 @@ public class PaymentRetryScheduler {
         for (PaymentEntity payment : due) {
             try {
                 paymentService.retryPayment(payment);
+            } catch (OptimisticLockException e) {
+                // Another process already picked up this payment — safe to skip
+                log.debug("Skipping retry for paymentId='{}': already claimed by another process",
+                        payment.getId());
             } catch (Exception e) {
                 // Log and continue — one failure must not block retries for other payments
                 log.error("Retry attempt failed for paymentId='{}', bookingId='{}': {}",

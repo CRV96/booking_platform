@@ -19,6 +19,8 @@ public final class BkgConstants {
         public static final String PAYMENT_GATEWAY_TYPE= "payment.gateway.type";
         public static final String RESPONSE_SUCCEEDED = "succeeded";
         public static final String CARD_PAYMENT_METHOD = "card";
+        // Test payment method for Stripe sandbox — used in PaymentIntentConfirmParams
+        public static final String PAYMENT_METHOD_CARD_VISA = "pm_card_visa";
     }
 
     public final class BkgOutboxConstants {

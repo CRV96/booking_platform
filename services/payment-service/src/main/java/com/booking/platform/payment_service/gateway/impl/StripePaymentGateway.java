@@ -1,7 +1,6 @@
 package com.booking.platform.payment_service.gateway.impl;
 
 import com.booking.platform.payment_service.constants.BkgConstants;
-import com.booking.platform.payment_service.constants.StripeConst;
 import com.booking.platform.payment_service.dto.GatewayPaymentResponse;
 import com.booking.platform.payment_service.dto.GatewayRefundResponse;
 import com.booking.platform.payment_service.exception.PaymentGatewayException;
@@ -58,8 +57,7 @@ public class StripePaymentGateway implements PaymentGateway {
     @PostConstruct
     void init() {
         Stripe.apiKey = apiKey;
-        log.info("Stripe gateway initialized (key ending in ...{})",
-                apiKey.length() > 8 ? apiKey.substring(apiKey.length() - 4) : "****");
+        log.info("Stripe gateway initialized");
     }
 
     // ── Gateway methods (decorated with Resilience4j) ────────────────────────
@@ -108,7 +106,7 @@ public class StripePaymentGateway implements PaymentGateway {
                 PaymentIntent intent = PaymentIntent.retrieve(externalPaymentId);
 
                 PaymentIntentConfirmParams params = PaymentIntentConfirmParams.builder()
-                        .setPaymentMethod(StripeConst.PAYMENT_METHOD_CARD_VISA) // Stripe test payment method
+                        .setPaymentMethod(BkgConstants.BkgStripeConstants.PAYMENT_METHOD_CARD_VISA) // Stripe test payment method
                         .build();
 
                 intent = intent.confirm(params);

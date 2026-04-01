@@ -7,7 +7,7 @@ import com.booking.platform.payment_service.dto.GatewayRefundResponse;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.gateway.PaymentGateway;
-import com.booking.platform.payment_service.messaging.publisher.impl.OutboxPollingPublisher;
+import com.booking.platform.payment_service.messaging.publisher.OutboxPollingPublisher;
 import com.booking.platform.payment_service.repository.OutboxEventRepository;
 import com.booking.platform.payment_service.service.PaymentService;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
@@ -20,11 +20,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
