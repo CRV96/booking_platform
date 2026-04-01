@@ -1,9 +1,11 @@
 package com.booking.platform.analytics_service.config;
 
+import com.booking.platform.analytics_service.constants.AnalyticsConstants;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import org.bson.Document;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.config.EnableMongoAuditing;
@@ -13,13 +15,10 @@ import java.util.concurrent.TimeUnit;
 
 @Configuration
 @EnableMongoAuditing
+@RequiredArgsConstructor
 public class MongoConfig {
 
     private final MongoTemplate mongoTemplate;
-
-    public MongoConfig(MongoTemplate mongoTemplate) {
-        this.mongoTemplate = mongoTemplate;
-    }
 
     @PostConstruct
     public void createIndexes() {
@@ -27,7 +26,8 @@ public class MongoConfig {
     }
 
     private void createEventsLogIndexes() {
-        MongoCollection<Document> eventsLog = mongoTemplate.getCollection("events_log");
+        MongoCollection<Document> eventsLog =
+                mongoTemplate.getCollection(AnalyticsConstants.Collection.EVENT_LOG);
 
         // Compound index for querying by event type and time range
         eventsLog.createIndex(

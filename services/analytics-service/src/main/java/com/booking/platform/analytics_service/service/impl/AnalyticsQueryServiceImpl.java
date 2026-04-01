@@ -194,7 +194,7 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 .aggregate(aggregation, Collection.EVENT_STATS, EventStatsDetail.class)
                 .getMappedResults();
 
-        return results.isEmpty() ? null : results.getFirst();
+        return results.isEmpty() ? null : results.getFirst(); // null signals "not found" to the controller
     }
 
     /**
