@@ -53,6 +53,10 @@ public final class BkgConstants {
     }
 
     public static final class BkgPaymentsConstants {
+        private BkgPaymentsConstants(){
+            // Private constructor to prevent instantiation
+        }
+
         // Entity constants
         public static final String TABLE_NAME = "payments";
         public static final String INDEX_BOOKING_ID = "idx_payments_booking_id";

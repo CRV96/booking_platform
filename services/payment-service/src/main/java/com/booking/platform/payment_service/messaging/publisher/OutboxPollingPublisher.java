@@ -91,9 +91,10 @@ public class OutboxPollingPublisher {
 
         for (OutboxEventEntity event : events) {
             try {
-                MessageLite protoMessage = buildProtoMessage(event);
-                String topic = resolveTopicFromEventType(event.getEventType());
-                String key = extractBookingIdFromPayload(event);
+                final JsonNode payload = objectMapper.readTree(event.getPayload());
+                final MessageLite protoMessage = buildProtoMessage(event, payload);
+                final String topic = resolveTopicFromEventType(event.getEventType());
+                final String key = payload.path(BkgOutboxConstants.BOOKING_ID).asText(event.getAggregateId());
 
                 // Synchronous send — blocks until Kafka confirms receipt
                 kafkaTemplate.send(topic, key, protoMessage).get();
@@ -123,7 +124,7 @@ public class OutboxPollingPublisher {
     @Scheduled(fixedRateString = "${outbox.cleanup.interval:3600000}")
     @Transactional
     public void cleanup() {
-        Instant cutoff = Instant.now().minus(Duration.ofHours(retentionHours));
+        final Instant cutoff = Instant.now().minus(Duration.ofHours(retentionHours));
         outboxEventRepository.deleteByPublishedAtBefore(cutoff);
         log.debug("Outbox cleanup: deleted events published before {}", cutoff);
     }
@@ -145,15 +146,13 @@ public class OutboxPollingPublisher {
     }
 
     /**
-     * Builds the Protobuf message from the JSON payload stored in the outbox event.
+     * Builds the Protobuf message from the pre-parsed JSON payload.
      * Uses {@code path(field)} instead of {@code get(field)} so missing fields return
      * an empty {@code MissingNode} rather than {@code null}, avoiding NPEs.
      */
-    private MessageLite buildProtoMessage(OutboxEventEntity event) {
+    private MessageLite buildProtoMessage(OutboxEventEntity event, JsonNode json) {
         try {
-            JsonNode json = objectMapper.readTree(event.getPayload());
-
-            if (json == null || !json.has(BkgOutboxConstants.BOOKING_ID)) {
+            if (!json.has(BkgOutboxConstants.BOOKING_ID)) {
                 throw new IllegalArgumentException("Invalid payload: missing booking_id");
             }
 
@@ -191,18 +190,4 @@ public class OutboxPollingPublisher {
         }
     }
 
-    /**
-     * Extracts the booking_id from the JSON payload to use as the Kafka message key.
-     * This ensures ordering per booking across Kafka partitions.
-     */
-    private String extractBookingIdFromPayload(OutboxEventEntity event) {
-        try {
-            JsonNode json = objectMapper.readTree(event.getPayload());
-            return json.path(BkgOutboxConstants.BOOKING_ID).asText(event.getAggregateId());
-        } catch (Exception e) {
-            log.warn("Could not extract booking_id from outbox event id='{}', using aggregate_id",
-                    event.getId());
-            return event.getAggregateId();
-        }
-    }
 }

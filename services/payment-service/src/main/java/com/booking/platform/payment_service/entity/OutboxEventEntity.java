@@ -38,7 +38,6 @@ import java.util.UUID;
 @Entity
 @Table(name = BkgOutboxConstants.TABLE_NAME)
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -80,6 +79,7 @@ public class OutboxEventEntity {
      * {@code NULL} means "not yet published" — the poller queries for these rows.
      * After publishing, the poller sets this to {@code Instant.now()}.
      */
+    @Setter
     @Column(name = BkgOutboxConstants.PUBLISHED_AT)
     private Instant publishedAt;
 }

@@ -196,8 +196,6 @@ public class PaymentStateTransitionService {
     private String buildPayload(PaymentEntity payment, String refundId, String eventType) {
         ObjectNode node = objectMapper.createObjectNode();
 
-        log.debug("Building payload for eventType='{}' and payment id='{}'", eventType, payment.getId());
-
         // Event-specific fields
         switch (eventType) {
             case BkgConstants.BkgOutboxConstants.PAYMENT_COMPLETED_EVENT ->

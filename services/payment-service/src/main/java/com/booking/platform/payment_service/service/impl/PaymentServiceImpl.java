@@ -95,7 +95,8 @@ public class PaymentServiceImpl implements PaymentService {
                     payment.getId(), bookingId, e.getMessage());
         } catch (PaymentGatewayException e) {
             payment = transitions.markFailed(payment.getId(), e.getMessage());
-            logPaymentError(payment.getId(), bookingId, e);
+            log.error("Payment FAILED with PaymentGatewayException for -> id='{}', bookingId='{}', reason='{}'",
+                    payment.getId(), bookingId, e.getMessage());
         }
 
         return payment;
@@ -146,8 +147,8 @@ public class PaymentServiceImpl implements PaymentService {
             log.warn("Refund PENDING (gateway unavailable): paymentId='{}', bookingId='{}', reason='{}'",
                     payment.getId(), bookingId, e.getMessage());
         } catch (PaymentGatewayException e) {
-            logRefundError(payment.getId(), bookingId, e.getCause());
-
+            log.error("Refund FAILED with PaymentGatewayException for -> paymentId='{}', bookingId='{}', reason='{}'",
+                    payment.getId(), bookingId, e.getMessage());
         }
     }
 
@@ -186,7 +187,8 @@ public class PaymentServiceImpl implements PaymentService {
             handleRetryGatewayException(payment, e);
         } catch (PaymentGatewayException e) {
             transitions.markFailed(payment.getId(), e.getMessage());
-            logPaymentError(payment.getId(), payment.getBookingId(), e);
+            log.error("Payment FAILED with PaymentGatewayException: id='{}', bookingId='{}', reason='{}'",
+                    payment.getId(), payment.getBookingId(), e.getMessage());
         }
     }
 
@@ -199,7 +201,8 @@ public class PaymentServiceImpl implements PaymentService {
         }
         if (cause instanceof PaymentGatewayException) {
             PaymentEntity payment = transitions.markFailed(paymentId, cause.getMessage());
-            logPaymentError(paymentId, bookingId, cause);
+            log.error("Payment FAILED (gateway error): id='{}', bookingId='{}', reason='{}'",
+                    paymentId, bookingId, cause.getMessage());
             return payment;
         }
         String reason = cause != null ? cause.getMessage() : "Unknown error";
@@ -212,7 +215,8 @@ public class PaymentServiceImpl implements PaymentService {
     private void handleRefundException(UUID paymentId, String bookingId, Throwable cause) {
         String reason = cause != null ? cause.getMessage() : "Unknown error";
         if (cause instanceof PaymentGatewayUnavailableException || cause instanceof PaymentGatewayException) {
-            logRefundError(paymentId, bookingId, cause);
+            log.error("Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
+                    paymentId, bookingId, reason);
         } else {
             log.error("Refund FAILED (unexpected): paymentId='{}', bookingId='{}', reason='{}'",
                     paymentId, bookingId, reason);
@@ -237,15 +241,5 @@ public class PaymentServiceImpl implements PaymentService {
         transitions.markFailed(payment.getId(), reason);
         log.error("Payment FAILED during retry: id='{}', bookingId='{}', reason='{}'",
                 payment.getId(), payment.getBookingId(), reason);
-    }
-
-    private void logPaymentError(UUID paymentId, String bookingId, Throwable cause) {
-        log.error("Payment FAILED (gateway error): id='{}', bookingId='{}', reason='{}'",
-                paymentId, bookingId, cause.getMessage());
-    }
-
-    private void logRefundError(UUID paymentId, String bookingId, Throwable cause) {
-        log.error("Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
-                paymentId, bookingId, cause.getMessage());
     }
 }
