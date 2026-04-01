@@ -1,5 +1,6 @@
 package com.booking.platform.payment_service.entity.enums;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -28,30 +29,38 @@ import java.util.Set;
 public enum PaymentStatus {
 
     /** Initial state — payment record created, charge not yet sent to gateway. */
-    INITIATED(Set.of("PROCESSING")),
+    INITIATED,
 
     /** Charge request sent to payment gateway — awaiting confirmation. */
-    PROCESSING(Set.of("COMPLETED", "FAILED", "PENDING_RETRY")),
+    PROCESSING,
 
     /** Gateway temporarily unavailable (circuit open, timeout, bulkhead full). Will be retried. */
-    PENDING_RETRY(Set.of("PROCESSING", "FAILED")),
+    PENDING_RETRY,
 
     /** Payment gateway confirmed the charge — funds captured. */
-    COMPLETED(Set.of("REFUND_INITIATED")),
+    COMPLETED,
 
     /** Payment gateway declined the charge (business failure — card declined, invalid amount). */
-    FAILED(Set.of()),
+    FAILED,
 
     /** Refund has been requested — waiting for gateway confirmation. */
-    REFUND_INITIATED(Set.of("REFUNDED")),
+    REFUND_INITIATED,
 
     /** Refund completed successfully. Terminal state. */
-    REFUNDED(Set.of());
+    REFUNDED;
 
-    private final Set<String> validNextStatusNames;
+    private static final Map<PaymentStatus, Set<PaymentStatus>> VALID_TRANSITIONS;
 
-    PaymentStatus(Set<String> validNextStatusNames) {
-        this.validNextStatusNames = validNextStatusNames;
+    static {
+        VALID_TRANSITIONS = Map.of(
+            INITIATED,        Set.of(PROCESSING),
+            PROCESSING,       Set.of(COMPLETED, FAILED, PENDING_RETRY),
+            PENDING_RETRY,    Set.of(PROCESSING, FAILED),
+            COMPLETED,        Set.of(REFUND_INITIATED),
+            FAILED,           Set.of(),
+            REFUND_INITIATED, Set.of(REFUNDED),
+            REFUNDED,         Set.of()
+        );
     }
 
     /**
@@ -62,6 +71,6 @@ public enum PaymentStatus {
      * @return {@code true} if the transition is valid
      */
     public boolean canTransitionTo(PaymentStatus next) {
-        return validNextStatusNames.contains(next.name());
+        return VALID_TRANSITIONS.getOrDefault(this, Set.of()).contains(next);
     }
 }

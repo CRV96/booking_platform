@@ -5,17 +5,19 @@ import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import java.math.BigDecimal;
 
 /**
- * Contract for validating and normalizing payment request inputs.
+ * Contract for validating payment request inputs and enforcing state-machine rules.
  *
  * <p>Implementations are responsible for:
  * <ul>
  *   <li>Rejecting null or blank booking/user identifiers</li>
  *   <li>Rejecting null or non-positive amounts</li>
- *   <li>Rejecting malformed currency codes and normalizing valid ones to uppercase</li>
+ *   <li>Rejecting malformed currency codes (normalization is the caller's responsibility)</li>
+ *   <li>Asserting that payment status transitions are permitted by the state machine</li>
  * </ul>
  *
- * <p>Validators throw {@link IllegalArgumentException} when a rule is violated,
- * which propagates up to the caller without touching any database state.
+ * <p>Validators throw {@link IllegalArgumentException} for invalid input and
+ * {@link IllegalStateException} for invalid state transitions — both propagate
+ * to the caller without touching any database state.
  */
 public interface PaymentValidator {
 
@@ -53,18 +55,13 @@ public interface PaymentValidator {
     void validateCurrency(String currency);
 
     /**
-     * Validates that the payment request is consistent and can be processed.
-     *
-     * <p>This method is a higher-level check that can involve cross-field validation
-     * or external system checks (e.g. verifying the booking exists and belongs to the user).
+     * Convenience method that runs all four field validations in order:
+     * bookingId → userId → amount → currency.
      *
      * @param bookingId the booking identifier
-     * @param userId the user identifier
-     * @param amount the payment amount
-     * @param currency the payment currency
-     * @throws IllegalArgumentException if any validation rule is violated
-     * Convenience method that runs all four field validations in order:
-     * bookingId → userId → amount → currency
+     * @param userId    the user identifier
+     * @param amount    the payment amount
+     * @param currency  the payment currency
      * @throws IllegalArgumentException on the first validation rule that is violated
      */
     void validatePaymentForProcessing(String bookingId, String userId, BigDecimal amount, String currency);

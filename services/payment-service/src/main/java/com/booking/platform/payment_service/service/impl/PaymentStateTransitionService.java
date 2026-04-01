@@ -159,7 +159,6 @@ public class PaymentStateTransitionService {
                     paymentId, payment.getStatus());
             return payment;
         }
-        paymentValidator.assertValidTransition(payment, PaymentStatus.REFUND_INITIATED);
         payment.setStatus(PaymentStatus.REFUND_INITIATED);
         log.debug("Payment id='{}' marked as REFUND_INITIATED", paymentId);
         return paymentRepository.save(payment);
