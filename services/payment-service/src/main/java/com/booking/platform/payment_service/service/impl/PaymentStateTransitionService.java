@@ -9,6 +9,7 @@ import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.exception.PaymentNotFoundException;
 import com.booking.platform.payment_service.repository.OutboxEventRepository;
 import com.booking.platform.payment_service.repository.PaymentRepository;
+import com.booking.platform.payment_service.validation.PaymentValidator;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -42,6 +43,7 @@ public class PaymentStateTransitionService {
     private final PaymentRepository paymentRepository;
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final PaymentValidator paymentValidator;
 
     @Value("${payment.retry.max-attempts:3}")
     private int maxRetries;
@@ -75,6 +77,7 @@ public class PaymentStateTransitionService {
     @Transactional
     public PaymentEntity updateToProcessing(UUID paymentId, GatewayPaymentResponse response) {
         PaymentEntity payment = findOrThrow(paymentId);
+        paymentValidator.assertValidTransition(payment, PaymentStatus.PROCESSING);
         payment.setExternalPaymentId(response.externalPaymentId());
         payment.setPaymentMethod(response.paymentMethod());
         payment.setStatus(PaymentStatus.PROCESSING);
@@ -92,6 +95,7 @@ public class PaymentStateTransitionService {
     @Transactional
     public PaymentEntity incrementRetryCount(UUID paymentId) {
         PaymentEntity payment = findOrThrow(paymentId);
+        paymentValidator.assertValidTransition(payment, PaymentStatus.PROCESSING);
         payment.setRetryCount(payment.getRetryCount() + 1);
         payment.setNextRetryAt(null);
         payment.setStatus(PaymentStatus.PROCESSING);
@@ -105,6 +109,7 @@ public class PaymentStateTransitionService {
     @Transactional
     public PaymentEntity markCompleted(UUID paymentId, GatewayPaymentResponse response) {
         PaymentEntity payment = findOrThrow(paymentId);
+        paymentValidator.assertValidTransition(payment, PaymentStatus.COMPLETED);
         payment.setStatus(PaymentStatus.COMPLETED);
         payment.setPaymentMethod(response.paymentMethod());
         payment = paymentRepository.save(payment);
@@ -116,6 +121,7 @@ public class PaymentStateTransitionService {
     @Transactional
     public PaymentEntity markFailed(UUID paymentId, String reason) {
         PaymentEntity payment = findOrThrow(paymentId);
+        paymentValidator.assertValidTransition(payment, PaymentStatus.FAILED);
         payment.setStatus(PaymentStatus.FAILED);
         payment.setFailureReason(reason);
         payment = paymentRepository.save(payment);
@@ -127,10 +133,10 @@ public class PaymentStateTransitionService {
     @Transactional
     public PaymentEntity markPendingRetry(UUID paymentId, String reason) {
         PaymentEntity payment = findOrThrow(paymentId);
+        paymentValidator.assertValidTransition(payment, PaymentStatus.PENDING_RETRY);
         payment.setStatus(PaymentStatus.PENDING_RETRY);
         payment.setFailureReason(reason);
         payment.setNextRetryAt(Instant.now().plusSeconds(computeBackoffSeconds(payment.getRetryCount())));
-
         log.debug("Payment id='{}' marked as PENDING_RETRY with reason='{}', next retry at {}",
                 paymentId, reason, payment.getNextRetryAt());
         return paymentRepository.save(payment);
@@ -153,8 +159,8 @@ public class PaymentStateTransitionService {
                     paymentId, payment.getStatus());
             return payment;
         }
+        paymentValidator.assertValidTransition(payment, PaymentStatus.REFUND_INITIATED);
         payment.setStatus(PaymentStatus.REFUND_INITIATED);
-
         log.debug("Payment id='{}' marked as REFUND_INITIATED", paymentId);
         return paymentRepository.save(payment);
     }
@@ -162,6 +168,7 @@ public class PaymentStateTransitionService {
     @Transactional
     public PaymentEntity markRefunded(UUID paymentId, GatewayRefundResponse response) {
         PaymentEntity payment = findOrThrow(paymentId);
+        paymentValidator.assertValidTransition(payment, PaymentStatus.REFUNDED);
         payment.setStatus(PaymentStatus.REFUNDED);
         payment = paymentRepository.save(payment);
         saveOutboxEvent(payment, BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT,

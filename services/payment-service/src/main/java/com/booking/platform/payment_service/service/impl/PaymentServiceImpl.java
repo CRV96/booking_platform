@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletionException;
@@ -42,6 +43,8 @@ import java.util.concurrent.CompletionException;
 @RequiredArgsConstructor
 public class PaymentServiceImpl implements PaymentService {
 
+    private static final String GATEWAY_UNEXPECTED_STATUS = "Gateway returned status: ";
+
     private final PaymentRepository paymentRepository;
     private final PaymentGateway paymentGateway;
     private final PaymentStateTransitionService transitions;
@@ -51,7 +54,7 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentEntity processPayment(String bookingId, String userId, BigDecimal amount, String currency) {
         paymentValidator.validatePaymentForProcessing(bookingId, userId, amount, currency);
 
-        final String normalizedCurrency = currency.toUpperCase();
+        final String normalizedCurrency = currency.toUpperCase(Locale.ROOT);
 
         Optional<PaymentEntity> existing = paymentRepository.findByIdempotencyKey(bookingId);
         if (existing.isPresent()) {
@@ -79,7 +82,7 @@ public class PaymentServiceImpl implements PaymentService {
                 payment = transitions.markCompleted(payment.getId(), confirmResponse);
                 log.info("Payment COMPLETED: id='{}', bookingId='{}'", payment.getId(), bookingId);
             } else {
-                payment = transitions.markFailed(payment.getId(), "Gateway returned status: " + confirmResponse.status());
+                payment = transitions.markFailed(payment.getId(), GATEWAY_UNEXPECTED_STATUS + confirmResponse.status());
                 log.warn("Payment FAILED (unexpected status): id='{}', status='{}'",
                         payment.getId(), confirmResponse.status());
             }
@@ -100,6 +103,8 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public void processRefund(String bookingId) {
+        paymentValidator.validateBookingId(bookingId);
+
         Optional<PaymentEntity> optional = paymentRepository.findByBookingId(bookingId);
         if (optional.isEmpty()) {
             log.warn("No payment found for bookingId='{}', cannot process refund", bookingId);
@@ -170,7 +175,7 @@ public class PaymentServiceImpl implements PaymentService {
                 log.info("Payment COMPLETED (after retry): id='{}', bookingId='{}'",
                         payment.getId(), payment.getBookingId());
             } else {
-                transitions.markFailed(payment.getId(), "Gateway returned status: " + confirmResponse.status());
+                transitions.markFailed(payment.getId(), GATEWAY_UNEXPECTED_STATUS + confirmResponse.status());
                 log.warn("Payment FAILED after retry (unexpected status): id='{}', status='{}'",
                         payment.getId(), confirmResponse.status());
             }

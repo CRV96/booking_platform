@@ -1,5 +1,7 @@
 package com.booking.platform.payment_service.validation.impl;
 
+import com.booking.platform.payment_service.entity.PaymentEntity;
+import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.validation.PaymentValidator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -46,7 +48,7 @@ public class PaymentRequestValidator implements PaymentValidator {
     }
 
     @Override
-    public void validateAndNormalizeCurrency(String currency) {
+    public void validateCurrency(String currency) {
         if (currency == null || currency.isBlank() || currency.length() != 3) {
             throw new IllegalArgumentException(
                     "Currency must be a 3-character ISO 4217 code, got: " + currency);
@@ -63,8 +65,19 @@ public class PaymentRequestValidator implements PaymentValidator {
         validateBookingId(bookingId);
         validateUserId(userId);
         validateAmount(amount);
-        validateAndNormalizeCurrency(currency);
+        validateCurrency(currency);
 
         log.debug("Payment request validation passed for bookingId='{}'", bookingId);
+    }
+
+    @Override
+    public void assertValidTransition(PaymentEntity payment, PaymentStatus target) {
+        if (!payment.getStatus().canTransitionTo(target)) {
+            throw new IllegalStateException(String.format(
+                    "Invalid status transition for payment id='%s': %s → %s",
+                    payment.getId(), payment.getStatus(), target));
+        }
+        log.debug("Valid status transition for payment id='{}': {} → {}",
+                payment.getId(), payment.getStatus(), target);
     }
 }

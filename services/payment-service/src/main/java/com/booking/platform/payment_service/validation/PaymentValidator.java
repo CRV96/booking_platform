@@ -1,5 +1,7 @@
 package com.booking.platform.payment_service.validation;
 
+import com.booking.platform.payment_service.entity.PaymentEntity;
+import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import java.math.BigDecimal;
 
 /**
@@ -42,14 +44,13 @@ public interface PaymentValidator {
     void validateAmount(BigDecimal amount);
 
     /**
-     * Validates that {@code currency} is a 3-character ISO 4217 code and
-     * returns its uppercase form.
+     * Validates that {@code currency} is a 3-character ISO 4217 code.
+     * Normalization (uppercase) is the caller's responsibility via {@link String#toUpperCase(java.util.Locale)}.
      *
-     * @param currency the raw currency string from the caller
-     * @return the uppercase-normalized currency code (e.g. {@code "usd"} → {@code "USD"})
+     * @param currency the currency string to validate
      * @throws IllegalArgumentException if {@code currency} is null, blank, or not 3 characters
      */
-    void validateAndNormalizeCurrency(String currency);
+    void validateCurrency(String currency);
 
     /**
      * Validates that the payment request is consistent and can be processed.
@@ -62,6 +63,19 @@ public interface PaymentValidator {
      * @param amount the payment amount
      * @param currency the payment currency
      * @throws IllegalArgumentException if any validation rule is violated
+     * Convenience method that runs all four field validations in order:
+     * bookingId → userId → amount → currency
+     * @throws IllegalArgumentException on the first validation rule that is violated
      */
     void validatePaymentForProcessing(String bookingId, String userId, BigDecimal amount, String currency);
+
+    /**
+     * Asserts that transitioning {@code payment} to {@code target} is permitted
+     * by the {@link PaymentStatus} state machine.
+     *
+     * @param payment the payment whose current status is checked
+     * @param target  the intended next status
+     * @throws IllegalStateException if the transition is not allowed
+     */
+    void assertValidTransition(PaymentEntity payment, PaymentStatus target);
 }

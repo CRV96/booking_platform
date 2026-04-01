@@ -7,8 +7,4 @@ public class PaymentNotFoundException extends RuntimeException {
     public PaymentNotFoundException(UUID paymentId) {
         super("Payment not found: " + paymentId);
     }
-
-    public PaymentNotFoundException(String message) {
-        super(message);
-    }
 }
