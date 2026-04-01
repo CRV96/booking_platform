@@ -1,4 +1,4 @@
-package com.booking.platform.payment_service.messaging.publisher.impl;
+package com.booking.platform.payment_service.messaging.publisher;
 
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentCompletedEvent;
@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.MessageLite;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -22,11 +24,12 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Outbox polling publisher — the "relay" side of the Transactional Outbox Pattern (P4-04).
+ * Outbox polling publisher — the "relay" side of the Transactional Outbox Pattern.
  *
  * <p><b>How it works:</b>
  * <ol>
- *   <li>Every 500ms, reads all rows from {@code outbox_events} where {@code published_at IS NULL}</li>
+ *   <li>Every 500ms, reads up to {@code outbox.poll.batch-size} rows from {@code outbox_events}
+ *       where {@code published_at IS NULL}</li>
  *   <li>For each event: parses the JSON payload → builds a Protobuf message → sends to Kafka</li>
  *   <li>On successful Kafka send: sets {@code published_at = NOW()} (marks as published)</li>
  *   <li>On Kafka failure: stops processing and retries on the next poll cycle (maintains ordering)</li>
@@ -57,19 +60,28 @@ public class OutboxPollingPublisher {
     private final KafkaTemplate<String, MessageLite> kafkaTemplate;
     private final ObjectMapper objectMapper;
 
+    @Value("${outbox.poll.batch-size:100}")
+    private int batchSize;
+
+    @Value("${outbox.cleanup.retention-hours:24}")
+    private int retentionHours;
+
     // ── Poll: read unpublished → publish to Kafka → mark published ──────────
 
     /**
      * Polls for unpublished outbox events every 500ms and publishes them to Kafka.
      *
-     * <p>Each event is published synchronously ({@code .get()}) to ensure Kafka
-     * confirms receipt before we mark it as published in the database.
+     * <p>Uses {@code fixedDelay} (not {@code fixedRate}) so the next poll starts
+     * 500ms after the previous one finishes — preventing overlapping polls under
+     * backlog. Reads at most {@code outbox.poll.batch-size} events per tick.
+     * Events are published synchronously ({@code .get()}) to ensure Kafka confirms
+     * receipt before marking as published.
      */
-    @Scheduled(fixedRateString = "${outbox.poll.interval:500}")
-    @Transactional
+    @Scheduled(fixedDelayString = "${outbox.poll.interval:500}")
     public void pollAndPublish() {
         List<OutboxEventEntity> events =
-                outboxEventRepository.findByPublishedAtIsNullOrderByCreatedAtAsc();
+                outboxEventRepository.findByPublishedAtIsNullOrderByCreatedAtAsc(
+                        PageRequest.of(0, batchSize));
 
         if (events.isEmpty()) {
             return;
@@ -79,9 +91,10 @@ public class OutboxPollingPublisher {
 
         for (OutboxEventEntity event : events) {
             try {
-                MessageLite protoMessage = buildProtoMessage(event);
-                String topic = resolveTopicFromEventType(event.getEventType());
-                String key = extractBookingIdFromPayload(event);
+                final JsonNode payload = objectMapper.readTree(event.getPayload());
+                final MessageLite protoMessage = buildProtoMessage(event, payload);
+                final String topic = resolveTopicFromEventType(event.getEventType());
+                final String key = payload.path(BkgOutboxConstants.BOOKING_ID).asText(event.getAggregateId());
 
                 // Synchronous send — blocks until Kafka confirms receipt
                 kafkaTemplate.send(topic, key, protoMessage).get();
@@ -111,7 +124,7 @@ public class OutboxPollingPublisher {
     @Scheduled(fixedRateString = "${outbox.cleanup.interval:3600000}")
     @Transactional
     public void cleanup() {
-        Instant cutoff = Instant.now().minus(Duration.ofHours(24));
+        final Instant cutoff = Instant.now().minus(Duration.ofHours(retentionHours));
         outboxEventRepository.deleteByPublishedAtBefore(cutoff);
         log.debug("Outbox cleanup: deleted events published before {}", cutoff);
     }
@@ -133,36 +146,39 @@ public class OutboxPollingPublisher {
     }
 
     /**
-     * Builds the Protobuf message from the JSON payload stored in the outbox event.
-     * The JSON fields mirror the Protobuf message fields exactly.
+     * Builds the Protobuf message from the pre-parsed JSON payload.
+     * Uses {@code path(field)} instead of {@code get(field)} so missing fields return
+     * an empty {@code MissingNode} rather than {@code null}, avoiding NPEs.
      */
-    private MessageLite buildProtoMessage(OutboxEventEntity event) {
+    private MessageLite buildProtoMessage(OutboxEventEntity event, JsonNode json) {
         try {
-            JsonNode json = objectMapper.readTree(event.getPayload());
+            if (!json.has(BkgOutboxConstants.BOOKING_ID)) {
+                throw new IllegalArgumentException("Invalid payload: missing booking_id");
+            }
 
             return switch (event.getEventType()) {
                 case BkgOutboxConstants.PAYMENT_COMPLETED_EVENT -> PaymentCompletedEvent.newBuilder()
-                        .setPaymentId(json.get(BkgOutboxConstants.PAYMENT_ID).asText())
-                        .setBookingId(json.get(BkgOutboxConstants.BOOKING_ID).asText())
-                        .setAmount(json.get(BkgOutboxConstants.AMOUNT).asDouble())
-                        .setCurrency(json.get(BkgOutboxConstants.CURRENCY).asText())
-                        .setTimestamp(json.get(BkgOutboxConstants.TIMESTAMP).asText())
+                        .setPaymentId(json.path(BkgOutboxConstants.PAYMENT_ID).asText())
+                        .setBookingId(json.path(BkgOutboxConstants.BOOKING_ID).asText())
+                        .setAmount(json.path(BkgOutboxConstants.AMOUNT).asDouble())
+                        .setCurrency(json.path(BkgOutboxConstants.CURRENCY).asText())
+                        .setTimestamp(json.path(BkgOutboxConstants.TIMESTAMP).asText())
                         .build();
 
                 case BkgOutboxConstants.PAYMENT_FAILED_EVENT -> PaymentFailedEvent.newBuilder()
-                        .setPaymentId(json.get(BkgOutboxConstants.PAYMENT_ID).asText())
-                        .setBookingId(json.get(BkgOutboxConstants.BOOKING_ID).asText())
-                        .setReason(json.get(BkgOutboxConstants.REASON).asText())
-                        .setTimestamp(json.get(BkgOutboxConstants.TIMESTAMP).asText())
+                        .setPaymentId(json.path(BkgOutboxConstants.PAYMENT_ID).asText())
+                        .setBookingId(json.path(BkgOutboxConstants.BOOKING_ID).asText())
+                        .setReason(json.path(BkgOutboxConstants.REASON).asText())
+                        .setTimestamp(json.path(BkgOutboxConstants.TIMESTAMP).asText())
                         .build();
 
                 case BkgOutboxConstants.REFUND_COMPLETED_EVENT -> RefundCompletedEvent.newBuilder()
-                        .setPaymentId(json.get(BkgOutboxConstants.PAYMENT_ID).asText())
-                        .setBookingId(json.get(BkgOutboxConstants.BOOKING_ID).asText())
-                        .setRefundId(json.get(BkgOutboxConstants.REFUND_ID).asText())
-                        .setAmount(json.get(BkgOutboxConstants.AMOUNT).asDouble())
-                        .setCurrency(json.get(BkgOutboxConstants.CURRENCY).asText())
-                        .setTimestamp(json.get(BkgOutboxConstants.TIMESTAMP).asText())
+                        .setPaymentId(json.path(BkgOutboxConstants.PAYMENT_ID).asText())
+                        .setBookingId(json.path(BkgOutboxConstants.BOOKING_ID).asText())
+                        .setRefundId(json.path(BkgOutboxConstants.REFUND_ID).asText())
+                        .setAmount(json.path(BkgOutboxConstants.AMOUNT).asDouble())
+                        .setCurrency(json.path(BkgOutboxConstants.CURRENCY).asText())
+                        .setTimestamp(json.path(BkgOutboxConstants.TIMESTAMP).asText())
                         .build();
 
                 default -> throw new IllegalArgumentException(
@@ -174,18 +190,4 @@ public class OutboxPollingPublisher {
         }
     }
 
-    /**
-     * Extracts the booking_id from the JSON payload to use as the Kafka message key.
-     * This ensures ordering per booking across Kafka partitions.
-     */
-    private String extractBookingIdFromPayload(OutboxEventEntity event) {
-        try {
-            JsonNode json = objectMapper.readTree(event.getPayload());
-            return json.get(BkgOutboxConstants.BOOKING_ID).asText();
-        } catch (Exception e) {
-            log.warn("Could not extract booking_id from outbox event id='{}', using aggregate_id",
-                    event.getId());
-            return event.getAggregateId();
-        }
-    }
 }

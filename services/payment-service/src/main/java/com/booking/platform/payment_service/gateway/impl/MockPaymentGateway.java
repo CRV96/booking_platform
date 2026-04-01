@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
 public class MockPaymentGateway implements PaymentGateway {
 
     @Value("${payment.gateway.mock.delay-ms:2000}")
-    private static long SIMULATED_DELAY_MS;
+    private long simulatedDelayMs;
 
     @Override
     public CompletableFuture<GatewayPaymentResponse> createPaymentIntent(
@@ -74,7 +74,7 @@ public class MockPaymentGateway implements PaymentGateway {
 
     private void simulateDelay() {
         try {
-            Thread.sleep(SIMULATED_DELAY_MS);
+            Thread.sleep(simulatedDelayMs);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }

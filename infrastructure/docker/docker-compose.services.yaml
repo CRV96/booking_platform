@@ -76,11 +76,11 @@ services:
     environment:
       <<: *common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://bkg-postgres:5432/userdb
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_DATASOURCE_USERNAME: ${DB_POSTGRES_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: bkg-redis
       KEYCLOAK_ADMIN_SERVER_URL: http://bkg-keycloak:8080
-      USER_SERVICE_KEYCLOAK_CLIENT_SECRET: user-service-secret
+      USER_SERVICE_KEYCLOAK_CLIENT_SECRET: ${USER_SERVICE_KEYCLOAK_CLIENT_SECRET}
       KEYCLOAK_AUTH_SERVER_URL: http://bkg-keycloak:8080
     depends_on:
       config-service:
@@ -104,7 +104,7 @@ services:
       - "8082:8082"
     environment:
       <<: *common-env
-      SPRING_DATA_MONGODB_URI: mongodb://admin:admin@bkg-mongodb:27017/eventdb?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://${DB_MONGO_USERNAME}:${DB_MONGO_PASSWORD}@bkg-mongodb:27017/eventdb?authSource=admin
       SPRING_DATA_REDIS_HOST: bkg-redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
     depends_on:
@@ -130,8 +130,8 @@ services:
     environment:
       <<: *common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://bkg-postgres:5432/bookingdb
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_DATASOURCE_USERNAME: ${DB_POSTGRES_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: bkg-redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
       GRPC_CLIENT_EVENT_SERVICE_ADDRESS: static://event-service:9093
@@ -159,8 +159,8 @@ services:
     environment:
       <<: *common-env
       SPRING_DATASOURCE_URL: jdbc:postgresql://bkg-postgres:5432/paymentdb
-      SPRING_DATASOURCE_USERNAME: admin
-      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_DATASOURCE_USERNAME: ${DB_POSTGRES_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${DB_POSTGRES_PASSWORD}
       SPRING_DATA_REDIS_HOST: bkg-redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
     depends_on:
@@ -190,12 +190,14 @@ services:
       GRPC_CLIENT_USER_SERVICE_ADDRESS: static://user-service:9091
       GRPC_CLIENT_USER_SERVICE_NEGOTIATION_TYPE: PLAINTEXT
       KEYCLOAK_SERVICE_TOKEN_URL: http://bkg-keycloak:8080/realms/booking-platform/protocol/openid-connect/token
-      NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET: notification-service-secret
+      NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET: ${NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET}
     depends_on:
       config-service:
         condition: service_healthy
       eureka-service:
         condition: service_healthy
+      release-manager:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8086/actuator/health || exit 1"]
       <<: *common-healthcheck
@@ -213,7 +215,7 @@ services:
       - "8087:8087"
     environment:
       <<: *common-env
-      SPRING_DATA_MONGODB_URI: mongodb://admin:admin@bkg-mongodb:27017/analyticsdb?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://${DB_MONGO_USERNAME}:${DB_MONGO_PASSWORD}@bkg-mongodb:27017/analyticsdb?authSource=admin
       SPRING_DATA_REDIS_HOST: bkg-redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
     depends_on:
@@ -238,7 +240,7 @@ services:
       - "8088:8088"
     environment:
       <<: *common-env
-      SPRING_DATA_MONGODB_URI: mongodb://admin:admin@bkg-mongodb:27017/ticketdb?authSource=admin
+      SPRING_DATA_MONGODB_URI: mongodb://${DB_MONGO_USERNAME}:${DB_MONGO_PASSWORD}@bkg-mongodb:27017/ticketdb?authSource=admin
       SPRING_DATA_REDIS_HOST: bkg-redis
       SPRING_KAFKA_BOOTSTRAP_SERVERS: bkg-kafka:29092
     depends_on:

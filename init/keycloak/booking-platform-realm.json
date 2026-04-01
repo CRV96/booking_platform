@@ -1,0 +1,325 @@
+{
+  "realm": "booking-platform",
+  "enabled": true,
+  "sslRequired": "none",
+
+  "attributes": {
+    "userProfileEnabled": "true"
+  },
+
+  "clients": [
+    {
+      "clientId": "user-service-admin",
+      "name": "User Service Admin Client",
+      "description": "Confidential client for user-service to manage users via Admin API",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "user-service-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false
+    },
+    {
+      "clientId": "notification-service",
+      "name": "Notification Service Client",
+      "description": "Confidential client for notification-service to fetch user data via gRPC",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "notification-service-secret",
+      "serviceAccountsEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": false
+    },
+    {
+      "clientId": "booking-app",
+      "name": "Booking Platform App",
+      "description": "Public client for user login (Postman, Frontend)",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "redirectUris": ["http://localhost:*"],
+      "webOrigins": ["http://localhost:3000", "http://localhost:8080"],
+      "defaultClientScopes": ["basic", "web-origins", "profile", "roles", "email"],
+      "optionalClientScopes": ["phone", "address", "offline_access"],
+      "protocolMappers": [
+        {
+          "name": "realm-roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-group-membership-mapper",
+          "config": {
+            "claim.name": "groups",
+            "full.path": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "phone-number",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "claim.name": "phone_number",
+            "user.attribute": "phoneNumber",
+            "access.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        },
+        {
+          "name": "country",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "claim.name": "country",
+            "user.attribute": "country",
+            "access.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        },
+        {
+          "name": "preferred-language",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "claim.name": "preferred_language",
+            "user.attribute": "preferredLanguage",
+            "access.token.claim": "true",
+            "id.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+
+  "roles": {
+    "realm": [
+      {
+        "name": "employee",
+        "description": "Employee role"
+      },
+      {
+        "name": "customer",
+        "description": "Customer role"
+      }
+    ]
+  },
+
+  "groups": [
+    {
+      "name": "employees",
+      "realmRoles": ["employee"]
+    },
+    {
+      "name": "customers",
+      "realmRoles": ["customer"]
+    }
+  ],
+
+  "users": [
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Employee",
+      "lastName": "Admin",
+      "email": "employee.admin@booking.com",
+
+      "attributes": {
+        "phoneNumber": ["+1234567890"],
+        "country": ["US"],
+        "preferredLanguage": ["en"],
+        "dateOfBirth": ["1990-01-15"],
+        "billingAddress": ["123 Admin Street, New York, NY 10001"],
+        "profilePictureUrl": [""],
+        "preferredCurrency": ["USD"],
+        "timezone": ["America/New_York"],
+        "emailNotifications": ["true"],
+        "smsNotifications": ["true"],
+        "favoriteEventIds": [""],
+        "favoriteVenueIds": [""]
+      },
+
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+
+      "groups": [
+        "/employees"
+      ],
+
+      "clientRoles": {
+        "realm-management": [
+          "realm-admin",
+          "manage-realm",
+          "manage-users",
+          "manage-clients",
+          "manage-identity-providers",
+          "manage-authorization",
+          "manage-events",
+          "view-realm",
+          "view-users",
+          "view-identity-providers",
+          "view-authorization",
+          "view-events",
+          "query-users"
+        ],
+        "account": [
+          "view-profile",
+          "manage-account"
+        ]
+      }
+    },
+    {
+      "username": "john.doe",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com",
+      "attributes": {
+        "phoneNumber": ["+1555123456"],
+        "country": ["US"],
+        "preferredLanguage": ["en"],
+        "dateOfBirth": ["1985-06-20"],
+        "billingAddress": ["456 Oak Street, Los Angeles, CA 90001"],
+        "profilePictureUrl": [""],
+        "preferredCurrency": ["USD"],
+        "timezone": ["America/Los_Angeles"],
+        "emailNotifications": ["true"],
+        "smsNotifications": ["false"],
+        "favoriteEventIds": [""],
+        "favoriteVenueIds": [""]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/customers"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      }
+    },
+    {
+      "username": "jane.smith",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane.smith@example.com",
+      "attributes": {
+        "phoneNumber": ["+44789123456"],
+        "country": ["UK"],
+        "preferredLanguage": ["en"],
+        "dateOfBirth": ["1992-03-15"],
+        "billingAddress": ["10 Baker Street, London, W1U 3BW"],
+        "profilePictureUrl": [""],
+        "preferredCurrency": ["GBP"],
+        "timezone": ["Europe/London"],
+        "emailNotifications": ["true"],
+        "smsNotifications": ["true"],
+        "favoriteEventIds": [""],
+        "favoriteVenueIds": [""]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/customers"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      }
+    },
+    {
+      "username": "carlos.garcia",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Carlos",
+      "lastName": "Garcia",
+      "email": "carlos.garcia@example.com",
+      "attributes": {
+        "phoneNumber": ["+34612345678"],
+        "country": ["ES"],
+        "preferredLanguage": ["es"],
+        "dateOfBirth": ["1988-11-30"],
+        "billingAddress": ["Calle Mayor 25, Madrid, 28013"],
+        "profilePictureUrl": [""],
+        "preferredCurrency": ["EUR"],
+        "timezone": ["Europe/Madrid"],
+        "emailNotifications": ["true"],
+        "smsNotifications": ["false"],
+        "favoriteEventIds": [""],
+        "favoriteVenueIds": [""]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "customer123",
+          "temporary": false
+        }
+      ],
+      "groups": ["/customers"],
+      "clientRoles": {
+        "account": ["view-profile", "manage-account"]
+      }
+    },
+    {
+      "username": "service-account-user-service-admin",
+      "enabled": true,
+      "serviceAccountClientId": "user-service-admin",
+      "clientRoles": {
+        "realm-management": [
+          "manage-users",
+          "view-users",
+          "query-users"
+        ]
+      }
+    },
+    {
+      "username": "service-account-notification-service",
+      "enabled": true,
+      "serviceAccountClientId": "notification-service",
+      "clientRoles": {
+        "realm-management": [
+          "view-users"
+        ]
+      }
+    }
+  ],
+
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"${username}\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"${email}\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"${firstName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"${lastName}\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"phoneNumber\",\"displayName\":\"Phone Number\",\"validations\":{\"length\":{\"max\":20}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"country\",\"displayName\":\"Country\",\"validations\":{\"length\":{\"max\":100}},\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"preferredLanguage\",\"displayName\":\"Preferred Language\",\"validations\":{\"length\":{\"max\":10}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"dateOfBirth\",\"displayName\":\"Date of Birth\",\"validations\":{\"pattern\":{\"pattern\":\"^\\\\d{4}-\\\\d{2}-\\\\d{2}$\"}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"billingAddress\",\"displayName\":\"Billing Address\",\"validations\":{\"length\":{\"max\":500}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"profilePictureUrl\",\"displayName\":\"Profile Picture URL\",\"validations\":{\"length\":{\"max\":500}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"preferredCurrency\",\"displayName\":\"Preferred Currency\",\"validations\":{\"length\":{\"max\":3}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"timezone\",\"displayName\":\"Timezone\",\"validations\":{\"length\":{\"max\":50}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"emailNotifications\",\"displayName\":\"Email Notifications\",\"validations\":{},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"smsNotifications\",\"displayName\":\"SMS Notifications\",\"validations\":{},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"favoriteEventIds\",\"displayName\":\"Favorite Events\",\"validations\":{\"length\":{\"max\":2000}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"favoriteVenueIds\",\"displayName\":\"Favorite Venues\",\"validations\":{\"length\":{\"max\":2000}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false}],\"groups\":[{\"name\":\"user-metadata\",\"displayHeader\":\"User metadata\",\"displayDescription\":\"Attributes, which refer to user metadata\"}]}"
+          ]
+        }
+      }
+    ]
+  }
+}

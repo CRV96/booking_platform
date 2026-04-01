@@ -57,8 +57,7 @@ public class StripePaymentGateway implements PaymentGateway {
     @PostConstruct
     void init() {
         Stripe.apiKey = apiKey;
-        log.info("Stripe gateway initialized (key ending in ...{})",
-                apiKey.length() > 8 ? apiKey.substring(apiKey.length() - 4) : "****");
+        log.info("Stripe gateway initialized");
     }
 
     // ── Gateway methods (decorated with Resilience4j) ────────────────────────
@@ -107,7 +106,7 @@ public class StripePaymentGateway implements PaymentGateway {
                 PaymentIntent intent = PaymentIntent.retrieve(externalPaymentId);
 
                 PaymentIntentConfirmParams params = PaymentIntentConfirmParams.builder()
-                        .setPaymentMethod("pm_card_visa") // Stripe test payment method
+                        .setPaymentMethod(BkgConstants.BkgStripeConstants.PAYMENT_METHOD_CARD_VISA) // Stripe test payment method
                         .build();
 
                 intent = intent.confirm(params);

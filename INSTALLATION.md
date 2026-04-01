@@ -15,29 +15,16 @@ Follow these steps after cloning the repository.
 
 Run infrastructure in Docker and services directly on your machine via Maven. Best for active development with hot-reload and IDE debugging.
 
-### 1. Set Environment Variables
+### 1. Create your `.env` file
 
-Export the required environment variables **before** starting Docker or services:
+Copy the template below into a `.env` file at the repo root and fill in any values you want to override. The file is gitignored — it will never be committed.
 
 ```bash
-# Absolute path to the root of this repository (no trailing slash)
-# Used by: service log file paths + Promtail volume mount in docker-compose
-export LOG_PATH=/absolute/path/to/booking-platform
-# Example (macOS):
-# export LOG_PATH=/Users/yourname/Developer/booking-platform
-
-# Config server — absolute path to the config/ folder
-export CONFIG_SERVER_CONFIGURATIONS_PATH=/absolute/path/to/booking-platform/config
-# Example (macOS):
-# export CONFIG_SERVER_CONFIGURATIONS_PATH=/Users/yourname/Developer/booking-platform/config
-
-# PostgreSQL credentials (default: admin/admin)
-export DB_POSTGRES_USERNAME=admin
-export DB_POSTGRES_PASSWORD=admin
-
-# Keycloak client secret for user-service (default: user-service-secret)
-export USER_SERVICE_KEYCLOAK_CLIENT_SECRET=user-service-secret
+# Run from the repo root:
+touch .env 
 ```
+
+See and add to the `.env` the environment variables. You can see here the [Environment Variables](#environment-variables) section for the full list of variables, their default values, and rotation instructions.
 
 > **Note:** `LOG_PATH` must be set before starting Docker (step 2) because
 > Promtail mounts `${LOG_PATH}/logs` as a read-only volume. If you forget it,
@@ -81,7 +68,7 @@ Start in this order (config-service and eureka-service must be first):
 
 By default, services run with the `dev` profile.
 
-> **1Password (optional):** The `run-service.sh` script runs services directly using your shell's exported environment variables. If you use [1Password CLI](https://developer.1password.com/docs/cli/) for secret management, open `run-service.sh` and swap the commented lines at the bottom to enable `op run` mode instead.
+> The `run-service.sh` script uses the environment variables already exported in your shell. Source your `.env` file first (see step 1) so all secrets are available before starting services.
 
 #### Debugging
 
@@ -164,7 +151,7 @@ config/
 
 ## Keycloak
 
-Keycloak provides OAuth2/OpenID Connect authentication. The realm (`booking-platform`) is auto-imported on first start from `infrastructure/docker/keycloak/booking-platform-realm.json`.
+Keycloak provides OAuth2/OpenID Connect authentication. The realm (`booking-platform`) is auto-imported on first start from `init/keycloak/booking-platform-realm.json`.
 
 ### Admin Console
 
@@ -414,16 +401,81 @@ Import into Postman: **File** → **Import** → select the JSON file.
 
 ---
 
-## Production Environment Variables
+## Environment Variables
 
-For production, these additional variables are needed:
+Create a `.env` file at the repo root with the variables below. This file is gitignored and must never be committed. The values listed here are the **local development defaults** — they are intentionally simple for a local-only environment and should be rotated to strong, unique values for any shared or production deployment.
 
 ```bash
-export SPRING_PROFILES_ACTIVE=prod
-export POSTGRES_HOST=your-postgres-host
-export DB_POSTGRES_USERNAME=your-user
-export DB_POSTGRES_PASSWORD=your-password
-export KEYCLOAK_URL=https://your-keycloak-url
-export EUREKA_URL=http://your-eureka-url/eureka/
-export ZIPKIN_URL=http://your-zipkin-url
+# ── PostgreSQL ────────────────────────────────────────────────────────────────
+# Credentials for the shared PostgreSQL instance (userdb, bookingdb, paymentdb).
+# Default matches the value hardcoded in docker-compose.startup.yaml for local dev.
+# Rotate: change here + update POSTGRES_USER/POSTGRES_PASSWORD in docker-compose.startup.yaml
+#         + recreate the postgres volume (docker volume rm bkg-postgres-data).
+DB_POSTGRES_USERNAME=admin
+DB_POSTGRES_PASSWORD=admin
+
+# ── MongoDB ───────────────────────────────────────────────────────────────────
+# Credentials for the shared MongoDB instance (eventdb, analyticsdb, ticketdb).
+# Rotate: change here + update MONGO_INITDB_ROOT_USERNAME/PASSWORD in docker-compose.startup.yaml
+#         + recreate the mongodb volume (docker volume rm bkg-mongodb-data).
+DB_MONGO_USERNAME=admin
+DB_MONGO_PASSWORD=admin
+
+# ── Keycloak service-account secrets ─────────────────────────────────────────
+# Client secrets for service-to-service gRPC calls authenticated via Keycloak.
+# Default values match what is configured in init/keycloak/booking-platform-realm.json.
+# Rotate: generate a new secret in Keycloak Admin (Clients → <client> → Credentials → Regenerate),
+#         update the value here, and restart the affected service.
+USER_SERVICE_KEYCLOAK_CLIENT_SECRET=user-service-secret
+NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET=notification-service-secret
+
+# ── Stripe ────────────────────────────────────────────────────────────────────
+# Stripe secret key used by payment-service to create and confirm payment intents.
+# Get your test key from: https://dashboard.stripe.com/test/apikeys
+# Rotate: generate a new key in the Stripe Dashboard and replace the value here.
+# Never use a live key (sk_live_...) for local development.
+STRIPE_SECRET_KEY=sk_test_replace_me
+
+# ── Paths (local development only) ───────────────────────────────────────────
+# Absolute path to the repo root — used by Promtail to mount service log files.
+# Must be set before starting Docker. If omitted, Promtail will see no log files
+# and logs will not appear in Grafana/Loki (console output still works).
+# LOG_PATH=/Users/yourname/Developer/booking-platform
+
+# Absolute path to the config/ folder — used by config-service when running on host.
+# Not needed for full Docker deployments (the folder is mounted automatically).
+# CONFIG_SERVER_CONFIGURATIONS_PATH=/Users/yourname/Developer/booking-platform/config
+
+# ── Observability (optional) ──────────────────────────────────────────────────
+# SonarQube token — only needed when running sonar analysis locally.
+# Generate at: http://localhost:9000 → My Account → Security → Generate Token
+# SONAR_TOKEN=
 ```
+
+### How Docker Compose resolves these variables
+
+Docker Compose automatically reads `.env` from the directory where you run the command **or from the project root**. Since the wrapper `docker-compose.yaml` is under `infrastructure/docker/` but uses `../../` relative paths, it resolves `.env` from the repo root — which is where this file lives.
+
+### How local Spring Boot services resolve these variables
+
+The `.env` file is **not** loaded automatically by Java or the shell. For local runs via `run-service.sh`, the script picks up whatever is already exported in your shell. Source the file first:
+
+```bash
+# Load .env into your current shell session
+export $(grep -v '^#' .env | grep -v '^$' | xargs)
+
+# Then start services as normal
+./run-service.sh user-service
+```
+
+Or add the export line to your shell profile (`~/.zshrc` / `~/.bashrc`) so it runs automatically.
+
+### Rotating secrets
+
+| Secret | Where to change | Additional steps |
+|--------|----------------|-----------------|
+| `DB_POSTGRES_PASSWORD` | `.env` + `docker-compose.startup.yaml` `POSTGRES_PASSWORD` | Recreate `bkg-postgres-data` volume |
+| `DB_MONGO_PASSWORD` | `.env` + `docker-compose.startup.yaml` `MONGO_INITDB_ROOT_PASSWORD` | Recreate `bkg-mongodb-data` volume |
+| `USER_SERVICE_KEYCLOAK_CLIENT_SECRET` | `.env` | Keycloak Admin → Clients → user-service → Credentials → Regenerate |
+| `NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET` | `.env` | Keycloak Admin → Clients → notification-service → Credentials → Regenerate |
+| `STRIPE_SECRET_KEY` | `.env` | Stripe Dashboard → Developers → API keys → Roll key |

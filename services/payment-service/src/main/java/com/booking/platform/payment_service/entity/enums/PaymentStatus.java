@@ -1,5 +1,8 @@
 package com.booking.platform.payment_service.entity.enums;
 
+import java.util.Map;
+import java.util.Set;
+
 /**
  * Status machine for a payment transaction.
  *
@@ -17,6 +20,11 @@ package com.booking.platform.payment_service.entity.enums;
  * </pre>
  *
  * Terminal states: {@link #COMPLETED} (if no refund), {@link #FAILED}, {@link #REFUNDED}.
+ *
+ * <p>Valid transitions are enforced at runtime via {@link #canTransitionTo(PaymentStatus)}.
+ * {@link com.booking.platform.payment_service.service.impl.PaymentStateTransitionService}
+ * calls this before every status change so invalid transitions are caught early
+ * rather than silently corrupting payment state.
  */
 public enum PaymentStatus {
 
@@ -39,5 +47,30 @@ public enum PaymentStatus {
     REFUND_INITIATED,
 
     /** Refund completed successfully. Terminal state. */
-    REFUNDED
+    REFUNDED;
+
+    private static final Map<PaymentStatus, Set<PaymentStatus>> VALID_TRANSITIONS;
+
+    static {
+        VALID_TRANSITIONS = Map.of(
+            INITIATED,        Set.of(PROCESSING),
+            PROCESSING,       Set.of(COMPLETED, FAILED, PENDING_RETRY),
+            PENDING_RETRY,    Set.of(PROCESSING, FAILED),
+            COMPLETED,        Set.of(REFUND_INITIATED),
+            FAILED,           Set.of(),
+            REFUND_INITIATED, Set.of(REFUNDED),
+            REFUNDED,         Set.of()
+        );
+    }
+
+    /**
+     * Returns {@code true} if transitioning from this status to {@code next} is allowed
+     * by the state machine.
+     *
+     * @param next the target status
+     * @return {@code true} if the transition is valid
+     */
+    public boolean canTransitionTo(PaymentStatus next) {
+        return VALID_TRANSITIONS.getOrDefault(this, Set.of()).contains(next);
+    }
 }

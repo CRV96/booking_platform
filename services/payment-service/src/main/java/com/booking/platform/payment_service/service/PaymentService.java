@@ -25,19 +25,20 @@ public interface PaymentService {
      *
      * @param bookingId the booking this payment is for (also used as idempotency key)
      * @param userId    Keycloak subject of the user
-     * @param amount    payment amount in standard currency units
-     * @param currency  ISO 4217 currency code
+     * @param amount    payment amount in standard currency units (must be positive)
+     * @param currency  ISO 4217 currency code (must be exactly 3 characters)
      * @return the persisted payment entity
+     * @throws IllegalArgumentException if amount is null/non-positive or currency is not 3 characters
      */
     PaymentEntity processPayment(String bookingId, String userId, BigDecimal amount, String currency);
 
     /**
-     * Processes a refund for a completed payment (P4-05).
+     * Processes a refund for a completed payment.
      *
      * <p>Finds the payment by bookingId. If the payment is not in COMPLETED status,
      * logs and returns (no refund needed). Otherwise:
      * <ol>
-     *   <li>COMPLETED → REFUND_INITIATED (persisted in same transaction)</li>
+     *   <li>COMPLETED → REFUND_INITIATED (persisted atomically with status re-check)</li>
      *   <li>Calls gateway.createRefund() outside transaction</li>
      *   <li>On success: REFUND_INITIATED → REFUNDED + outbox event "RefundCompleted"</li>
      *   <li>On gateway unavailable: stays REFUND_INITIATED for manual retry</li>
@@ -46,4 +47,16 @@ public interface PaymentService {
      * @param bookingId the booking whose payment should be refunded
      */
     void processRefund(String bookingId);
+
+    /**
+     * Retries a payment currently in {@code PENDING_RETRY} status.
+     *
+     * <p>Called by {@code PaymentRetryScheduler} for payments whose backoff window has elapsed.
+     * Increments the retry counter, re-attempts the gateway call, and transitions to
+     * {@code COMPLETED}, {@code PENDING_RETRY} (with next backoff), or {@code FAILED}
+     * (when max retries is reached).
+     *
+     * @param payment the payment entity snapshot returned by the scheduler query
+     */
+    void retryPayment(PaymentEntity payment);
 }

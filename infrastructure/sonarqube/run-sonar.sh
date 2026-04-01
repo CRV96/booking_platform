@@ -15,20 +15,13 @@ echo "=========================================="
 echo "Project root: $PROJECT_ROOT"
 echo ""
 
-# Run Maven with SonarQube using 1Password to inject env vars
-op run --env-file=".env" -- mvn clean verify sonar:sonar \
-  -DskipTests \
-  -Dsonar.projectKey=Booking \
-  -Dsonar.projectName='Booking' \
+# Requires SONAR_TOKEN to be set in your environment.
+# Source your .env file first: export $(grep -v '^#' .env | grep -v '^$' | xargs)
+mvn clean verify sonar:sonar \
+  -Dsonar.projectKey=Booking-Application \
+  -Dsonar.projectName='Booking-Application' \
   -Dsonar.host.url=http://localhost:9000 \
-  -Dsonar.token="${SONAR_QUBE_TOKEN}"
-
-# Run without 1Password, replace the "${SONAR_QUBE_TOKEN}" with the one from the SonarQube portal and uncomment the below block and comment the above one
-# mvn clean verify sonar:sonar \
-#  -Dsonar.projectKey=Booking \
-#  -Dsonar.projectName='Booking' \
-#  -Dsonar.host.url=http://localhost:9000 \
-#  -Dsonar.token="${SONAR_QUBE_TOKEN}"
+  -Dsonar.token="${SONAR_TOKEN}"
 
 echo ""
 echo "=========================================="

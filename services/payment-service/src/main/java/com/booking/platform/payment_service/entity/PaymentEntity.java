@@ -40,7 +40,6 @@ import java.util.UUID;
     }
 )
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -69,6 +68,7 @@ public class PaymentEntity {
     private String currency;
 
     /** Current status in the payment lifecycle state machine. */
+    @Setter
     @Enumerated(EnumType.STRING)
     @Column(name = BkgPaymentsConstants.STATUS, nullable = false, length = 50)
     private PaymentStatus status;
@@ -77,6 +77,7 @@ public class PaymentEntity {
      * Payment method identifier (e.g. "card", "bank_transfer").
      * Nullable — set when Stripe integration is wired in (P4-02).
      */
+    @Setter
     @Column(name = BkgPaymentsConstants.PAYMENT_METHOD)
     private String paymentMethod;
 
@@ -85,6 +86,7 @@ public class PaymentEntity {
      * Nullable — set after the gateway responds.
      * Indexed for webhook lookups where the gateway sends its own ID.
      */
+    @Setter
     @Column(name = BkgPaymentsConstants.EXTERNAL_PAYMENT_ID)
     private String externalPaymentId;
 
@@ -92,6 +94,7 @@ public class PaymentEntity {
      * Reason for payment failure, if applicable.
      * Nullable — only set when status is {@link PaymentStatus#FAILED}.
      */
+    @Setter
     @Column(name = BkgPaymentsConstants.FAILURE_REASON, columnDefinition = BkgPaymentsConstants.FAILURE_REASON_COLUMN_DEFINITION)
     private String failureReason;
 
@@ -121,4 +124,25 @@ public class PaymentEntity {
     @Version
     @Column(name = BkgPaymentsConstants.VERSION, nullable = false)
     private Long version;
+
+    /** Number of retry attempts made so far. Incremented by the retry scheduler on each attempt. */
+    @Setter
+    @Column(name = BkgPaymentsConstants.RETRY_COUNT, nullable = false)
+    private int retryCount;
+
+    /**
+     * Maximum number of retry attempts allowed for this payment.
+     * Copied from config at creation time ({@code payment.retry.max-attempts}).
+     */
+    @Column(name = BkgPaymentsConstants.MAX_RETRIES, nullable = false)
+    private int maxRetries;
+
+    /**
+     * Timestamp when the next retry should be attempted.
+     * Set by {@code markPendingRetry()} using exponential backoff.
+     * Null when the payment is not in {@link com.booking.platform.payment_service.entity.enums.PaymentStatus#PENDING_RETRY}.
+     */
+    @Setter
+    @Column(name = BkgPaymentsConstants.NEXT_RETRY_AT)
+    private Instant nextRetryAt;
 }

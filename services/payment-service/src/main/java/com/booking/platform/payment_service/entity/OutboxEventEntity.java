@@ -1,6 +1,7 @@
 package com.booking.platform.payment_service.entity;
 
 import com.booking.platform.payment_service.constants.BkgConstants.BkgOutboxConstants;
+import com.booking.platform.payment_service.messaging.publisher.OutboxPollingPublisher;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -16,7 +17,7 @@ import java.util.UUID;
  * <p><b>Transactional Outbox Pattern:</b> instead of publishing events directly to Kafka
  * (which can fail after the DB transaction commits), we write the event to this table
  * <em>in the same transaction</em> as the payment status change. A scheduled poller
- * ({@link com.booking.platform.payment_service.messaging.publisher.impl.OutboxPollingPublisher})
+ * ({@link OutboxPollingPublisher})
  * reads unpublished rows and publishes them to Kafka.
  *
  * <p>Key fields:
@@ -37,7 +38,6 @@ import java.util.UUID;
 @Entity
 @Table(name = BkgOutboxConstants.TABLE_NAME)
 @Getter
-@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -79,6 +79,7 @@ public class OutboxEventEntity {
      * {@code NULL} means "not yet published" — the poller queries for these rows.
      * After publishing, the poller sets this to {@code Instant.now()}.
      */
+    @Setter
     @Column(name = BkgOutboxConstants.PUBLISHED_AT)
     private Instant publishedAt;
 }
