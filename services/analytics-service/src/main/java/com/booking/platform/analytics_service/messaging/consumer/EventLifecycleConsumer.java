@@ -53,7 +53,7 @@ public class EventLifecycleConsumer {
     public void onEventUpdated(ConsumerRecord<String, EventUpdatedEvent> record) {
         EventUpdatedEvent event = record.value();
 
-        log.info("[EVENT_UPDATED] eventId='{}', changedFields={} | partition={}, offset={}",
+        log.debug("[EVENT_UPDATED] eventId='{}', changedFields={} | partition={}, offset={}",
                 event.getEventId(), event.getChangedFieldsList(),
                 record.partition(), record.offset());
 

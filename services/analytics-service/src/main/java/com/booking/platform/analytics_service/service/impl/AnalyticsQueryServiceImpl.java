@@ -60,7 +60,7 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
     @Override
     @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = "'booking-trends:' + #days")
     public List<BookingTrend> getBookingTrends(int days) {
-        String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
+        String startDate = startDateFor(days);
 
         Aggregation aggregation = newAggregation(
                 match(Criteria.where(AnalyticsConstants.DATE).gte(startDate)),
@@ -207,7 +207,7 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
     @Override
     @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = "'payment-trends:' + #days")
     public List<PaymentTrend> getPaymentTrends(int days) {
-        String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
+        String startDate = startDateFor(days);
 
         Aggregation aggregation = newAggregation(
                 match(Criteria.where(AnalyticsConstants.DATE).gte(startDate)),
@@ -224,6 +224,10 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
                 .getMappedResults();
     }
 
+    private String startDateFor(int days) {
+        return LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
+    }
+
     /**
      * Daily event lifecycle trends over the last N days from {@code daily_metrics}.
      *
@@ -234,7 +238,7 @@ public class AnalyticsQueryServiceImpl implements AnalyticsQueryService {
     @Override
     @Cacheable(value = CacheConfig.CACHE_DAILY_METRICS, key = "'event-lifecycle:' + #days")
     public List<EventLifecycleTrend> getEventLifecycleTrends(int days) {
-        String startDate = LocalDate.now(ZoneOffset.UTC).minusDays(days).toString();
+        String startDate = startDateFor(days);
 
         Aggregation aggregation = newAggregation(
                 match(Criteria.where(AnalyticsConstants.DATE).gte(startDate)),

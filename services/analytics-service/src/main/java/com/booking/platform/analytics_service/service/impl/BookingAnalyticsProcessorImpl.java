@@ -93,7 +93,8 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
     public void processBookingCancelled(BookingDto booking) {
         saveRawEvent(Booking.CANCELLED_EVENT, booking.topic(), booking.key(), Map.of(
                 AnalyticsConstants.PAYLOAD_BOOKING_ID, booking.bookingId(),
-                AnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId()));
+                AnalyticsConstants.PAYLOAD_EVENT_ID, booking.eventId(),
+                AnalyticsConstants.PAYLOAD_REASON, booking.reason()));
 
         // event_stats: increment cancelledBookings
         upsertEventStats(booking.eventId(), new Update()

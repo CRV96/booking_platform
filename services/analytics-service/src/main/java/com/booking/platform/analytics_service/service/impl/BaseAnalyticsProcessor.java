@@ -23,7 +23,7 @@ import java.util.Map;
  * <p>Provides shared helper methods used across event, booking, and payment
  * processors:
  * <ul>
- *   <li>{@link #saveRawEvent} — appends to the immutable {@code events_log}</li>
+ *   <li>{@link #saveRawEvent} — appends to the immutable {@code event_log}</li>
  *   <li>{@link #upsertEventStats} — {@code $inc}/{@code $set} upsert on {@code event_stats}</li>
  *   <li>{@link #upsertDailyMetrics} — {@code $inc} upsert on {@code daily_metrics} (by today's UTC date)</li>
  *   <li>{@link #upsertCategoryStats} — {@code $inc} upsert on {@code category_stats}</li>

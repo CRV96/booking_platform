@@ -12,6 +12,7 @@ public record BookingDto
                 double totalPrice,
                 String currency,
                 String eventTitle,
-                String seatCategory
+                String seatCategory,
+                String reason
         )
 {}
