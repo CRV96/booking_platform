@@ -46,6 +46,7 @@ public final class BkgConstants {
         public static final String TIMESTAMP = "timestamp";
         public static final String REASON = "reason";
         public static final String UNKNOWN = "Unknown";
+        public static final String AGGREGATE_TYPE_PAYMENT = "Payment";
         public static final String PAYMENT_COMPLETED_EVENT = "PaymentCompleted";
         public static final String PAYMENT_FAILED_EVENT = "PaymentFailed";
         public static final String REFUND_COMPLETED_EVENT = "RefundCompleted";

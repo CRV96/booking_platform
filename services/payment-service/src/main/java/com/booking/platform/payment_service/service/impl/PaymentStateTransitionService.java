@@ -65,6 +65,8 @@ public class PaymentStateTransitionService {
                 .idempotencyKey(bookingId)
                 .maxRetries(maxRetries)
                 .build();
+        log.debug("Creating payment record for bookingId='{}', userId='{}', amount={}, currency='{}'",
+                bookingId, userId, amount, currency);
         return paymentRepository.save(payment);
     }
 
@@ -76,6 +78,8 @@ public class PaymentStateTransitionService {
         payment.setExternalPaymentId(response.externalPaymentId());
         payment.setPaymentMethod(response.paymentMethod());
         payment.setStatus(PaymentStatus.PROCESSING);
+        log.debug("Payment id='{}' moved to PROCESSING with externalPaymentId='{}'",
+                paymentId, response.externalPaymentId());
         return paymentRepository.save(payment);
     }
 
@@ -91,6 +95,8 @@ public class PaymentStateTransitionService {
         payment.setRetryCount(payment.getRetryCount() + 1);
         payment.setNextRetryAt(null);
         payment.setStatus(PaymentStatus.PROCESSING);
+        log.debug("Incremented retry count for payment id='{}' to {}, moving back to PROCESSING",
+                paymentId, payment.getRetryCount());
         return paymentRepository.save(payment);
     }
 
@@ -124,6 +130,9 @@ public class PaymentStateTransitionService {
         payment.setStatus(PaymentStatus.PENDING_RETRY);
         payment.setFailureReason(reason);
         payment.setNextRetryAt(Instant.now().plusSeconds(computeBackoffSeconds(payment.getRetryCount())));
+
+        log.debug("Payment id='{}' marked as PENDING_RETRY with reason='{}', next retry at {}",
+                paymentId, reason, payment.getNextRetryAt());
         return paymentRepository.save(payment);
     }
 
@@ -145,6 +154,8 @@ public class PaymentStateTransitionService {
             return payment;
         }
         payment.setStatus(PaymentStatus.REFUND_INITIATED);
+
+        log.debug("Payment id='{}' marked as REFUND_INITIATED", paymentId);
         return paymentRepository.save(payment);
     }
 
@@ -167,7 +178,7 @@ public class PaymentStateTransitionService {
 
     private void saveOutboxEvent(PaymentEntity payment, String eventType, String payload) {
         OutboxEventEntity outboxEvent = OutboxEventEntity.builder()
-                .aggregateType("Payment")
+                .aggregateType(BkgConstants.BkgOutboxConstants.AGGREGATE_TYPE_PAYMENT)
                 .aggregateId(payment.getId().toString())
                 .eventType(eventType)
                 .payload(payload)
@@ -178,19 +189,31 @@ public class PaymentStateTransitionService {
 
     private String buildPayload(PaymentEntity payment, String refundId, String eventType) {
         ObjectNode node = objectMapper.createObjectNode();
-        if (BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT.equals(eventType)) {
-            node.put(BkgConstants.BkgOutboxConstants.REFUND_ID, refundId);
+
+        log.debug("Building payload for eventType='{}' and payment id='{}'", eventType, payment.getId());
+
+        // Event-specific fields
+        switch (eventType) {
+            case BkgConstants.BkgOutboxConstants.PAYMENT_COMPLETED_EVENT ->
+                // Store as plain string to preserve full decimal precision through the JSON hop
+                node.put(BkgConstants.BkgOutboxConstants.AMOUNT, payment.getAmount().toPlainString())
+                    .put(BkgConstants.BkgOutboxConstants.CURRENCY, payment.getCurrency());
+
+            case BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT ->
+                node.put(BkgConstants.BkgOutboxConstants.REASON,
+                        payment.getFailureReason() != null
+                                ? payment.getFailureReason()
+                                : BkgConstants.BkgOutboxConstants.UNKNOWN);
+
+            case BkgConstants.BkgOutboxConstants.REFUND_COMPLETED_EVENT ->
+                node.put(BkgConstants.BkgOutboxConstants.REFUND_ID, refundId)
+                    .put(BkgConstants.BkgOutboxConstants.AMOUNT, payment.getAmount().toPlainString())
+                    .put(BkgConstants.BkgOutboxConstants.CURRENCY, payment.getCurrency());
+
+            default -> throw new IllegalArgumentException("Unknown event type for payload: " + eventType);
         }
-        if (BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT.equals(eventType)) {
-            node.put(BkgConstants.BkgOutboxConstants.REASON,
-                    payment.getFailureReason() != null
-                            ? payment.getFailureReason()
-                            : BkgConstants.BkgOutboxConstants.UNKNOWN);
-        } else {
-            // Store as plain string to preserve full decimal precision through the JSON hop
-            node.put(BkgConstants.BkgOutboxConstants.AMOUNT, payment.getAmount().toPlainString());
-            node.put(BkgConstants.BkgOutboxConstants.CURRENCY, payment.getCurrency());
-        }
+
+        // Common fields present in every event
         node.put(BkgConstants.BkgOutboxConstants.PAYMENT_ID, payment.getId().toString());
         node.put(BkgConstants.BkgOutboxConstants.BOOKING_ID, payment.getBookingId());
         node.put(BkgConstants.BkgOutboxConstants.TIMESTAMP, Instant.now().toString());

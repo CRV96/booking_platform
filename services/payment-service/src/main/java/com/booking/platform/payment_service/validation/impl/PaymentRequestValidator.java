@@ -1,6 +1,7 @@
 package com.booking.platform.payment_service.validation.impl;
 
 import com.booking.platform.payment_service.validation.PaymentValidator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -14,21 +15,56 @@ import java.math.BigDecimal;
  * the request without leaving any partial state in the system.
  */
 @Component
+@Slf4j
 public class PaymentRequestValidator implements PaymentValidator {
+
+    @Override
+    public void validateBookingId(String bookingId) {
+        if (bookingId == null || bookingId.isBlank()) {
+            throw new IllegalArgumentException("Booking ID must not be null or blank, got: " + bookingId);
+        }
+
+        log.debug("Booking ID '{}' is valid", bookingId);
+    }
+
+    @Override
+    public void validateUserId(String userId) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID must not be null or blank, got: " + userId);
+        }
+
+        log.debug("User ID '{}' is valid", userId);
+    }
 
     @Override
     public void validateAmount(BigDecimal amount) {
         if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Payment amount must be positive, got: " + amount);
         }
+
+        log.debug("Payment amount {} is valid", amount);
     }
 
     @Override
-    public String validateAndNormalizeCurrency(String currency) {
+    public void validateAndNormalizeCurrency(String currency) {
         if (currency == null || currency.isBlank() || currency.length() != 3) {
             throw new IllegalArgumentException(
                     "Currency must be a 3-character ISO 4217 code, got: " + currency);
         }
-        return currency.toUpperCase();
+
+        log.debug("Currency code '{}' is valid", currency);
+    }
+
+    @Override
+    public void validatePaymentForProcessing(String bookingId, String userId, BigDecimal amount, String currency) {
+        log.debug("Validating payment request: bookingId='{}', userId='{}', amount={}, currency='{}'",
+                bookingId, userId, amount, currency);
+
+        validateBookingId(bookingId);
+        validateUserId(userId);
+        validateAmount(amount);
+        validateAndNormalizeCurrency(currency);
+
+        log.debug("Payment request validation passed for bookingId='{}'", bookingId);
     }
 }

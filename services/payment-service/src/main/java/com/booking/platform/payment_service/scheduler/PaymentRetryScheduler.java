@@ -42,7 +42,7 @@ public class PaymentRetryScheduler {
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
 
-    @Scheduled(fixedRateString = "${payment.retry.scheduler.interval:60000}")
+    @Scheduled(fixedDelayString = "${payment.retry.scheduler.interval:60000}")
     public void retryDuePayments() {
         List<PaymentEntity> due = paymentRepository
                 .findByStatusAndNextRetryAtBefore(PaymentStatus.PENDING_RETRY, Instant.now());

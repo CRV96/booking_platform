@@ -49,8 +49,9 @@ public class PaymentServiceImpl implements PaymentService {
 
     @Override
     public PaymentEntity processPayment(String bookingId, String userId, BigDecimal amount, String currency) {
-        paymentValidator.validateAmount(amount);
-        String normalizedCurrency = paymentValidator.validateAndNormalizeCurrency(currency);
+        paymentValidator.validatePaymentForProcessing(bookingId, userId, amount, currency);
+
+        final String normalizedCurrency = currency.toUpperCase();
 
         Optional<PaymentEntity> existing = paymentRepository.findByIdempotencyKey(bookingId);
         if (existing.isPresent()) {
@@ -65,7 +66,7 @@ public class PaymentServiceImpl implements PaymentService {
 
         try {
             GatewayPaymentResponse createResponse =
-                    paymentGateway.createPaymentIntent(amount, currency, bookingId).join();
+                    paymentGateway.createPaymentIntent(amount, normalizedCurrency, bookingId).join();
 
             payment = transitions.updateToProcessing(payment.getId(), createResponse);
             log.info("Payment PROCESSING: id='{}', externalId='{}'",

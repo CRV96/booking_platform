@@ -7,6 +7,7 @@ import java.math.BigDecimal;
  *
  * <p>Implementations are responsible for:
  * <ul>
+ *   <li>Rejecting null or blank booking/user identifiers</li>
  *   <li>Rejecting null or non-positive amounts</li>
  *   <li>Rejecting malformed currency codes and normalizing valid ones to uppercase</li>
  * </ul>
@@ -15,6 +16,22 @@ import java.math.BigDecimal;
  * which propagates up to the caller without touching any database state.
  */
 public interface PaymentValidator {
+
+    /**
+     * Validates that {@code bookingId} is non-null and non-blank.
+     *
+     * @param bookingId the booking identifier to validate
+     * @throws IllegalArgumentException if {@code bookingId} is null or blank
+     */
+    void validateBookingId(String bookingId);
+
+    /**
+     * Validates that {@code userId} is non-null and non-blank.
+     *
+     * @param userId the user identifier to validate
+     * @throws IllegalArgumentException if {@code userId} is null or blank
+     */
+    void validateUserId(String userId);
 
     /**
      * Validates that {@code amount} is non-null and strictly positive.
@@ -32,5 +49,19 @@ public interface PaymentValidator {
      * @return the uppercase-normalized currency code (e.g. {@code "usd"} → {@code "USD"})
      * @throws IllegalArgumentException if {@code currency} is null, blank, or not 3 characters
      */
-    String validateAndNormalizeCurrency(String currency);
+    void validateAndNormalizeCurrency(String currency);
+
+    /**
+     * Validates that the payment request is consistent and can be processed.
+     *
+     * <p>This method is a higher-level check that can involve cross-field validation
+     * or external system checks (e.g. verifying the booking exists and belongs to the user).
+     *
+     * @param bookingId the booking identifier
+     * @param userId the user identifier
+     * @param amount the payment amount
+     * @param currency the payment currency
+     * @throws IllegalArgumentException if any validation rule is violated
+     */
+    void validatePaymentForProcessing(String bookingId, String userId, BigDecimal amount, String currency);
 }
