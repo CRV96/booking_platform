@@ -11,7 +11,7 @@ public final class BkgConstants {
         // Private constructor to prevent instantiation
     }
 
-    public final class BkgStripeConstants {
+    public static final class BkgStripeConstants {
         private BkgStripeConstants(){}
 
         // Used in configuration properties and as a prefix for Stripe-related constants
@@ -23,10 +23,10 @@ public final class BkgConstants {
         public static final String PAYMENT_METHOD_CARD_VISA = "pm_card_visa";
     }
 
-    public final class BkgOutboxConstants {
+    public static final class BkgOutboxConstants {
 
         private BkgOutboxConstants(){}
-        //
+
         public static final String ID = "id";
         public static final String TABLE_NAME = "outbox_events";
         public static final String AGGREGATE_TYPE = "aggregate_type";
@@ -51,7 +51,7 @@ public final class BkgConstants {
         public static final String REFUND_COMPLETED_EVENT = "RefundCompleted";
     }
 
-    public final class BkgPaymentsConstants {
+    public static final class BkgPaymentsConstants {
         // Entity constants
         public static final String TABLE_NAME = "payments";
         public static final String INDEX_BOOKING_ID = "idx_payments_booking_id";

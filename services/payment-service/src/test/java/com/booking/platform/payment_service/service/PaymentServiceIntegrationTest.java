@@ -337,6 +337,108 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
         }
     }
 
+    // ═════════════════════════════════════════════════════════════════════════
+    // retryPayment
+    // ═════════════════════════════════════════════════════════════════════════
+
+    @Nested
+    class RetryPayment {
+
+        private PaymentEntity pendingRetryPayment;
+
+        @BeforeEach
+        void createPendingRetryPayment() {
+            when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
+                    .thenReturn(CompletableFuture.failedFuture(
+                            new PaymentGatewayUnavailableException("Circuit breaker open")));
+
+            String bookingId = "booking-retry-" + UUID.randomUUID();
+            pendingRetryPayment = paymentService.processPayment(bookingId, USER_ID, AMOUNT, CURRENCY);
+            assertThat(pendingRetryPayment.getStatus()).isEqualTo(PaymentStatus.PENDING_RETRY);
+
+            // Restore default mock for the retry attempt
+            when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
+                    .thenReturn(CompletableFuture.completedFuture(
+                            new GatewayPaymentResponse("pi_retry_123", "requires_confirmation", "card")));
+            when(paymentGateway.confirmPayment(anyString()))
+                    .thenReturn(CompletableFuture.completedFuture(
+                            new GatewayPaymentResponse("pi_retry_123", "succeeded", "card")));
+        }
+
+        @Test
+        void success_completesPayment() {
+            paymentService.retryPayment(pendingRetryPayment);
+
+            PaymentEntity result = findPaymentById(pendingRetryPayment.getId());
+            assertThat(result.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+        }
+
+        @Test
+        void success_createsOutboxEvent() {
+            paymentService.retryPayment(pendingRetryPayment);
+
+            List<Map<String, Object>> outboxRows = jdbcTemplate.queryForList(
+                    "SELECT * FROM outbox_events WHERE aggregate_id = ? AND event_type = 'PaymentCompleted'",
+                    pendingRetryPayment.getId().toString());
+            assertThat(outboxRows).hasSize(1);
+        }
+
+        @Test
+        void incrementsRetryCount() {
+            paymentService.retryPayment(pendingRetryPayment);
+
+            Integer retryCount = jdbcTemplate.queryForObject(
+                    "SELECT retry_count FROM payments WHERE id = ?",
+                    Integer.class, pendingRetryPayment.getId());
+            assertThat(retryCount).isEqualTo(1);
+        }
+
+        @Test
+        void gatewayStillDown_remainsPendingRetry() {
+            when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
+                    .thenReturn(CompletableFuture.failedFuture(
+                            new PaymentGatewayUnavailableException("Still down")));
+
+            paymentService.retryPayment(pendingRetryPayment);
+
+            PaymentEntity result = findPaymentById(pendingRetryPayment.getId());
+            assertThat(result.getStatus()).isEqualTo(PaymentStatus.PENDING_RETRY);
+        }
+
+        @Test
+        void maxRetriesExhausted_marksAsFailed() {
+            // Set retry_count to max_retries - 1 so the next attempt exhausts it
+            jdbcTemplate.update(
+                    "UPDATE payments SET retry_count = max_retries - 1 WHERE id = ?",
+                    pendingRetryPayment.getId());
+
+            when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
+                    .thenReturn(CompletableFuture.failedFuture(
+                            new PaymentGatewayUnavailableException("Gateway down")));
+
+            paymentService.retryPayment(pendingRetryPayment);
+
+            PaymentEntity result = findPaymentById(pendingRetryPayment.getId());
+            assertThat(result.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(result.getFailureReason()).contains("Max retries exhausted");
+        }
+
+        @Test
+        void externalPaymentIdPresent_skipsCreatePaymentIntent() {
+            // Manually set externalPaymentId as if createPaymentIntent succeeded on first try
+            jdbcTemplate.update(
+                    "UPDATE payments SET external_payment_id = 'pi_existing_123' WHERE id = ?",
+                    pendingRetryPayment.getId());
+            pendingRetryPayment.setExternalPaymentId("pi_existing_123");
+
+            paymentService.retryPayment(pendingRetryPayment);
+
+            // createPaymentIntent should NOT be called — only confirmPayment
+            verify(paymentGateway, never()).createPaymentIntent(any(), anyString(), anyString());
+            verify(paymentGateway).confirmPayment("pi_existing_123");
+        }
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
     private PaymentEntity findPaymentById(UUID id) {
@@ -353,6 +455,8 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
         entity.setExternalPaymentId((String) row.get("external_payment_id"));
         entity.setPaymentMethod((String) row.get("payment_method"));
         entity.setFailureReason((String) row.get("failure_reason"));
+        entity.setRetryCount(row.get("retry_count") != null ? (int) row.get("retry_count") : 0);
+        entity.setMaxRetries(row.get("max_retries") != null ? (int) row.get("max_retries") : 3);
         return entity;
     }
 }

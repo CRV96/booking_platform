@@ -197,7 +197,7 @@ public class PaymentStateTransitionService {
         return node.toString();
     }
 
-    long computeBackoffSeconds(int retryCount) {
+    private long computeBackoffSeconds(int retryCount) {
         return Math.min((long) (backoffBaseSeconds * Math.pow(backoffMultiplier, retryCount)), 3600);
     }
 }

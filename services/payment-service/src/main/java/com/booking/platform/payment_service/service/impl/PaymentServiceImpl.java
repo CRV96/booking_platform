@@ -10,6 +10,7 @@ import com.booking.platform.payment_service.exception.PaymentGatewayUnavailableE
 import com.booking.platform.payment_service.gateway.PaymentGateway;
 import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.service.PaymentService;
+import com.booking.platform.payment_service.validation.PaymentValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -44,12 +45,12 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final PaymentGateway paymentGateway;
     private final PaymentStateTransitionService transitions;
-
-    // ── Payment flow ──────────────────────────────────────────────────────────
+    private final PaymentValidator paymentValidator;
 
     @Override
     public PaymentEntity processPayment(String bookingId, String userId, BigDecimal amount, String currency) {
-        validatePaymentInput(amount, currency);
+        paymentValidator.validateAmount(amount);
+        String normalizedCurrency = paymentValidator.validateAndNormalizeCurrency(currency);
 
         Optional<PaymentEntity> existing = paymentRepository.findByIdempotencyKey(bookingId);
         if (existing.isPresent()) {
@@ -58,9 +59,9 @@ public class PaymentServiceImpl implements PaymentService {
             return existing.get();
         }
 
-        PaymentEntity payment = transitions.createPaymentRecord(bookingId, userId, amount, currency);
+        PaymentEntity payment = transitions.createPaymentRecord(bookingId, userId, amount, normalizedCurrency);
         log.info("Payment INITIATED: id='{}', bookingId='{}', amount={} {}",
-                payment.getId(), bookingId, amount, currency);
+                payment.getId(), bookingId, amount, normalizedCurrency);
 
         try {
             GatewayPaymentResponse createResponse =
@@ -95,8 +96,6 @@ public class PaymentServiceImpl implements PaymentService {
 
         return payment;
     }
-
-    // ── Refund flow ───────────────────────────────────────────────────────────
 
     @Override
     public void processRefund(String bookingId) {
@@ -141,12 +140,10 @@ public class PaymentServiceImpl implements PaymentService {
             log.warn("Refund PENDING (gateway unavailable): paymentId='{}', bookingId='{}', reason='{}'",
                     payment.getId(), bookingId, e.getMessage());
         } catch (PaymentGatewayException e) {
-            log.error("Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
-                    payment.getId(), bookingId, e.getMessage());
+            logRefundError(payment.getId(), bookingId, e.getCause());
+
         }
     }
-
-    // ── Retry flow ────────────────────────────────────────────────────────────
 
     @Override
     public void retryPayment(PaymentEntity snapshot) {
@@ -187,17 +184,6 @@ public class PaymentServiceImpl implements PaymentService {
         }
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
-
-    private void validatePaymentInput(BigDecimal amount, String currency) {
-        if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Payment amount must be positive, got: " + amount);
-        }
-        if (currency == null || currency.isBlank() || currency.length() != 3) {
-            throw new IllegalArgumentException("Currency must be a 3-character ISO 4217 code, got: " + currency);
-        }
-    }
-
     private PaymentEntity handleGatewayException(UUID paymentId, String bookingId, Throwable cause) {
         if (cause instanceof PaymentGatewayUnavailableException) {
             PaymentEntity payment = transitions.markPendingRetry(paymentId, cause.getMessage());
@@ -220,8 +206,7 @@ public class PaymentServiceImpl implements PaymentService {
     private void handleRefundException(UUID paymentId, String bookingId, Throwable cause) {
         String reason = cause != null ? cause.getMessage() : "Unknown error";
         if (cause instanceof PaymentGatewayUnavailableException || cause instanceof PaymentGatewayException) {
-            log.error("Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
-                    paymentId, bookingId, reason);
+            logRefundError(paymentId, bookingId, cause);
         } else {
             log.error("Refund FAILED (unexpected): paymentId='{}', bookingId='{}', reason='{}'",
                     paymentId, bookingId, reason);
@@ -250,6 +235,11 @@ public class PaymentServiceImpl implements PaymentService {
 
     private void logPaymentError(UUID paymentId, String bookingId, Throwable cause) {
         log.error("Payment FAILED (gateway error): id='{}', bookingId='{}', reason='{}'",
+                paymentId, bookingId, cause.getMessage());
+    }
+
+    private void logRefundError(UUID paymentId, String bookingId, Throwable cause) {
+        log.error("Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
                 paymentId, bookingId, cause.getMessage());
     }
 }

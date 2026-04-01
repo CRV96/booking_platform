@@ -63,18 +63,21 @@ public class OutboxPollingPublisher {
     @Value("${outbox.poll.batch-size:100}")
     private int batchSize;
 
+    @Value("${outbox.cleanup.retention-hours:24}")
+    private int retentionHours;
+
     // ── Poll: read unpublished → publish to Kafka → mark published ──────────
 
     /**
      * Polls for unpublished outbox events every 500ms and publishes them to Kafka.
      *
-     * <p>Reads at most {@code outbox.poll.batch-size} events per tick to avoid
-     * loading unbounded rows under backlog conditions. Events are published
-     * synchronously ({@code .get()}) to ensure Kafka confirms receipt before
-     * marking as published.
+     * <p>Uses {@code fixedDelay} (not {@code fixedRate}) so the next poll starts
+     * 500ms after the previous one finishes — preventing overlapping polls under
+     * backlog. Reads at most {@code outbox.poll.batch-size} events per tick.
+     * Events are published synchronously ({@code .get()}) to ensure Kafka confirms
+     * receipt before marking as published.
      */
-    @Scheduled(fixedRateString = "${outbox.poll.interval:500}")
-    @Transactional
+    @Scheduled(fixedDelayString = "${outbox.poll.interval:500}")
     public void pollAndPublish() {
         List<OutboxEventEntity> events =
                 outboxEventRepository.findByPublishedAtIsNullOrderByCreatedAtAsc(
@@ -120,7 +123,7 @@ public class OutboxPollingPublisher {
     @Scheduled(fixedRateString = "${outbox.cleanup.interval:3600000}")
     @Transactional
     public void cleanup() {
-        Instant cutoff = Instant.now().minus(Duration.ofHours(24));
+        Instant cutoff = Instant.now().minus(Duration.ofHours(retentionHours));
         outboxEventRepository.deleteByPublishedAtBefore(cutoff);
         log.debug("Outbox cleanup: deleted events published before {}", cutoff);
     }
