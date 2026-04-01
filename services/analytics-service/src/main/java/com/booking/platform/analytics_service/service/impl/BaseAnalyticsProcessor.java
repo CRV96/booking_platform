@@ -14,6 +14,7 @@ import org.springframework.data.mongodb.core.query.Update;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -22,7 +23,7 @@ import java.util.Map;
  * <p>Provides shared helper methods used across event, booking, and payment
  * processors:
  * <ul>
- *   <li>{@link #saveRawEvent} — appends to the immutable {@code events_log}</li>
+ *   <li>{@link #saveRawEvent} — appends to the immutable {@code event_log}</li>
  *   <li>{@link #upsertEventStats} — {@code $inc}/{@code $set} upsert on {@code event_stats}</li>
  *   <li>{@link #upsertDailyMetrics} — {@code $inc} upsert on {@code daily_metrics} (by today's UTC date)</li>
  *   <li>{@link #upsertCategoryStats} — {@code $inc} upsert on {@code category_stats}</li>
@@ -114,13 +115,15 @@ public abstract class BaseAnalyticsProcessor {
         }
     }
 
+    // Helper method to build the payload map for a PaymentDto, used when saving raw events.
     protected Map<String, Object> getPayload(PaymentDto payment) {
-        return Map.of(
-                AnalyticsConstants.PAYLOAD_PAYMENT_ID, payment.paymentId(),
-                AnalyticsConstants.PAYLOAD_BOOKING_ID, payment.bookingId(),
-                AnalyticsConstants.PAYLOAD_AMOUNT, payment.amount(),
-                AnalyticsConstants.PAYLOAD_CURRENCY, payment.currency(),
-                AnalyticsConstants.PAYLOAD_REASON, payment.reason(),
-                AnalyticsConstants.PAYLOAD_REFUND_ID, payment.refundId());
+        Map<String, Object> payload = new HashMap<>();
+        payload.put(AnalyticsConstants.PAYLOAD_PAYMENT_ID, payment.paymentId());
+        payload.put(AnalyticsConstants.PAYLOAD_BOOKING_ID, payment.bookingId());
+        payload.put(AnalyticsConstants.PAYLOAD_AMOUNT,     payment.amount());
+        payload.put(AnalyticsConstants.PAYLOAD_CURRENCY,   payment.currency());
+        if (payment.reason()   != null) payload.put(AnalyticsConstants.PAYLOAD_REASON,    payment.reason());
+        if (payment.refundId() != null) payload.put(AnalyticsConstants.PAYLOAD_REFUND_ID, payment.refundId());
+        return payload;
     }
 }

@@ -90,6 +90,7 @@ public class BookingLifecycleConsumer {
                         .key(record.key())
                         .bookingId(event.getBookingId())
                         .eventId(event.getEventId())
+                        .reason(event.getReason())
                         .build());
     }
 }
