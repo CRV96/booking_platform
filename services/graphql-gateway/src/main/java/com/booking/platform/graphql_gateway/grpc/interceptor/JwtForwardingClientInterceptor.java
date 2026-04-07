@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.grpc.interceptor;
 
+import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.interceptor.GrpcGlobalClientInterceptor;
@@ -20,7 +21,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 public class JwtForwardingClientInterceptor implements ClientInterceptor {
 
     private static final Metadata.Key<String> AUTHORIZATION_KEY =
-            Metadata.Key.of("authorization", Metadata.ASCII_STRING_MARSHALLER);
+            Metadata.Key.of(GatewayConstants.Security.GRPC_AUTHORIZATION_HEADER, Metadata.ASCII_STRING_MARSHALLER);
 
     @Override
     public <ReqT, RespT> ClientCall<ReqT, RespT> interceptCall(
@@ -36,7 +37,7 @@ public class JwtForwardingClientInterceptor implements ClientInterceptor {
 
                 if (authentication instanceof JwtAuthenticationToken jwtAuth) {
                     String tokenValue = jwtAuth.getToken().getTokenValue();
-                    headers.put(AUTHORIZATION_KEY, "Bearer " + tokenValue);
+                    headers.put(AUTHORIZATION_KEY, GatewayConstants.Security.BEARER_PREFIX + tokenValue);
                     log.debug("Forwarding JWT to gRPC call: {}", method.getFullMethodName());
                 }
 

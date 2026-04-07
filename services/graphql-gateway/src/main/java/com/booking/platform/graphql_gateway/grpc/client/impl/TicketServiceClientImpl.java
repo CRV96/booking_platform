@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class TicketServiceClientImpl implements TicketClient {
 
-    @GrpcClient(TicketServiceConst.TicketGRPCConst.TICKET_SERVICE_GRPC_CLIENT)
+    @GrpcClient(TicketServiceConst.GRPC_CLIENT)
     private TicketServiceGrpc.TicketServiceBlockingStub ticketServiceStub;
 
     @Override

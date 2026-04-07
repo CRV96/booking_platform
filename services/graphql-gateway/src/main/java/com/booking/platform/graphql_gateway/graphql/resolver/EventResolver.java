@@ -6,9 +6,7 @@ import com.booking.platform.graphql_gateway.dto.event.Event;
 import com.booking.platform.graphql_gateway.dto.event.EventConnection;
 import com.booking.platform.graphql_gateway.dto.event.UpdateEventInput;
 import com.booking.platform.graphql_gateway.grpc.client.EventClient;
-import com.booking.platform.graphql_gateway.dto.event.EventCreateRequest;
 import com.booking.platform.graphql_gateway.dto.event.EventSearchRequest;
-import com.booking.platform.graphql_gateway.dto.event.EventUpdateRequest;
 import com.booking.platform.graphql_gateway.annotations.PublicEndpoint;
 import com.booking.platform.graphql_gateway.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -105,14 +103,7 @@ public class EventResolver {
         authService.requireRole(Roles.EMPLOYEE.getValue());
         log.info("GraphQL mutation: createEvent title='{}'", input.title());
 
-        return Event.fromGrpc(eventClient.createEvent(new EventCreateRequest(
-                input.title(),
-                input.description(),
-                input.category(),
-                input.dateTime(),
-                input.venue(),
-                input.seatCategories()
-        )).getEvent());
+        return Event.fromGrpc(eventClient.createEvent(input).getEvent());
     }
 
     @MutationMapping
@@ -122,15 +113,7 @@ public class EventResolver {
         authService.requireRole(Roles.EMPLOYEE.getValue());
         log.info("GraphQL mutation: updateEvent({})", id);
 
-        return Event.fromGrpc(eventClient.updateEvent(new EventUpdateRequest(
-                id,
-                input.title(),
-                input.description(),
-                input.category(),
-                input.dateTime(),
-                input.venue(),
-                input.seatCategories()
-        )).getEvent());
+        return Event.fromGrpc(eventClient.updateEvent(id, input).getEvent());
     }
 
     @MutationMapping

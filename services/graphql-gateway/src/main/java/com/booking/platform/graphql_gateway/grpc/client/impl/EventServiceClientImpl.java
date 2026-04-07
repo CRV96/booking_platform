@@ -2,11 +2,11 @@ package com.booking.platform.graphql_gateway.grpc.client.impl;
 
 import com.booking.platform.common.grpc.event.*;
 import com.booking.platform.graphql_gateway.constants.EventServiceConst;
+import com.booking.platform.graphql_gateway.dto.event.CreateEventInput;
+import com.booking.platform.graphql_gateway.dto.event.EventSearchRequest;
+import com.booking.platform.graphql_gateway.dto.event.UpdateEventInput;
 import com.booking.platform.graphql_gateway.dto.event.VenueInput;
 import com.booking.platform.graphql_gateway.grpc.client.EventClient;
-import com.booking.platform.graphql_gateway.dto.event.EventCreateRequest;
-import com.booking.platform.graphql_gateway.dto.event.EventSearchRequest;
-import com.booking.platform.graphql_gateway.dto.event.EventUpdateRequest;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
@@ -15,23 +15,23 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class EventServiceClientImpl implements EventClient {
 
-    @GrpcClient(EventServiceConst.EventGRPCConst.EVENT_SERVICE_GRPC_CLIENT)
+    @GrpcClient(EventServiceConst.GRPC_CLIENT)
     private EventServiceGrpc.EventServiceBlockingStub eventServiceStub;
 
     @Override
-    public EventResponse createEvent(EventCreateRequest request) {
-        log.debug("Calling event-service: CreateEvent title='{}'", request.title());
+    public EventResponse createEvent(CreateEventInput input) {
+        log.debug("Calling event-service: CreateEvent title='{}'", input.title());
 
         CreateEventRequest.Builder requestBuilder = CreateEventRequest.newBuilder()
-                .setTitle(request.title())
-                .setCategory(request.category())
-                .setDateTime(request.dateTime())
-                .setVenue(buildVenue(request.venue()));
+                .setTitle(input.title())
+                .setCategory(input.category())
+                .setDateTime(input.dateTime())
+                .setVenue(buildVenue(input.venue()));
 
-        if (request.description() != null) requestBuilder.setDescription(request.description());
+        if (input.description() != null) requestBuilder.setDescription(input.description());
 
-        if (request.seatCategories() != null) {
-            request.seatCategories().forEach(sc -> requestBuilder.addSeatCategories(
+        if (input.seatCategories() != null) {
+            input.seatCategories().forEach(sc -> requestBuilder.addSeatCategories(
                     SeatCategoryInfo.newBuilder()
                             .setName(sc.name())
                             .setPrice(sc.price())
@@ -54,23 +54,23 @@ public class EventServiceClientImpl implements EventClient {
     }
 
     @Override
-    public EventResponse updateEvent(EventUpdateRequest request) {
-        log.debug("Calling event-service: UpdateEvent {}", request.eventId());
+    public EventResponse updateEvent(String eventId, UpdateEventInput input) {
+        log.debug("Calling event-service: UpdateEvent {}", eventId);
 
         UpdateEventRequest.Builder requestBuilder = UpdateEventRequest.newBuilder()
-                .setEventId(request.eventId());
+                .setEventId(eventId);
 
-        if (request.title() != null) requestBuilder.setTitle(request.title());
-        if (request.description() != null) requestBuilder.setDescription(request.description());
-        if (request.category() != null) requestBuilder.setCategory(request.category());
-        if (request.dateTime() != null) requestBuilder.setDateTime(request.dateTime());
+        if (input.title() != null) requestBuilder.setTitle(input.title());
+        if (input.description() != null) requestBuilder.setDescription(input.description());
+        if (input.category() != null) requestBuilder.setCategory(input.category());
+        if (input.dateTime() != null) requestBuilder.setDateTime(input.dateTime());
 
-        if (request.venue() != null) {
-            requestBuilder.setVenue(buildVenue(request.venue()));
+        if (input.venue() != null) {
+            requestBuilder.setVenue(buildVenue(input.venue()));
         }
 
-        if (request.seatCategories() != null) {
-            request.seatCategories().forEach(sc -> requestBuilder.addSeatCategories(
+        if (input.seatCategories() != null) {
+            input.seatCategories().forEach(sc -> requestBuilder.addSeatCategories(
                     SeatCategoryInfo.newBuilder()
                             .setName(sc.name())
                             .setPrice(sc.price())
@@ -126,8 +126,8 @@ public class EventServiceClientImpl implements EventClient {
     private VenueInfo buildVenue(VenueInput venue) {
         VenueInfo.Builder builder = VenueInfo.newBuilder()
                 .setName(venue.name())
-                .setCity(venue.city() != null ? venue.city() : "")
-                .setCountry(venue.country() != null ? venue.country() : "");
+                .setCity(venue.city())
+                .setCountry(venue.country());
 
         if (venue.address() != null) builder.setAddress(venue.address());
         if (venue.latitude() != null) builder.setLatitude(venue.latitude());

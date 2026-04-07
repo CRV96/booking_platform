@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.graphql.resolver;
 
+import com.booking.platform.common.enums.Roles;
 import com.booking.platform.common.grpc.user.SearchUsersResponse;
 import com.booking.platform.common.grpc.user.UserInfo;
 import com.booking.platform.graphql_gateway.dto.user.UpdateProfileInput;
@@ -39,6 +40,7 @@ public class UserResolver {
 
     @QueryMapping
     public User user(@Argument("id") String id) {
+        authService.requireRole(Roles.ADMIN.getValue());
         log.debug("GraphQL query: user({})", id);
 
         UserInfo userInfo = userOperationsClient.getUser(id);
@@ -51,6 +53,7 @@ public class UserResolver {
             @Argument("query") String query,
             @Argument("page") Integer page,
             @Argument("pageSize") Integer pageSize) {
+        authService.requireRole(Roles.ADMIN.getValue());
         log.debug("GraphQL query: users(query={}, page={}, pageSize={})", query, page, pageSize);
 
         int actualPage = page != null ? page : 0;

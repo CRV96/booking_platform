@@ -18,8 +18,8 @@ import java.util.UUID;
  * request and places it in SLF4J MDC. The correlation ID is also added to
  * the response headers for client-side debugging.
  *
- * <p>The {@link CorrelationIdClientInterceptor} picks up the MDC value when
- * making outgoing gRPC calls from the gateway.
+ * <p>The MDC value is available for local structured logging. Propagation to
+ * downstream gRPC services is not yet implemented.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)

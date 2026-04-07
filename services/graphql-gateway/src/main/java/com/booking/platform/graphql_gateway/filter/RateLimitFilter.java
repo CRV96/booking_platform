@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.filter;
 
+import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import com.booking.platform.graphql_gateway.properties.RateLimitProperties;
 import com.booking.platform.graphql_gateway.config.SecurityConfig;
 import com.booking.platform.graphql_gateway.dto.RateLimitResult;
@@ -41,7 +42,6 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class RateLimitFilter extends OncePerRequestFilter {
 
-    private static final String GRAPHQL_PATH = "/graphql";
     private static final String RATE_LIMIT_JSON_TEMPLATE = """
             {"errors":[{"message":"Too many requests. Please try again later.","extensions":{"code":"RATE_001","retryAfter":%d}}]}""";
 
@@ -53,7 +53,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        if (!GRAPHQL_PATH.equals(request.getServletPath())) {
+        if (!GatewayConstants.GraphQL.PATH.equals(request.getServletPath())) {
             filterChain.doFilter(request, response);
             return;
         }
@@ -65,10 +65,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 
         if (auth instanceof JwtAuthenticationToken jwtAuth) {
-            identity = "user:" + jwtAuth.getToken().getSubject();
+            identity = GatewayConstants.RateLimit.IDENTITY_USER + jwtAuth.getToken().getSubject();
             tier = properties.getAuthenticated();
         } else {
-            identity = "ip:" + getClientIp(request);
+            identity = GatewayConstants.RateLimit.IDENTITY_IP + getClientIp(request);
             tier = properties.getAnonymous();
         }
 
@@ -91,22 +91,26 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private void writeRateLimitResponse(HttpServletResponse response, RateLimitResult result) throws IOException {
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setHeader("Retry-After", String.valueOf(result.retryAfterSeconds()));
-        response.setHeader("X-RateLimit-Limit", String.valueOf(result.limit()));
-        response.setHeader("X-RateLimit-Remaining", "0");
-        response.setHeader("X-RateLimit-Reset", String.valueOf(
+        response.setHeader(GatewayConstants.Http.HEADER_RETRY_AFTER, String.valueOf(result.retryAfterSeconds()));
+        response.setHeader(GatewayConstants.Http.HEADER_RATE_LIMIT, String.valueOf(result.limit()));
+        response.setHeader(GatewayConstants.Http.HEADER_RATE_LIMIT_REMAINING, "0");
+        response.setHeader(GatewayConstants.Http.HEADER_RATE_LIMIT_RESET, String.valueOf(
                 Instant.now().getEpochSecond() + result.retryAfterSeconds()));
 
         response.getWriter().write(String.format(RATE_LIMIT_JSON_TEMPLATE, result.retryAfterSeconds()));
     }
 
     private void addRateLimitHeaders(HttpServletResponse response, RateLimitResult result) {
-        response.setHeader("X-RateLimit-Limit", String.valueOf(result.limit()));
-        response.setHeader("X-RateLimit-Remaining", String.valueOf(result.remaining()));
+        response.setHeader(GatewayConstants.Http.HEADER_RATE_LIMIT, String.valueOf(result.limit()));
+        response.setHeader(GatewayConstants.Http.HEADER_RATE_LIMIT_REMAINING, String.valueOf(result.remaining()));
     }
 
     private String getClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
+        // In Docker deployment, nginx always overwrites X-Forwarded-For with
+        // $remote_addr before forwarding — the value is therefore trustworthy.
+        // In local dev (Option A, no nginx), the header is absent and we fall
+        // back to remoteAddr, which is already the real client IP.
+        String forwarded = request.getHeader(GatewayConstants.Http.HEADER_FORWARDED_FOR);
         if (forwarded != null && !forwarded.isBlank()) {
             return forwarded.split(",")[0].trim();
         }

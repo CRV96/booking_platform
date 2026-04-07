@@ -2,13 +2,13 @@
 	"info": {
 		"_postman_id": "booking-platform-docker",
 		"name": "Booking Platform - Docker Services",
-		"description": "Health checks and verification requests for the Dockerized booking platform.\n\n## How to use\n\n1. Start the platform: `docker compose -f infrastructure/docker/docker-compose.yaml up --build`\n2. Wait for all containers to reach healthy status\n3. Run the requests in order — start with Health Checks to verify all services are up\n4. Then run the GraphQL API requests (same as local, but through Docker containers)\n\n## Port mappings\n\n| Service | Port |\n|---|---|\n| config-service | 8888 |\n| eureka-service | 8761 |\n| graphql-gateway | 8080 |\n| user-service | 8081 |\n| event-service | 8082 |\n| booking-service | 8083 |\n| payment-service | 8084 |\n| notification-service | 8086 |\n| analytics-service | 8087 |\n| ticket-service | 8088 |\n\n## Differences from local collection\n\n- Keycloak runs on port 8180 (same as local)\n- All services communicate internally via Docker network\n- gRPC mTLS is disabled (plaintext within Docker network)\n- Config server URL is overridden via CONFIG_SERVER_URL env var",
+		"description": "Health checks and verification requests for the Dockerized booking platform.\n\n## How to use\n\n1. Start the platform: `docker compose -f infrastructure/docker/docker-compose.yaml up --build`\n2. Wait for all containers to reach healthy status\n3. Run the requests in order — start with Health Checks to verify all services are up\n4. Then run the GraphQL API requests (same as local, but through Docker containers)\n\n## Entry point\n\nAll GraphQL requests go through nginx (port 80), which reverse-proxies to graphql-gateway.\nThe graphql-gateway container is **not** directly accessible from the host in Docker deployment.\n\n| Access point | URL | Purpose |\n|---|---|---|\n| GraphQL API | http://localhost/graphql | All queries and mutations |\n| GraphiQL UI | http://localhost/graphiql | Interactive query editor |\n\n## Port mappings (infrastructure)\n\n| Service | Port |\n|---|---|\n| nginx (reverse proxy) | 80 |\n| config-service | 8888 |\n| eureka-service | 8761 |\n| keycloak | 8180 |\n| user-service | 8081 |\n| event-service | 8082 |\n| booking-service | 8083 |\n| payment-service | 8084 |\n| notification-service | 8086 |\n| analytics-service | 8087 |\n| ticket-service | 8088 |\n\n## Differences from local collection\n\n- GraphQL API is on port 80 (via nginx), not 8080\n- Keycloak runs on port 8180 (same as local)\n- All services communicate internally via Docker network\n- gRPC mTLS is disabled (plaintext within Docker network)\n- Config server URL is overridden via CONFIG_SERVER_URL env var",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
 		{
 			"key": "baseUrl",
-			"value": "http://localhost:8080",
+			"value": "http://localhost",
 			"type": "string"
 		},
 		{

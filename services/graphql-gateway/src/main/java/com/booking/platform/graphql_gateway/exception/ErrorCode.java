@@ -33,7 +33,8 @@ public enum ErrorCode {
     // General errors
     INTERNAL_ERROR("GEN_001", "An unexpected error occurred"),
     SERVICE_UNAVAILABLE("GEN_002", "Service is temporarily unavailable"),
-    NOT_IMPLEMENTED("GEN_003", "This feature is not yet implemented");
+    NOT_IMPLEMENTED("GEN_003", "This feature is not yet implemented"),
+    NOT_FOUND("GEN_004", "The requested resource was not found");
     /**
      * ==============================================
      */

@@ -262,8 +262,8 @@ services:
       args:
         SERVICE_NAME: graphql-gateway
     container_name: graphql-gateway
-    ports:
-      - "8080:8080"
+    # No external port — only reachable through the nginx reverse proxy (port 80).
+    # For direct access during local development use Option A (run-service.sh).
     environment:
       <<: *common-env
       SPRING_DATA_REDIS_HOST: bkg-redis
@@ -305,6 +305,26 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/actuator/health || exit 1"]
       <<: *common-healthcheck
+    networks:
+      - bkg-network
+
+  # ==================== REVERSE PROXY ====================
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: bkg-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      graphql-gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - bkg-network
 

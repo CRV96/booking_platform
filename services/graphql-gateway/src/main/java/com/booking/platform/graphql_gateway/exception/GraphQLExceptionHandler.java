@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.exception;
 
+import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import graphql.schema.DataFetchingEnvironment;
@@ -54,9 +55,9 @@ public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter
                 .message(message)
                 .errorType(errorType)
                 .extensions(Map.of(
-                        "code", code,
-                        "timestamp", Instant.now().toString(),
-                        "path", env.getExecutionStepInfo().getPath().toString()
+                        GatewayConstants.GraphQL.EXTENSION_CODE, code,
+                        GatewayConstants.GraphQL.EXTENSION_TIMESTAMP, Instant.now().toString(),
+                        GatewayConstants.GraphQL.EXTENSION_PATH, env.getExecutionStepInfo().getPath().toString()
                 ))
                 .build();
     }
@@ -64,16 +65,17 @@ public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter
     private ErrorType mapErrorType(ErrorCode errorCode) {
         return switch (errorCode) {
             case INVALID_CREDENTIALS, INVALID_TOKEN, TOKEN_EXPIRED, UNAUTHENTICATED -> ErrorType.UNAUTHORIZED;
-            case FORBIDDEN -> ErrorType.FORBIDDEN;
-            case USER_NOT_FOUND -> ErrorType.NOT_FOUND;
+            case FORBIDDEN, USER_DISABLED -> ErrorType.FORBIDDEN;
+            case USER_NOT_FOUND, NOT_FOUND -> ErrorType.NOT_FOUND;
             case VALIDATION_ERROR, INVALID_INPUT, USER_ALREADY_EXISTS -> ErrorType.BAD_REQUEST;
-            default -> ErrorType.INTERNAL_ERROR;
+            case RATE_LIMITED -> ErrorType.FORBIDDEN;
+            case INTERNAL_ERROR, SERVICE_UNAVAILABLE, NOT_IMPLEMENTED -> ErrorType.INTERNAL_ERROR;
         };
     }
 
     private ErrorCode mapGrpcStatus(Status.Code code) {
         return switch (code) {
-            case NOT_FOUND -> ErrorCode.USER_NOT_FOUND;
+            case NOT_FOUND -> ErrorCode.NOT_FOUND;
             case ALREADY_EXISTS -> ErrorCode.USER_ALREADY_EXISTS;
             case UNAUTHENTICATED -> ErrorCode.INVALID_CREDENTIALS;
             case PERMISSION_DENIED -> ErrorCode.FORBIDDEN;
