@@ -5,7 +5,7 @@ package com.booking.platform.graphql_gateway.dto.event;
  */
 public record SeatCategory(
         String name,
-        double price,
+        String price,
         String currency,
         int totalSeats,
         int availableSeats
@@ -13,7 +13,7 @@ public record SeatCategory(
     public static SeatCategory fromGrpc(com.booking.platform.common.grpc.event.SeatCategoryInfo seatCategoryInfo) {
         return new SeatCategory(
                 seatCategoryInfo.getName(),
-                seatCategoryInfo.getPrice(),
+                String.valueOf(seatCategoryInfo.getPrice()),
                 seatCategoryInfo.getCurrency(),
                 seatCategoryInfo.getTotalSeats(),
                 seatCategoryInfo.getAvailableSeats()

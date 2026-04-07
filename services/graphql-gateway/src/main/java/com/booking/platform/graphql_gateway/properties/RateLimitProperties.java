@@ -13,7 +13,6 @@ public class RateLimitProperties {
 
     private Tier anonymous = new Tier(30, 60);
     private Tier authenticated = new Tier(100, 60);
-    private Tier search = new Tier(10, 60);
 
     @Getter
     @Setter

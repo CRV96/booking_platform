@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class BookingServiceClientImpl implements BookingClient {
 
-    @GrpcClient(BookingServiceConst.BookingGRPCConst.BOOKING_SERVICE_GRPC_CLIENT)
+    @GrpcClient(BookingServiceConst.GRPC_CLIENT)
     private BookingServiceGrpc.BookingServiceBlockingStub bookingServiceStub;
 
     @Override

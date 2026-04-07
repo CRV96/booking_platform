@@ -22,15 +22,6 @@ public interface AuthService {
     boolean isAuthenticated();
 
     /**
-     * Requires authentication for the current request.
-     * Call this at the start of protected resolver methods.
-     *
-     * @throws com.booking.platform.graphql_gateway.exception.GraphQLException
-     *         with UNAUTHENTICATED if no valid authentication is present
-     */
-    void requireAuthentication();
-
-    /**
      * Requires the authenticated user to have the specified role.
      * Roles are sourced from the {@code realm_access.roles} claim in the JWT,
      * mapped as Spring Security authorities with the "ROLE_" prefix.

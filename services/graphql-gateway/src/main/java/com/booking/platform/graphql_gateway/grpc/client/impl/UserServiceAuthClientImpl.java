@@ -5,13 +5,13 @@ import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
 import com.booking.platform.graphql_gateway.constants.UserServiceConst;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.inject.GrpcClient;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
-@Component
+@Service
 @Slf4j
 public class UserServiceAuthClientImpl implements AuthClient {
 
-    @GrpcClient(UserServiceConst.UserGRPCConst.USER_SERVICE_GRPC_CLIENT)
+    @GrpcClient(UserServiceConst.GRPC_CLIENT)
     private AuthServiceGrpc.AuthServiceBlockingStub authServiceStub;
 
     @Override

@@ -46,7 +46,7 @@ type Event {
 
     venue: VenueInfo!
     organizer: OrganizerInfo!
-    seatCategories: [SeatCategoryInfo!]!
+    seatCategories: [SeatCategory!]!
 
     createdAt: String
     updatedAt: String
@@ -68,9 +68,9 @@ type OrganizerInfo {
     email: String!
 }
 
-type SeatCategoryInfo {
+type SeatCategory {
     name: String!
-    price: Float!
+    price: String!
     currency: String!
     totalSeats: Int!
     availableSeats: Int!

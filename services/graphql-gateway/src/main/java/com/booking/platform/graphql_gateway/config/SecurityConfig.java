@@ -1,6 +1,7 @@
 package com.booking.platform.graphql_gateway.config;
 
 import com.booking.platform.graphql_gateway.filter.RateLimitFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,14 +35,11 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
  */
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 @ConditionalOnProperty(name = "security.jwt.enabled", havingValue = "true")
 public class SecurityConfig {
 
     private final RateLimitFilter rateLimitFilter;
-
-    public SecurityConfig(RateLimitFilter rateLimitFilter) {
-        this.rateLimitFilter = rateLimitFilter;
-    }
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {

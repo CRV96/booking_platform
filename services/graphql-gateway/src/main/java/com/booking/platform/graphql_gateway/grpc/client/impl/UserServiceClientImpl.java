@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserServiceClientImpl implements UserOperationsClient {
 
-    @GrpcClient(UserServiceConst.UserGRPCConst.USER_SERVICE_GRPC_CLIENT)
+    @GrpcClient(UserServiceConst.GRPC_CLIENT)
     private UserServiceGrpc.UserServiceBlockingStub userServiceStub;
 
     @Override

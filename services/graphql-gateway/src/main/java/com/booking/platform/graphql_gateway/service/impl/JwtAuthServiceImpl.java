@@ -41,13 +41,6 @@ public class JwtAuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void requireAuthentication() {
-        if (!isAuthenticated()) {
-            throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
-        }
-    }
-
-    @Override
     public boolean hasRole(String role) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (!(authentication instanceof JwtAuthenticationToken)) {

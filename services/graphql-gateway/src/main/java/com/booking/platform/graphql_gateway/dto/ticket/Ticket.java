@@ -1,13 +1,11 @@
 package com.booking.platform.graphql_gateway.dto.ticket;
 
 import com.booking.platform.common.grpc.ticket.TicketInfo;
-import lombok.Builder;
 
 /**
  * GraphQL DTO representing a ticket.
  * Maps from the gRPC TicketInfo protobuf message.
  */
-@Builder
 public record Ticket(
         String id,
         String bookingId,

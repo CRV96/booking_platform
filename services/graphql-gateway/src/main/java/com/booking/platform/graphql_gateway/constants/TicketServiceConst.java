@@ -1,8 +1,8 @@
 package com.booking.platform.graphql_gateway.constants;
 
-public interface TicketServiceConst {
+public final class TicketServiceConst {
 
-    interface TicketGRPCConst {
-        String TICKET_SERVICE_GRPC_CLIENT = "ticket-service";
-    }
+    private TicketServiceConst() {}
+
+    public static final String GRPC_CLIENT = "ticket-service";
 }
