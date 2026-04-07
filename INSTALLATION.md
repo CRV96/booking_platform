@@ -84,13 +84,24 @@ Each service has a unique default debug port (5005–5014). Run `./run-service.s
 
 ## Option B: Full Docker Deployment
 
-Run **everything** in Docker — infrastructure and all 10 microservices. Best for testing the full stack without installing Java.
+Run **everything** in Docker — infrastructure, nginx, and all microservices. Best for testing the full stack without installing Java.
 
 ```bash
 docker compose -f infrastructure/docker/docker-compose.yaml up --build -d
 ```
 
 This builds all services from source using the multi-stage `Dockerfile.service` and starts them alongside the infrastructure. The first build takes several minutes (Maven downloads dependencies); subsequent builds use Docker layer caching.
+
+### API Entry Point (Docker)
+
+In Docker deployment, **nginx** acts as the reverse proxy in front of the graphql-gateway. All API traffic goes through port **80**:
+
+| URL | Purpose |
+|-----|---------|
+| `http://localhost/graphql` | GraphQL API endpoint |
+| `http://localhost/graphiql` | GraphiQL interactive UI |
+
+> The `graphql-gateway` container does **not** expose port 8080 to the host in Docker mode — nginx is the only public entry point. This is intentional: clients always go through the proxy, which stamps the real client IP for rate limiting.
 
 To rebuild a single service after code changes:
 
@@ -190,6 +201,32 @@ curl -s -X POST http://localhost:8180/realms/booking-platform/protocol/openid-co
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=password&client_id=booking-app&username=john.doe&password=customer123"
 ```
+
+---
+
+## nginx (Reverse Proxy)
+
+nginx sits in front of the `graphql-gateway` container in Docker deployment. It is responsible for:
+
+- **Single entry point** — all traffic enters on port 80; clients never talk directly to the gateway container
+- **IP stamping** — nginx overwrites `X-Forwarded-For` with the real client IP (`$remote_addr`) before forwarding, preventing clients from spoofing their IP to bypass rate limiting
+
+### Configuration
+
+The nginx config lives at `infrastructure/nginx/nginx.conf`. It defines one upstream (`graphql-gateway:8080`) and one `server` block on port 80 that proxies everything through.
+
+```
+Client → nginx:80 → graphql-gateway:8080 (internal Docker network)
+```
+
+### nginx is Docker-only
+
+nginx is only used in **Option B (Full Docker)**. In **Option A (local dev)**, the graphql-gateway runs directly on `localhost:8080` and you access it directly — no nginx involved.
+
+| Mode | GraphQL API URL |
+|------|----------------|
+| Option A (local dev) | `http://localhost:8080/graphql` |
+| Option B (Docker) | `http://localhost/graphql` |
 
 ---
 
@@ -392,10 +429,10 @@ The pipeline runs Build, Test, and Docker jobs even without SonarCloud. Only the
 
 Two Postman collections are provided in the `postman/` folder for quick API testing:
 
-| Collection | Purpose |
-|------------|---------|
-| `Booking-Platform-GraphQL.postman_collection.json` | GraphQL queries and mutations via the gateway |
-| `Booking-Platform-Docker.postman_collection.json` | Same requests configured for the Docker deployment |
+| Collection | Base URL | Purpose |
+|------------|----------|---------|
+| `Booking-Platform-GraphQL.postman_collection.json` | `http://localhost:8080` | Local dev (Option A) — direct gateway access |
+| `Booking-Platform-Docker.postman_collection.json` | `http://localhost` | Docker deployment (Option B) — through nginx |
 
 Import into Postman: **File** → **Import** → select the JSON file.
 

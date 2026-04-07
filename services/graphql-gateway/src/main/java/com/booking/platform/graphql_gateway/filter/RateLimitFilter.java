@@ -106,6 +106,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     private String getClientIp(HttpServletRequest request) {
+        // In Docker deployment, nginx always overwrites X-Forwarded-For with
+        // $remote_addr before forwarding — the value is therefore trustworthy.
+        // In local dev (Option A, no nginx), the header is absent and we fall
+        // back to remoteAddr, which is already the real client IP.
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
             return forwarded.split(",")[0].trim();
