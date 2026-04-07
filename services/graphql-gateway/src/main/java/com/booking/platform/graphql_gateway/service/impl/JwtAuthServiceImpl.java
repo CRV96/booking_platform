@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.service.impl;
 
+import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import com.booking.platform.graphql_gateway.exception.ErrorCode;
 import com.booking.platform.graphql_gateway.exception.GraphQLException;
 import com.booking.platform.graphql_gateway.service.AuthService;
@@ -46,7 +47,7 @@ public class JwtAuthServiceImpl implements AuthService {
         if (!(authentication instanceof JwtAuthenticationToken)) {
             return false;
         }
-        String authorityName = "ROLE_" + role;
+        String authorityName = GatewayConstants.Security.ROLE_PREFIX + role;
         return authentication.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals(authorityName));
     }

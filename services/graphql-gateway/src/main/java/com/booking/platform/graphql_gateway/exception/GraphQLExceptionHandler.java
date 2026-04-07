@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.exception;
 
+import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorBuilder;
 import graphql.schema.DataFetchingEnvironment;
@@ -54,9 +55,9 @@ public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter
                 .message(message)
                 .errorType(errorType)
                 .extensions(Map.of(
-                        "code", code,
-                        "timestamp", Instant.now().toString(),
-                        "path", env.getExecutionStepInfo().getPath().toString()
+                        GatewayConstants.GraphQL.EXTENSION_CODE, code,
+                        GatewayConstants.GraphQL.EXTENSION_TIMESTAMP, Instant.now().toString(),
+                        GatewayConstants.GraphQL.EXTENSION_PATH, env.getExecutionStepInfo().getPath().toString()
                 ))
                 .build();
     }

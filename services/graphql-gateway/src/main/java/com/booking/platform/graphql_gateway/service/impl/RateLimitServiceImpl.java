@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.service.impl;
 
+import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import com.booking.platform.graphql_gateway.dto.RateLimitResult;
 import com.booking.platform.graphql_gateway.service.RateLimitService;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +24,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RateLimitServiceImpl implements RateLimitService {
 
-    private static final String KEY_PREFIX = "ratelimit:";
-
     /**
      * Lua script: INCR the key, set EXPIRE only if this is the first increment (count == 1).
      * Returns [currentCount, ttlRemaining].
@@ -45,7 +44,7 @@ public class RateLimitServiceImpl implements RateLimitService {
 
     @Override
     public RateLimitResult checkLimit(String key, int maxRequests, int windowSeconds) {
-        String redisKey = KEY_PREFIX + key + ":" + currentWindow(windowSeconds);
+        String redisKey = GatewayConstants.RateLimit.KEY_PREFIX + key + ":" + currentWindow(windowSeconds);
 
         try {
             @SuppressWarnings("unchecked")

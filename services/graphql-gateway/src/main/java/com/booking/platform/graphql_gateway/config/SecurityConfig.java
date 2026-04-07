@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.config;
 
+import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import com.booking.platform.graphql_gateway.filter.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -73,14 +74,14 @@ public class SecurityConfig {
         @Override
         @SuppressWarnings("unchecked")
         public Collection<GrantedAuthority> convert(Jwt jwt) {
-            Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
-            if (realmAccess == null || !realmAccess.containsKey("roles")) {
+            Map<String, Object> realmAccess = jwt.getClaimAsMap(GatewayConstants.Security.KEYCLOAK_REALM_ACCESS_CLAIM);
+            if (realmAccess == null || !realmAccess.containsKey(GatewayConstants.Security.KEYCLOAK_ROLES_CLAIM)) {
                 return List.of();
             }
 
-            List<String> roles = (List<String>) realmAccess.get("roles");
+            List<String> roles = (List<String>) realmAccess.get(GatewayConstants.Security.KEYCLOAK_ROLES_CLAIM);
             return roles.stream()
-                    .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role))
+                    .map(role -> (GrantedAuthority) new SimpleGrantedAuthority(GatewayConstants.Security.ROLE_PREFIX + role))
                     .toList();
         }
     }
