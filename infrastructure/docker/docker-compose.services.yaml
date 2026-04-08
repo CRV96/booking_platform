@@ -29,8 +29,6 @@ services:
       args:
         SERVICE_NAME: config-service
     container_name: config-service
-    ports:
-      - "8888:8888"
     environment:
       SPRING_PROFILES_ACTIVE: native
       CONFIG_SERVER_CONFIGURATIONS_PATH: /config
