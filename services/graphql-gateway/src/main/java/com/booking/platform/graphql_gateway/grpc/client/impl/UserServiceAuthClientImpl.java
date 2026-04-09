@@ -1,6 +1,12 @@
 package com.booking.platform.graphql_gateway.grpc.client.impl;
 
-import com.booking.platform.common.grpc.user.*;
+import com.booking.platform.common.grpc.user.AuthResponse;
+import com.booking.platform.common.grpc.user.AuthServiceGrpc;
+import com.booking.platform.common.grpc.user.LoginRequest;
+import com.booking.platform.common.grpc.user.LogoutRequest;
+import com.booking.platform.common.grpc.user.LogoutResponse;
+import com.booking.platform.common.grpc.user.RefreshTokenRequest;
+import com.booking.platform.common.grpc.user.RegisterRequest;
 import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
 import com.booking.platform.graphql_gateway.constants.UserServiceConst;
 import lombok.extern.slf4j.Slf4j;

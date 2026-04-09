@@ -30,10 +30,11 @@ show_usage() {
     echo "Usage: ./build-service.sh <module-name> [options]"
     echo ""
     echo "Modules:"
-    echo "  common              - All common modules (proto, core, security)"
+    echo "  common              - All common modules (proto, core, security, events)"
     echo "  common-proto        - Shared protobuf definitions and gRPC stubs"
     echo "  common-core         - Shared base classes and utilities"
     echo "  common-security     - Shared server security infrastructure"
+    echo "  common-events       - Shared Kafka event definitions (Protobuf)"
     echo "  config-service      - Configuration server"
     echo "  eureka-service      - Service discovery"
     echo "  graphql-gateway     - GraphQL API gateway"
@@ -62,6 +63,7 @@ show_usage() {
     echo "  ./build-service.sh user-service --tests      # Build and run tests"
     echo "  ./build-service.sh common                    # Build all common modules"
     echo "  ./build-service.sh common-proto              # Build only proto stubs"
+    echo "  ./build-service.sh common-events             # Build only Kafka event definitions"
     echo "  ./build-service.sh all                       # Build all app services (no infra)"
     echo "  ./build-service.sh all --clean               # Clean and build all app services"
     echo "  ./build-service.sh all --clean --tests       # Build all + run integration tests"
@@ -111,7 +113,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Common sub-modules
-COMMON_MODULES="common/common-proto,common/common-core,common/common-security"
+COMMON_MODULES="common/common-proto,common/common-core,common/common-security,common/common-events"
 
 # Services lists
 INFRA_SERVICES="services/config-service,services/eureka-service"
@@ -130,6 +132,9 @@ case $MODULE_NAME in
         ;;
     common-security)
         MODULE_PATH="common/common-security"
+        ;;
+    common-events)
+        MODULE_PATH="common/common-events"
         ;;
     config-service|eureka-service|graphql-gateway|user-service|event-service|booking-service|payment-service|ticket-service|notification-service|analytics-service)
         MODULE_PATH="services/$MODULE_NAME"

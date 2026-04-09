@@ -22,7 +22,7 @@ import java.util.Map;
 /**
  * Kafka consumer configuration for notification-service.
  *
- * <p>Notification-service consumes from 8 topics — all event and booking lifecycle
+ * <p>Notification-service consumes from 7 topics — all event and booking lifecycle
  * events, plus payment failure events. Base infrastructure (error handler, DLT,
  * default factory) is inherited from {@link BaseKafkaConsumerConfig}; only the
  * typed event factories are defined here.

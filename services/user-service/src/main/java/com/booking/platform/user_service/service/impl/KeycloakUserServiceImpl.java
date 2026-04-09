@@ -17,11 +17,13 @@ import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,9 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
     private final Keycloak keycloak;
     private final KeycloakProperties keycloakProperties;
+
+    @Value("${verification.email.lifespan-seconds:604800}")
+    private int verificationEmailLifespanSeconds;
 
     @Override
     public String createUser(String email, String password, String firstName, String lastName,
@@ -183,6 +188,30 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         return result;
+    }
+
+    @Override
+    public void sendVerificationEmail(String userId) {
+        log.info("Sending verification email for userId='{}'", userId);
+
+        getUsersResource().get(userId)
+                .executeActionsEmail(List.of("VERIFY_EMAIL"), verificationEmailLifespanSeconds);
+    }
+
+    @Override
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_USER_BY_ID, key = "#a0"),
+            @CacheEvict(value = CacheConfig.CACHE_USER_BY_EMAIL, allEntries = true),
+            @CacheEvict(value = CacheConfig.CACHE_USER_BY_USERNAME, allEntries = true)
+    })
+    public void deleteUser(String userId) {
+        log.info("Deleting user: '{}'", userId);
+
+        try {
+            getUsersResource().get(userId).remove();
+        } catch (NotFoundException e) {
+            log.warn("User not found for deletion: '{}'", userId);
+        }
     }
 
     // ==================== Private Helper Methods ====================

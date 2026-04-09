@@ -123,6 +123,7 @@ services:
 
     volumes:
       - ../../init/keycloak:/opt/keycloak/data/import
+      - ../../infrastructure/keycloak/themes:/opt/keycloak/themes
     depends_on:
       postgres:
         condition: service_healthy
