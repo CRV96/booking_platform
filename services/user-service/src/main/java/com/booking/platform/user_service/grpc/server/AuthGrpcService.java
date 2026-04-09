@@ -61,6 +61,9 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
         UserRepresentation user = keycloakUserService.getUserById(userId);
         List<String> roles = keycloakUserService.getUserRoles(userId);
 
+        // Trigger Keycloak to send the verification email directly via MailHog
+        keycloakUserService.sendVerificationEmail(userId);
+
         AuthResponse response = buildAuthResponse(tokens, user, roles);
 
         responseObserver.onNext(response);

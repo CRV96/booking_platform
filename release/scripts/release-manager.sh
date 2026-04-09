@@ -56,7 +56,7 @@ wait_for_keycloak() {
     info "Waiting for Keycloak to be ready..."
     RETRIES=60
     while [ "$RETRIES" -gt 0 ]; do
-        if curl -sf "http://bkg-keycloak:8080/health/ready" > /dev/null 2>&1; then
+        if curl -sf "http://bkg-keycloak:9000/health/ready" > /dev/null 2>&1; then
             info "Keycloak is ready."
             return 0
         fi
@@ -95,21 +95,45 @@ apply_keycloak_for_version() {
     for JSON_FILE in "$KC_DIR"/*.json; do
         [ -f "$JSON_FILE" ] || continue
         FILENAME=$(basename "$JSON_FILE")
-        info "  [$VERSION] Importing $FILENAME..."
 
-        HTTP_STATUS=$(curl -s -o /tmp/kc_response.txt -w "%{http_code}" \
-            -X POST "http://bkg-keycloak:8080/admin/realms/booking-platform/partialImport" \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json" \
-            -d @"$JSON_FILE" 2>/dev/null)
+        # Files named realm-*.json are applied as realm-level updates (PUT).
+        # All other *.json files are applied via partialImport.
+        case "$FILENAME" in
+            realm-*.json)
+                info "  [$VERSION] Applying realm update from $FILENAME..."
 
-        RESPONSE=$(cat /tmp/kc_response.txt 2>/dev/null || echo "")
+                HTTP_STATUS=$(curl -s -o /tmp/kc_response.txt -w "%{http_code}" \
+                    -X PUT "http://bkg-keycloak:8080/admin/realms/booking-platform" \
+                    -H "Authorization: Bearer $TOKEN" \
+                    -H "Content-Type: application/json" \
+                    -d @"$JSON_FILE" 2>/dev/null)
 
-        if [ "$HTTP_STATUS" = "200" ]; then
-            info "  [$VERSION] $FILENAME imported successfully. Response: $RESPONSE"
-        else
-            warn "  [$VERSION] $FILENAME import returned HTTP $HTTP_STATUS: $RESPONSE"
-        fi
+                RESPONSE=$(cat /tmp/kc_response.txt 2>/dev/null || echo "")
+
+                if [ "$HTTP_STATUS" = "204" ]; then
+                    info "  [$VERSION] $FILENAME applied successfully."
+                else
+                    warn "  [$VERSION] $FILENAME update returned HTTP $HTTP_STATUS: $RESPONSE"
+                fi
+                ;;
+            *)
+                info "  [$VERSION] Importing $FILENAME..."
+
+                HTTP_STATUS=$(curl -s -o /tmp/kc_response.txt -w "%{http_code}" \
+                    -X POST "http://bkg-keycloak:8080/admin/realms/booking-platform/partialImport" \
+                    -H "Authorization: Bearer $TOKEN" \
+                    -H "Content-Type: application/json" \
+                    -d @"$JSON_FILE" 2>/dev/null)
+
+                RESPONSE=$(cat /tmp/kc_response.txt 2>/dev/null || echo "")
+
+                if [ "$HTTP_STATUS" = "200" ]; then
+                    info "  [$VERSION] $FILENAME imported successfully. Response: $RESPONSE"
+                else
+                    warn "  [$VERSION] $FILENAME import returned HTTP $HTTP_STATUS: $RESPONSE"
+                fi
+                ;;
+        esac
     done
 }
 

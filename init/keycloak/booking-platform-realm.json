@@ -2,6 +2,17 @@
   "realm": "booking-platform",
   "enabled": true,
   "sslRequired": "none",
+  "emailTheme": "booking-platform",
+
+  "smtpServer": {
+    "host": "bkg-mailhog",
+    "port": "1025",
+    "from": "noreply@booking-platform.com",
+    "fromDisplayName": "Booking Platform",
+    "auth": "false",
+    "ssl": "false",
+    "starttls": "false"
+  },
 
   "attributes": {
     "userProfileEnabled": "true"

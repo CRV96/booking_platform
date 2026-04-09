@@ -32,4 +32,20 @@ public interface KeycloakUserService extends UserLookupService<UserRepresentatio
 
     int getUserCount(String search);
 
+    /**
+     * Triggers Keycloak to send a verification email to the user.
+     * Keycloak generates the token, sends the email via its configured SMTP,
+     * and marks emailVerified=true automatically when the link is clicked.
+     *
+     * @param userId the Keycloak user ID
+     */
+    void sendVerificationEmail(String userId);
+
+    /**
+     * Permanently deletes a user from Keycloak.
+     *
+     * @param userId the Keycloak user ID to delete
+     */
+    void deleteUser(String userId);
+
 }

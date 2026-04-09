@@ -19,5 +19,5 @@
 # The release-manager only handles non-Flyway changes (e.g. Keycloak clients).
 # ============================================================================
 
-current-version: v1.0.1
-target-version: v1.0.1
+current-version: v1.0.2
+target-version: v1.0.2
