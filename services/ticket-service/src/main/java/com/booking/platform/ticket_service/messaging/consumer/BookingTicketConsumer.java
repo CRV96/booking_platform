@@ -5,8 +5,11 @@ import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.ticket_service.document.TicketDocument;
 import com.booking.platform.ticket_service.dto.TicketDTO;
 import com.booking.platform.ticket_service.service.TicketService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -36,7 +39,8 @@ public class BookingTicketConsumer {
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
 
-        log.debug("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', category='{}', qty={}, partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', category='{}', qty={}, partition={}, offset={}",
                 event.getBookingId(), event.getEventId(), event.getSeatCategory(), event.getQuantity(),
                 record.partition(), record.offset());
 
@@ -52,14 +56,13 @@ public class BookingTicketConsumer {
                             .build()
             );
 
-            log.debug("Generated {} tickets for booking '{}': {}",
-                    tickets.size(),
-                    event.getBookingId(),
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Generated {} tickets for booking '{}': {}",
+                    tickets.size(), event.getBookingId(),
                     tickets.stream().map(TicketDocument::getTicketNumber).toList());
 
         } catch (Exception e) {
-            log.error("Failed to generate tickets for booking '{}': {}",
-                    event.getBookingId(), e.getMessage());
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.TICKET_GENERATION_FAILED,
+                    "Failed to generate tickets for booking '{}'", event.getBookingId(), e);
 
             throw e;  // re-throw to trigger retry + DLT
         }

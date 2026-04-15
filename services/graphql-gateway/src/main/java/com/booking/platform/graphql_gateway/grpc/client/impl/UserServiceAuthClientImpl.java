@@ -9,7 +9,9 @@ import com.booking.platform.common.grpc.user.RefreshTokenRequest;
 import com.booking.platform.common.grpc.user.RegisterRequest;
 import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
 import com.booking.platform.graphql_gateway.constants.UserServiceConst;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +25,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
     @Override
     public AuthResponse register(String email, String password, String firstName, String lastName,
                                   String phoneNumber, String country, String preferredLanguage) {
-        log.debug("Calling user-service: Register for {}", email);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: Register for {}", email);
 
         RegisterRequest.Builder builder = RegisterRequest.newBuilder()
             .setEmail(email)
@@ -40,7 +42,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
 
     @Override
     public AuthResponse login(String username, String password) {
-        log.debug("Calling user-service: Login for {}", username);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: Login for {}", username);
 
         LoginRequest request = LoginRequest.newBuilder()
             .setUsername(username)
@@ -52,7 +54,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
 
     @Override
     public AuthResponse refreshToken(String refreshToken) {
-        log.debug("Calling user-service: RefreshToken");
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: RefreshToken");
 
         RefreshTokenRequest request = RefreshTokenRequest.newBuilder()
             .setRefreshToken(refreshToken)
@@ -63,7 +65,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
 
     @Override
     public boolean logout(String refreshToken) {
-        log.debug("Calling user-service: Logout");
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: Logout");
 
         LogoutRequest request = LogoutRequest.newBuilder()
             .setRefreshToken(refreshToken)

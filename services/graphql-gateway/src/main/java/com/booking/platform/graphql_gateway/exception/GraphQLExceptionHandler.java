@@ -6,7 +6,10 @@ import graphql.GraphqlErrorBuilder;
 import graphql.schema.DataFetchingEnvironment;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.graphql.execution.DataFetcherExceptionResolverAdapter;
 import org.springframework.graphql.execution.ErrorType;
 import org.springframework.security.access.AccessDeniedException;
@@ -45,7 +48,7 @@ public class GraphQLExceptionHandler extends DataFetcherExceptionResolverAdapter
         }
 
         // Log unexpected errors
-        log.error("Unexpected error in GraphQL resolver", ex);
+        ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.GRPC_CALL_FAILED, ex);
         return buildError(env, ErrorCode.INTERNAL_ERROR.getDefaultMessage(), 
                          ErrorCode.INTERNAL_ERROR.getCode(), ErrorType.INTERNAL_ERROR);
     }

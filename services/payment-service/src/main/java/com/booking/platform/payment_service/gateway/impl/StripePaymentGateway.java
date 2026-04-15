@@ -17,8 +17,11 @@ import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.retry.annotation.Retry;
 import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -57,7 +60,7 @@ public class StripePaymentGateway implements PaymentGateway {
     @PostConstruct
     void init() {
         Stripe.apiKey = apiKey;
-        log.info("Stripe gateway initialized");
+        ApplicationLogger.logMessage(log, Level.INFO, "Stripe gateway initialized");
     }
 
     // ── Gateway methods (decorated with Resilience4j) ────────────────────────
@@ -82,13 +85,13 @@ public class StripePaymentGateway implements PaymentGateway {
 
                 PaymentIntent intent = PaymentIntent.create(params);
 
-                log.info("Stripe PaymentIntent created: id='{}', status='{}', amount={} {}",
+                ApplicationLogger.logMessage(log, Level.INFO, "Stripe PaymentIntent created: id='{}', status='{}', amount={} {}",
                         intent.getId(), intent.getStatus(), amount, currency);
 
                 return new GatewayPaymentResponse(intent.getId(), intent.getStatus(), "card");
 
             } catch (StripeException e) {
-                log.error("Stripe createPaymentIntent failed: code='{}', message='{}'",
+                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_INTENT_FAILED, "Stripe createPaymentIntent failed: code='{}', message='{}'",
                         e.getCode(), e.getMessage());
                 throw new PaymentGatewayException("Failed to create payment intent: " + e.getMessage(), e);
             }
@@ -111,7 +114,7 @@ public class StripePaymentGateway implements PaymentGateway {
 
                 intent = intent.confirm(params);
 
-                log.info("Stripe PaymentIntent confirmed: id='{}', status='{}'",
+                ApplicationLogger.logMessage(log, Level.INFO, "Stripe PaymentIntent confirmed: id='{}', status='{}'",
                         intent.getId(), intent.getStatus());
 
                 String paymentMethod = intent.getPaymentMethod() != null
@@ -121,7 +124,7 @@ public class StripePaymentGateway implements PaymentGateway {
                 return new GatewayPaymentResponse(intent.getId(), intent.getStatus(), paymentMethod);
 
             } catch (StripeException e) {
-                log.error("Stripe confirmPayment failed: code='{}', message='{}'",
+                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_CONFIRMATION_FAILED, "Stripe confirmPayment failed: code='{}', message='{}'",
                         e.getCode(), e.getMessage());
                 throw new PaymentGatewayException("Failed to confirm payment: " + e.getMessage(), e);
             }
@@ -146,13 +149,13 @@ public class StripePaymentGateway implements PaymentGateway {
 
                 Refund refund = Refund.create(params);
 
-                log.info("Stripe Refund created: id='{}', status='{}', amount={}",
+                ApplicationLogger.logMessage(log, Level.INFO, "Stripe Refund created: id='{}', status='{}', amount={}",
                         refund.getId(), refund.getStatus(), amount);
 
                 return new GatewayRefundResponse(refund.getId(), refund.getStatus());
 
             } catch (StripeException e) {
-                log.error("Stripe createRefund failed: code='{}', message='{}'",
+                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_REFUND_FAILED, "Stripe createRefund failed: code='{}', message='{}'",
                         e.getCode(), e.getMessage());
                 throw new PaymentGatewayException("Failed to create refund: " + e.getMessage(), e);
             }
@@ -166,7 +169,7 @@ public class StripePaymentGateway implements PaymentGateway {
 
     private CompletableFuture<GatewayPaymentResponse> createPaymentIntentFallback(
             BigDecimal amount, String currency, String idempotencyKey, Throwable t) {
-        log.warn("FALLBACK createPaymentIntent: amount={} {}, key='{}', cause='{}'",
+        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE, "FALLBACK createPaymentIntent: amount={} {}, key='{}', cause='{}'",
                 amount, currency, idempotencyKey, t.getMessage());
         return CompletableFuture.failedFuture(
                 new PaymentGatewayUnavailableException(
@@ -175,7 +178,7 @@ public class StripePaymentGateway implements PaymentGateway {
 
     private CompletableFuture<GatewayPaymentResponse> confirmPaymentFallback(
             String externalPaymentId, Throwable t) {
-        log.warn("FALLBACK confirmPayment: externalId='{}', cause='{}'",
+        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE, "FALLBACK confirmPayment: externalId='{}', cause='{}'",
                 externalPaymentId, t.getMessage());
         return CompletableFuture.failedFuture(
                 new PaymentGatewayUnavailableException(
@@ -184,7 +187,7 @@ public class StripePaymentGateway implements PaymentGateway {
 
     private CompletableFuture<GatewayRefundResponse> createRefundFallback(
             String externalPaymentId, BigDecimal amount, Throwable t) {
-        log.warn("FALLBACK createRefund: externalId='{}', amount={}, cause='{}'",
+        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE, "FALLBACK createRefund: externalId='{}', amount={}, cause='{}'",
                 externalPaymentId, amount, t.getMessage());
         return CompletableFuture.failedFuture(
                 new PaymentGatewayUnavailableException(

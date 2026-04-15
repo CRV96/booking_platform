@@ -7,8 +7,11 @@ import com.booking.platform.booking_service.lock.LockHandle;
 import com.booking.platform.booking_service.properties.BookingExpirationProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -51,7 +54,7 @@ public class BookingExpirationScheduler {
     void processExpiredBookings() {
         LockHandle lock = lockService.tryAcquireOnce(SCHEDULER_LOCK_KEY, properties.getLockTtl());
         if (lock == null) {
-            log.debug("Expiration scheduler skipped — another instance holds the lock");
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Expiration scheduler skipped — another instance holds the lock");
             return;
         }
 
@@ -71,11 +74,12 @@ public class BookingExpirationScheduler {
                     bookingService.expireBooking(booking.getId());
                     processed++;
                 } catch (Exception e) {
-                    log.error("Failed to expire booking '{}': {}", booking.getId(), e.getMessage());
+                    ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.BOOKING_CANCELLATION_FAILED,
+                            "Failed to expire booking '{}'", booking.getId(), e);
                 }
             }
 
-            log.info("Expiration scheduler completed: expired={}, total_found={}",
+            ApplicationLogger.logMessage(log, Level.INFO, "Expiration scheduler completed: expired={}, total_found={}",
                     processed, expired.size());
 
         } finally {

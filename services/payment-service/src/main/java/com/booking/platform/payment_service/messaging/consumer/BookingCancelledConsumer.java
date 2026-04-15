@@ -3,9 +3,11 @@ package com.booking.platform.payment_service.messaging.consumer;
 import com.booking.platform.common.events.BookingCancelledEvent;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.payment_service.service.PaymentService;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.slf4j.event.Level;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -39,7 +41,7 @@ public class BookingCancelledConsumer {
     public void onBookingCancelled(ConsumerRecord<String, BookingCancelledEvent> record) {
         BookingCancelledEvent event = record.value();
 
-        log.info("[BOOKING_CANCELLED] bookingId='{}', reason='{}' | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.INFO, "[BOOKING_CANCELLED] bookingId='{}', reason='{}' | partition={}, offset={}",
                 event.getBookingId(),
                 event.getReason(),
                 record.partition(),

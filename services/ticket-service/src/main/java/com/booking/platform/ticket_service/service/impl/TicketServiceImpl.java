@@ -10,8 +10,10 @@ import com.booking.platform.ticket_service.exception.TicketNotFoundException;
 import com.booking.platform.ticket_service.repository.TicketRepository;
 import com.booking.platform.ticket_service.service.TicketService;
 import com.booking.platform.ticket_service.validation.BookingValidation;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -53,14 +55,14 @@ public class TicketServiceImpl implements TicketService {
         // Idempotency: if tickets already exist for this booking, return them
         List<TicketDocument> existing = ticketRepository.findByBookingId(source.bookingId());
         if (!existing.isEmpty()) {
-            log.info("Tickets already exist for booking '{}', returning {} existing tickets",
+            ApplicationLogger.logMessage(log, Level.INFO, "Tickets already exist for booking '{}', returning {} existing tickets",
                     source.bookingId(), existing.size());
             return existing;
         }
 
         List<TicketDocument> saved = ticketRepository.saveAll(generateTicketsForBooking(source));
 
-        log.debug("Generated {} tickets for booking '{}': {}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Generated {} tickets for booking '{}': {}",
                 saved.size(), source.bookingId(),
                 saved.stream().map(TicketDocument::getTicketNumber).toList());
 
@@ -73,7 +75,7 @@ public class TicketServiceImpl implements TicketService {
         bookingValidation.validateBookingId(bookingId);
 
         final List<TicketDocument> ticketDocuments = ticketRepository.findByBookingId(bookingId);
-        log.debug("Retrieved {} tickets for booking '{}'", ticketDocuments.size(), bookingId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Retrieved {} tickets for booking '{}'", ticketDocuments.size(), bookingId);
 
         return ticketDocuments;
     }
@@ -81,7 +83,7 @@ public class TicketServiceImpl implements TicketService {
     /** Retrieves a ticket by its unique ticket number. */
     @Override
     public TicketDocument getByTicketNumber(String ticketNumber) {
-        log.debug("Retrieving ticket by ticket number '{}'", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Retrieving ticket by ticket number '{}'", ticketNumber);
         return ticketRepository.findByTicketNumber(ticketNumber)
                 .orElseThrow(() -> new TicketNotFoundException(ticketNumber));
     }
@@ -90,7 +92,7 @@ public class TicketServiceImpl implements TicketService {
     @Override
     public List<TicketDocument> getTicketsByUserId(String userId) {
         final List<TicketDocument> ticketDocuments = ticketRepository.findByUserId(userId);
-        log.debug("Retrieved {} tickets for user '{}'", ticketDocuments.size(), userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Retrieved {} tickets for user '{}'", ticketDocuments.size(), userId);
 
         return ticketDocuments;
     }
@@ -99,7 +101,7 @@ public class TicketServiceImpl implements TicketService {
     @Override
     public Page<TicketDocument> getTicketsByUserId(String userId, Pageable pageable) {
         Page<TicketDocument> ticketPage = ticketRepository.findByUserId(userId, pageable);
-        log.debug("Retrieved {} tickets (page {}) for user '{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Retrieved {} tickets (page {}) for user '{}'",
                 ticketPage.getNumberOfElements(), pageable.getPageNumber(), userId);
         return ticketPage;
     }
@@ -121,7 +123,7 @@ public class TicketServiceImpl implements TicketService {
 
         ticket.setStatus(TicketStatus.USED);
         TicketDocument saved = ticketRepository.save(ticket);
-        log.info("Ticket '{}' validated — marked as USED", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.INFO, "Ticket '{}' validated — marked as USED", ticketNumber);
         return saved;
     }
 
@@ -134,7 +136,7 @@ public class TicketServiceImpl implements TicketService {
                 .orElseThrow(() -> new TicketNotFoundException(ticketNumber));
 
         if (ticket.getStatus() == TicketStatus.CANCELLED) {
-            log.debug("Ticket '{}' is already cancelled", ticketNumber);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Ticket '{}' is already cancelled", ticketNumber);
             return ticket;
         }
         if (ticket.getStatus() == TicketStatus.USED) {
@@ -143,7 +145,7 @@ public class TicketServiceImpl implements TicketService {
 
         ticket.setStatus(TicketStatus.CANCELLED);
         TicketDocument saved = ticketRepository.save(ticket);
-        log.info("Ticket '{}' cancelled", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.INFO, "Ticket '{}' cancelled", ticketNumber);
         return saved;
     }
 
@@ -159,7 +161,7 @@ public class TicketServiceImpl implements TicketService {
                 .substring(0, TicketConstants.TICKET_NUMBER_SUFFIX_LENGTH)
                 .toUpperCase();
 
-        log.debug("Generated ticket number suffix: '{}'", suffix);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Generated ticket number suffix: '{}'", suffix);
 
         return TicketConstants.TICKET_NUMBER_PREFIX + "-" + datePrefix + "-" + suffix;
     }
@@ -172,7 +174,7 @@ public class TicketServiceImpl implements TicketService {
         List<TicketDocument> tickets = new ArrayList<>(source.quantity());
         String datePrefix = LocalDate.now().format(DATE_FORMAT);
 
-        log.debug("Generating {} tickets for booking '{}', event '{}', user '{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Generating {} tickets for booking '{}', event '{}', user '{}'",
                 source.quantity(), source.bookingId(), source.eventId(), source.userId());
 
         for (int i = 0; i < source.quantity(); i++) {
@@ -193,7 +195,7 @@ public class TicketServiceImpl implements TicketService {
             tickets.add(ticket);
         }
 
-        log.debug("Generated ticket numbers for booking '{}': {}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Generated ticket numbers for booking '{}': {}",
                 source.bookingId(), tickets.stream().map(TicketDocument::getTicketNumber).toList());
 
         return tickets;

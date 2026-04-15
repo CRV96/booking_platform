@@ -2,7 +2,9 @@ package com.booking.platform.graphql_gateway.grpc.interceptor;
 
 import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import io.grpc.*;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.client.interceptor.GrpcGlobalClientInterceptor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -38,7 +40,7 @@ public class JwtForwardingClientInterceptor implements ClientInterceptor {
                 if (authentication instanceof JwtAuthenticationToken jwtAuth) {
                     String tokenValue = jwtAuth.getToken().getTokenValue();
                     headers.put(AUTHORIZATION_KEY, GatewayConstants.Security.BEARER_PREFIX + tokenValue);
-                    log.debug("Forwarding JWT to gRPC call: {}", method.getFullMethodName());
+                    ApplicationLogger.logMessage(log, Level.DEBUG, "Forwarding JWT to gRPC call: {}", method.getFullMethodName());
                 }
 
                 super.start(responseListener, headers);

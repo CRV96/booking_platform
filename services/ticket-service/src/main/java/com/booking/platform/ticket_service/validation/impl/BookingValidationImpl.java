@@ -4,8 +4,10 @@ import com.booking.platform.ticket_service.dto.TicketDTO;
 import com.booking.platform.ticket_service.exception.InvalidTicketOperationException;
 import com.booking.platform.ticket_service.properties.TicketProperties;
 import com.booking.platform.ticket_service.validation.BookingValidation;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -40,14 +42,14 @@ public class BookingValidationImpl implements BookingValidation {
 
     private void validateRequired(String value, String fieldName) {
         if (value == null || value.isBlank()) {
-            log.debug("Validation failed: {} is required", fieldName);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Validation failed: {} is required", fieldName);
             throw new InvalidTicketOperationException(fieldName + " is required");
         }
     }
 
     private void validateQuantity(int quantity) {
         if (quantity <= 0 || quantity > ticketProperties.maxQuantityPerBooking()) {
-            log.debug("Invalid booking quantity: {}", quantity);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Invalid booking quantity: {}", quantity);
             throw new InvalidTicketOperationException(
                     "Booking quantity must be between 1 and " + ticketProperties.maxQuantityPerBooking());
         }

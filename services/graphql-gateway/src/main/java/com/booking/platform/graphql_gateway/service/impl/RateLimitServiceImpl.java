@@ -3,8 +3,11 @@ package com.booking.platform.graphql_gateway.service.impl;
 import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import com.booking.platform.graphql_gateway.dto.RateLimitResult;
 import com.booking.platform.graphql_gateway.service.RateLimitService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -61,7 +64,8 @@ public class RateLimitServiceImpl implements RateLimitService {
 
             return new RateLimitResult(allowed, count, maxRequests, retryAfter);
         } catch (Exception e) {
-            log.warn("Rate limit check failed for key '{}', allowing request: {}", key, e.getMessage());
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.RATE_LIMIT_STORE_FAILED,
+                    "Rate limit check failed for key '{}', allowing request: {}", key, e.getMessage());
             return new RateLimitResult(true, 0, maxRequests, 0);
         }
     }

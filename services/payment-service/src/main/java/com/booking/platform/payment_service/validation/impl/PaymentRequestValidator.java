@@ -3,7 +3,9 @@ package com.booking.platform.payment_service.validation.impl;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.validation.PaymentValidator;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -26,7 +28,7 @@ public class PaymentRequestValidator implements PaymentValidator {
             throw new IllegalArgumentException("Booking ID must not be null or blank, got: " + bookingId);
         }
 
-        log.debug("Booking ID '{}' is valid", bookingId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Booking ID '{}' is valid", bookingId);
     }
 
     @Override
@@ -35,7 +37,7 @@ public class PaymentRequestValidator implements PaymentValidator {
             throw new IllegalArgumentException("User ID must not be null or blank, got: " + userId);
         }
 
-        log.debug("User ID '{}' is valid", userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "User ID '{}' is valid", userId);
     }
 
     @Override
@@ -44,7 +46,7 @@ public class PaymentRequestValidator implements PaymentValidator {
             throw new IllegalArgumentException("Payment amount must be positive, got: " + amount);
         }
 
-        log.debug("Payment amount {} is valid", amount);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Payment amount {} is valid", amount);
     }
 
     @Override
@@ -54,12 +56,12 @@ public class PaymentRequestValidator implements PaymentValidator {
                     "Currency must be a 3-character ISO 4217 code, got: " + currency);
         }
 
-        log.debug("Currency code '{}' is valid", currency);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Currency code '{}' is valid", currency);
     }
 
     @Override
     public void validatePaymentForProcessing(String bookingId, String userId, BigDecimal amount, String currency) {
-        log.debug("Validating payment request: bookingId='{}', userId='{}', amount={}, currency='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Validating payment request: bookingId='{}', userId='{}', amount={}, currency='{}'",
                 bookingId, userId, amount, currency);
 
         validateBookingId(bookingId);
@@ -67,7 +69,7 @@ public class PaymentRequestValidator implements PaymentValidator {
         validateAmount(amount);
         validateCurrency(currency);
 
-        log.debug("Payment request validation passed for bookingId='{}'", bookingId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Payment request validation passed for bookingId='{}'", bookingId);
     }
 
     @Override
@@ -77,7 +79,7 @@ public class PaymentRequestValidator implements PaymentValidator {
                     "Invalid status transition for payment id='%s': %s → %s",
                     payment.getId(), payment.getStatus(), target));
         }
-        log.debug("Valid status transition for payment id='{}': {} → {}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Valid status transition for payment id='{}': {} → {}",
                 payment.getId(), payment.getStatus(), target);
     }
 }

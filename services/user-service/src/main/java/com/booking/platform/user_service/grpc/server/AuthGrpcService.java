@@ -10,10 +10,12 @@ import com.booking.platform.user_service.mapper.UserGrpcMapper;
 import com.booking.platform.user_service.service.AuthService;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.AuthValidator;
+import com.booking.platform.common.logging.ApplicationLogger;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
+import org.slf4j.event.Level;
 import org.keycloak.representations.idm.UserRepresentation;
 
 import java.time.Instant;
@@ -41,7 +43,7 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
     @PublicEndpoint
     @Override
     public void register(RegisterRequest request, StreamObserver<AuthResponse> responseObserver) {
-        log.debug("gRPC Register request for email: {}", request.getEmail());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC Register request for email: {}", request.getEmail());
 
         authValidator.validateRegisterRequest(request);
 
@@ -68,13 +70,13 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
-        log.debug("User registered successfully: {}", userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "User registered successfully: {}", userId);
     }
 
     @PublicEndpoint
     @Override
     public void login(LoginRequest request, StreamObserver<AuthResponse> responseObserver) {
-        log.debug("gRPC Login request for user: {}", request.getUsername());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC Login request for user: {}", request.getUsername());
 
         authValidator.validateLoginRequest(request);
 
@@ -87,13 +89,13 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
-        log.debug("Login successful for user: {}", request.getUsername());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Login successful for user: {}", request.getUsername());
     }
 
     @PublicEndpoint
     @Override
     public void refreshToken(RefreshTokenRequest request, StreamObserver<AuthResponse> responseObserver) {
-        log.debug("gRPC RefreshToken request");
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC RefreshToken request");
 
         authValidator.validateRefreshToken(request.getRefreshToken());
 
@@ -109,12 +111,12 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
-        log.debug("Token refresh successful");
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Token refresh successful");
     }
 
     @Override
     public void logout(LogoutRequest request, StreamObserver<LogoutResponse> responseObserver) {
-        log.debug("gRPC Logout request for user: {}", GrpcUserContext.getUserId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC Logout request for user: {}", GrpcUserContext.getUserId());
 
         // Blacklist the current access token
         String jti = GrpcUserContext.getJwtId();
@@ -132,7 +134,7 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
-        log.debug("Logout successful, token blacklisted: {}", jti);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Logout successful, token blacklisted: {}", jti);
     }
 
     private AuthResponse buildAuthResponse(TokenResponseDTO tokens, UserRepresentation user, List<String> roles) {

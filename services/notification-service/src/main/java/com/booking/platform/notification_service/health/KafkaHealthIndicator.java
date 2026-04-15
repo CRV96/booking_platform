@@ -2,8 +2,11 @@ package com.booking.platform.notification_service.health;
 
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.notification_service.constants.NotificationConst;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.ListTopicsOptions;
 import org.springframework.boot.actuate.health.Health;
@@ -106,7 +109,8 @@ public class KafkaHealthIndicator implements HealthIndicator {
                     .build();
 
         } catch (Exception e) {
-            log.warn("[KAFKA_HEALTH] Broker unreachable: {}", e.getMessage());
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[KAFKA_HEALTH] Broker unreachable: {}", e.getMessage());
             return Health.down()
                     .withDetail(NotificationConst.HealthDetails.BROKER_STATUS, NotificationConst.HealthDetails.UNREACHABLE)
                     .withDetail(NotificationConst.HealthDetails.ERROR, e.getMessage())

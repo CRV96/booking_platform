@@ -5,8 +5,11 @@ import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.service.PaymentService;
 import jakarta.persistence.OptimisticLockException;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -51,19 +54,21 @@ public class PaymentRetryScheduler {
             return;
         }
 
-        log.info("Payment retry scheduler: {} payment(s) due for retry", due.size());
+        ApplicationLogger.logMessage(log, Level.INFO, "Payment retry scheduler: {} payment(s) due for retry", due.size());
 
         for (PaymentEntity payment : due) {
             try {
                 paymentService.retryPayment(payment);
             } catch (OptimisticLockException e) {
                 // Another process already picked up this payment — safe to skip
-                log.debug("Skipping retry for paymentId='{}': already claimed by another process",
+                ApplicationLogger.logMessage(log, Level.DEBUG,
+                        "Skipping retry for paymentId='{}': already claimed by another process",
                         payment.getId());
             } catch (Exception e) {
                 // Log and continue — one failure must not block retries for other payments
-                log.error("Retry attempt failed for paymentId='{}', bookingId='{}': {}",
-                        payment.getId(), payment.getBookingId(), e.getMessage());
+                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_RETRY_FAILED,
+                        "Retry attempt failed for paymentId='{}', bookingId='{}'",
+                        payment.getId(), payment.getBookingId(), e);
             }
         }
     }

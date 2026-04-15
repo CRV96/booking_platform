@@ -5,8 +5,10 @@ import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.service.PaymentAnalyticsProcessor;
 import com.booking.platform.common.events.*;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -32,7 +34,7 @@ public class PaymentLifecycleConsumer {
     public void onPaymentCompleted(ConsumerRecord<String, PaymentCompletedEvent> record) {
         PaymentCompletedEvent event = record.value();
 
-        log.debug("[PAYMENT_COMPLETED] paymentId='{}', bookingId='{}', amount={} {} | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[PAYMENT_COMPLETED] paymentId='{}', bookingId='{}', amount={} {} | partition={}, offset={}",
                 event.getPaymentId(), event.getBookingId(),
                 event.getAmount(), event.getCurrency(),
                 record.partition(), record.offset());
@@ -55,7 +57,7 @@ public class PaymentLifecycleConsumer {
     public void onPaymentFailed(ConsumerRecord<String, PaymentFailedEvent> record) {
         PaymentFailedEvent event = record.value();
 
-        log.debug("[PAYMENT_FAILED] paymentId='{}', bookingId='{}', reason='{}' | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[PAYMENT_FAILED] paymentId='{}', bookingId='{}', reason='{}' | partition={}, offset={}",
                 event.getPaymentId(), event.getBookingId(), event.getReason(),
                 record.partition(), record.offset());
 
@@ -77,7 +79,7 @@ public class PaymentLifecycleConsumer {
     public void onRefundCompleted(ConsumerRecord<String, RefundCompletedEvent> record) {
         RefundCompletedEvent event = record.value();
 
-        log.debug("[REFUND_COMPLETED] paymentId='{}', bookingId='{}', refundId='{}', amount={} {} | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[REFUND_COMPLETED] paymentId='{}', bookingId='{}', refundId='{}', amount={} {} | partition={}, offset={}",
                 event.getPaymentId(), event.getBookingId(), event.getRefundId(),
                 event.getAmount(), event.getCurrency(),
                 record.partition(), record.offset());

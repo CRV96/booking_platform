@@ -3,9 +3,11 @@ package com.booking.platform.payment_service.messaging.consumer;
 import com.booking.platform.common.events.BookingCreatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.payment_service.service.PaymentService;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.slf4j.event.Level;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
@@ -39,7 +41,7 @@ public class BookingPaymentConsumer {
     public void onBookingCreated(ConsumerRecord<String, BookingCreatedEvent> record) {
         BookingCreatedEvent event = record.value();
 
-        log.info("[BOOKING_CREATED] bookingId='{}', eventId='{}', amount={} {} | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.INFO, "[BOOKING_CREATED] bookingId='{}', eventId='{}', amount={} {} | partition={}, offset={}",
                 event.getBookingId(),
                 event.getEventId(),
                 event.getTotalPrice(),

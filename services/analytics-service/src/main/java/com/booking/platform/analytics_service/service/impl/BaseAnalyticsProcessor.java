@@ -4,8 +4,10 @@ import com.booking.platform.analytics_service.constants.AnalyticsConstants;
 import com.booking.platform.analytics_service.document.EventLog;
 import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -111,7 +113,7 @@ public abstract class BaseAnalyticsProcessor {
         if (eventStats != null && eventStats.getString(AnalyticsConstants.CATEGORY) != null) {
             upsertCategoryStats(eventStats.getString(AnalyticsConstants.CATEGORY), update);
         } else {
-            log.debug("Skipping category_stats update — event_stats not yet available for eventId='{}'", eventId);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Skipping category_stats update — event_stats not yet available for eventId='{}'", eventId);
         }
     }
 

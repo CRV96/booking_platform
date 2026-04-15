@@ -1,7 +1,9 @@
 package com.booking.platform.common.security;
 
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -36,20 +38,20 @@ public class TokenBlacklistService {
      */
     public void blacklist(String jti, Instant expiry) {
         if (jti == null || jti.isBlank()) {
-            log.warn("Cannot blacklist token: missing jti claim");
+            ApplicationLogger.logMessage(log, Level.WARN, "Cannot blacklist token: missing jti claim");
             return;
         }
 
         long ttlSeconds = Duration.between(Instant.now(), expiry).getSeconds();
 
         if (ttlSeconds <= 0) {
-            log.debug("Token already expired, no need to blacklist: {}", jti);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Token already expired, no need to blacklist: {}", jti);
             return;
         }
 
         String key = BLACKLIST_PREFIX + jti;
         redisTemplate.opsForValue().set(key, "1", Duration.ofSeconds(ttlSeconds));
-        log.info("Token blacklisted: {} (TTL: {}s)", jti, ttlSeconds);
+        ApplicationLogger.logMessage(log, Level.INFO, "Token blacklisted: {} (TTL: {}s)", jti, ttlSeconds);
     }
 
     /**
@@ -67,7 +69,7 @@ public class TokenBlacklistService {
         Boolean exists = redisTemplate.hasKey(key);
 
         if (Boolean.TRUE.equals(exists)) {
-            log.debug("Token is blacklisted: {}", jti);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Token is blacklisted: {}", jti);
             return true;
         }
 

@@ -5,7 +5,9 @@ import com.booking.platform.analytics_service.constants.AnalyticsConstants.Event
 import com.booking.platform.analytics_service.dto.EventDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.EventAnalyticsProcessor;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
@@ -53,7 +55,7 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         // category_stats: increment totalEvents
         upsertCategoryStats(event.category(), new Update().inc(Event.TOTAL_EVENTS, 1));
 
-        log.debug("Processed EventCreatedEvent: eventId='{}'", event.eventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed EventCreatedEvent: eventId='{}'", event.eventId());
     }
 
     @Override
@@ -63,7 +65,7 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
                 Event.PAYLOAD_CHANGED_FIELDS, event.changedFields()));
 
         // EventUpdated only goes to the raw log — no materialized view updates needed
-        log.debug("Processed EventUpdatedEvent: eventId='{}'", event.eventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed EventUpdatedEvent: eventId='{}'", event.eventId());
     }
 
     @Override
@@ -79,7 +81,7 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         // category_stats: increment publishedEvents
         upsertCategoryStats(event.category(), new Update().inc(Event.PUBLISHED_EVENTS, 1));
 
-        log.debug("Processed EventPublishedEvent: eventId='{}'", event.eventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed EventPublishedEvent: eventId='{}'", event.eventId());
     }
 
     @Override
@@ -91,6 +93,6 @@ public class EventAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         // daily_metrics: increment eventsCancelled
         upsertDailyMetrics(new Update().inc(Event.EVENTS_CANCELLED, 1));
 
-        log.debug("Processed EventCancelledEvent: eventId='{}'", event.eventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed EventCancelledEvent: eventId='{}'", event.eventId());
     }
 }

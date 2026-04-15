@@ -2,7 +2,9 @@ package com.booking.platform.booking_service.grpc.client.impl;
 
 import com.booking.platform.booking_service.grpc.client.EventServiceClient;
 import com.booking.platform.common.grpc.event.*;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +21,7 @@ public class EventServiceClientImpl implements EventServiceClient {
 
     @Override
     public EventResponse getEvent(String eventId) {
-        log.debug("Calling event-service: GetEvent '{}'", eventId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling event-service: GetEvent '{}'", eventId);
         return eventServiceStub.getEvent(
                 GetEventRequest.newBuilder()
                         .setEventId(eventId)
@@ -30,7 +32,7 @@ public class EventServiceClientImpl implements EventServiceClient {
     @Override
     public UpdateSeatAvailabilityResponse updateSeatAvailability(
             String eventId, String seatCategoryName, int delta) {
-        log.debug("Calling event-service: UpdateSeatAvailability event='{}', category='{}', delta={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling event-service: UpdateSeatAvailability event='{}', category='{}', delta={}",
                 eventId, seatCategoryName, delta);
         return eventServiceStub.updateSeatAvailability(
                 UpdateSeatAvailabilityRequest.newBuilder()

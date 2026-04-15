@@ -1,7 +1,9 @@
 package com.booking.platform.common.security;
 
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
@@ -45,12 +47,12 @@ public class PublicEndpointRegistry {
                     // gRPC method names are capitalized (e.g., "Login", "Register")
                     String methodName = capitalize(method.getName());
                     publicMethods.add(methodName);
-                    log.info("Registered public endpoint: {}", methodName);
+                    ApplicationLogger.logMessage(log, Level.INFO, "Registered public endpoint: {}", methodName);
                 }
             }
         }
 
-        log.info("Public endpoint registry initialized with {} public methods: {}",
+        ApplicationLogger.logMessage(log, Level.INFO, "Public endpoint registry initialized with {} public methods: {}",
                 publicMethods.size(), publicMethods);
     }
 

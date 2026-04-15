@@ -9,8 +9,11 @@ import com.booking.platform.ticket_service.exception.InvalidTicketOperationExcep
 import com.booking.platform.ticket_service.mapper.TicketProtoMapper;
 import com.booking.platform.ticket_service.service.TicketService;
 import io.grpc.stub.StreamObserver;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -49,7 +52,7 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
                              StreamObserver<GetMyTicketsResponse> responseObserver) {
         String userId = requireUserId();
 
-        log.debug("gRPC GetMyTickets: user='{}'", userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetMyTickets: user='{}'", userId);
 
         int page = Math.max(request.getPage(), 0);
         int pageSize = normalizePageSize(request.getPageSize());
@@ -74,7 +77,7 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
                                     StreamObserver<GetTicketsByBookingResponse> responseObserver) {
         requireRole(Roles.EMPLOYEE);
 
-        log.debug("gRPC GetTicketsByBooking: bookingId='{}'", request.getBookingId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetTicketsByBooking: bookingId='{}'", request.getBookingId());
         List<TicketDocument> tickets = ticketService.getTicketsByBooking(request.getBookingId());
 
         GetTicketsByBookingResponse response = GetTicketsByBookingResponse.newBuilder()
@@ -90,7 +93,7 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
                                  StreamObserver<GetTicketsByUserResponse> responseObserver) {
         requireRole(Roles.EMPLOYEE);
 
-        log.debug("gRPC GetTicketsByUser: userId='{}'", request.getUserId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetTicketsByUser: userId='{}'", request.getUserId());
 
         int page = Math.max(request.getPage(), 0);
         int pageSize = normalizePageSize(request.getPageSize());
@@ -111,7 +114,7 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
                                   StreamObserver<TicketResponse> responseObserver) {
         requireRole(Roles.EMPLOYEE);
 
-        log.debug("gRPC GetTicketByNumber: ticketNumber='{}'", request.getTicketNumber());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetTicketByNumber: ticketNumber='{}'", request.getTicketNumber());
 
         TicketDocument ticket = ticketService.getByTicketNumber(request.getTicketNumber());
 
@@ -124,10 +127,10 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
                                StreamObserver<TicketResponse> responseObserver) {
         requireRole(Roles.EMPLOYEE);
 
-        log.debug("gRPC ValidateTicket: ticketNumber='{}'", request.getTicketNumber());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC ValidateTicket: ticketNumber='{}'", request.getTicketNumber());
 
         TicketDocument ticket = ticketService.validateTicket(request.getTicketNumber());
-        log.info("gRPC ValidateTicket completed: ticket '{}' marked as USED", request.getTicketNumber());
+        ApplicationLogger.logMessage(log, Level.INFO, "gRPC ValidateTicket completed: ticket '{}' marked as USED", request.getTicketNumber());
 
         responseObserver.onNext(buildTicketResponse(ticket));
         responseObserver.onCompleted();
@@ -138,10 +141,10 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
                              StreamObserver<TicketResponse> responseObserver) {
         requireRole(Roles.EMPLOYEE);
 
-        log.debug("gRPC CancelTicket: ticketNumber='{}'", request.getTicketNumber());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC CancelTicket: ticketNumber='{}'", request.getTicketNumber());
 
         TicketDocument ticket = ticketService.cancelTicket(request.getTicketNumber());
-        log.info("gRPC CancelTicket completed: ticket '{}' status='{}'",
+        ApplicationLogger.logMessage(log, Level.INFO, "gRPC CancelTicket completed: ticket '{}' status='{}'",
                 request.getTicketNumber(), ticket.getStatus());
 
         responseObserver.onNext(buildTicketResponse(ticket));
@@ -193,7 +196,8 @@ public class TicketGrpcService extends TicketServiceGrpc.TicketServiceImplBase {
      */
     private void requireRole(Roles role) {
         if (!GrpcUserContext.hasRole(role.getValue())) {
-            log.warn("Access denied for user '{}': missing role '{}'",
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.TICKET_ACCESS_DENIED,
+                    "Access denied for user '{}': missing role '{}'",
                     GrpcUserContext.getUserId(), role);
             throw new PermissionDeniedException(
                     "Access denied: role '" + role + "' is required");

@@ -5,8 +5,11 @@ import io.grpc.netty.shaded.io.grpc.netty.NettyServerBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.ClientAuth;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.serverfactory.GrpcServerConfigurer;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -49,10 +52,10 @@ public class GrpcServerTlsConfig {
         return serverBuilder -> {
             if (serverBuilder instanceof NettyServerBuilder nettyBuilder) {
                 try {
-                    log.info("Configuring gRPC server with mTLS...");
-                    log.info("  Certificate: {}", certificateChain.getFilename());
-                    log.info("  Private Key: {}", privateKey.getFilename());
-                    log.info("  Trust CA: {}", trustCertificate.getFilename());
+                    ApplicationLogger.logMessage(log, Level.INFO, "Configuring gRPC server with mTLS...");
+                    ApplicationLogger.logMessage(log, Level.INFO, "  Certificate: {}", certificateChain.getFilename());
+                    ApplicationLogger.logMessage(log, Level.INFO, "  Private Key: {}", privateKey.getFilename());
+                    ApplicationLogger.logMessage(log, Level.INFO, "  Trust CA: {}", trustCertificate.getFilename());
 
                     SslContext sslContext = GrpcSslContexts.configure(
                             SslContextBuilder.forServer(
@@ -65,14 +68,14 @@ public class GrpcServerTlsConfig {
                     .build();
 
                     nettyBuilder.sslContext(sslContext);
-                    log.info("gRPC server mTLS configured successfully");
+                    ApplicationLogger.logMessage(log, Level.INFO, "gRPC server mTLS configured successfully");
 
                 } catch (IOException e) {
-                    log.error("Failed to configure gRPC server TLS", e);
+                    ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.TLS_CONFIG_FAILED, e);
                     throw new RuntimeException("Failed to configure gRPC server TLS", e);
                 }
             } else {
-                log.warn("Cannot configure TLS for non-Netty server builder: {}", serverBuilder.getClass().getName());
+                ApplicationLogger.logMessage(log, Level.WARN, "Cannot configure TLS for non-Netty server builder: {}", serverBuilder.getClass().getName());
             }
         };
     }

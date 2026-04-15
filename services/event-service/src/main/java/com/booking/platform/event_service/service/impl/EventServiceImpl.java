@@ -19,8 +19,10 @@ import com.booking.platform.event_service.properties.EventProperties;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.service.EventService;
 import com.booking.platform.event_service.validator.EventValidator;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
@@ -53,14 +55,14 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventDocument createEvent(CreateEventRequest request, OrganizerDto organizer) {
-        log.debug("Creating event '{}' for organizer '{}'", request.getTitle(), organizer.userId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Creating event '{}' for organizer '{}'", request.getTitle(), organizer.userId());
 
         eventValidator.validateCreateRequest(request);
 
         EventDocument saved = eventRepository.save(getEventDocument(request, organizer));
 
         eventPublisher.publishEventCreated(saved);
-        log.info("Event created: id='{}', title='{}'", saved.getId(), saved.getTitle());
+        ApplicationLogger.logMessage(log, Level.INFO, "Event created: id='{}', title='{}'", saved.getId(), saved.getTitle());
         return saved;
     }
 
@@ -71,7 +73,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Cacheable(value = CacheConfig.CACHE_EVENT_DETAIL, key = "#a0")
     public EventDocument getEvent(String eventId) {
-        log.debug("Fetching event by ID: {} (cache miss)", eventId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetching event by ID: {} (cache miss)", eventId);
 
         return eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));
@@ -88,7 +90,7 @@ public class EventServiceImpl implements EventService {
             @CacheEvict(value = CacheConfig.CACHE_EVENTS_FEATURED, allEntries = true)
     })
     public EventDocument updateEvent(String eventId, UpdateEventRequest request) {
-        log.debug("Updating event '{}'", eventId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Updating event '{}'", eventId);
 
         EventDocument event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));
@@ -128,7 +130,7 @@ public class EventServiceImpl implements EventService {
 
         EventDocument saved = eventRepository.save(event);
         eventPublisher.publishEventUpdated(saved, changedFields);
-        log.info("Event updated: id='{}'", saved.getId());
+        ApplicationLogger.logMessage(log, Level.INFO, "Event updated: id='{}'", saved.getId());
         return saved;
     }
 
@@ -147,7 +149,7 @@ public class EventServiceImpl implements EventService {
             }
     )
     public EventDocument publishEvent(String eventId) {
-        log.debug("Publishing event '{}'", eventId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Publishing event '{}'", eventId);
 
         EventDocument event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));
@@ -163,7 +165,7 @@ public class EventServiceImpl implements EventService {
 
         EventDocument saved = eventRepository.save(event);
         eventPublisher.publishEventPublished(saved);
-        log.info("Event published: id='{}', title='{}'", saved.getId(), saved.getTitle());
+        ApplicationLogger.logMessage(log, Level.INFO, "Event published: id='{}', title='{}'", saved.getId(), saved.getTitle());
         return saved;
     }
 
@@ -178,7 +180,7 @@ public class EventServiceImpl implements EventService {
             @CacheEvict(value = CacheConfig.CACHE_EVENTS_FEATURED, allEntries = true)
     })
     public EventDocument cancelEvent(String eventId, String reason) {
-        log.debug("Cancelling event '{}', reason: {}", eventId, reason);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Cancelling event '{}', reason: {}", eventId, reason);
 
         EventDocument event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));
@@ -192,7 +194,7 @@ public class EventServiceImpl implements EventService {
 
         EventDocument saved = eventRepository.save(event);
         eventPublisher.publishEventCancelled(saved, reason);
-        log.info("Event cancelled: id='{}', reason='{}'", saved.getId(), reason);
+        ApplicationLogger.logMessage(log, Level.INFO, "Event cancelled: id='{}', reason='{}'", saved.getId(), reason);
         return saved;
     }
 
@@ -203,7 +205,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @Cacheable(value = CacheConfig.CACHE_EVENTS_SEARCH, key = "#a0.hashCode()")
     public List<EventDocument> searchEvents(SearchEventsRequest request) {
-        log.debug("Searching events: query='{}', category='{}', city='{}', page={} (cache miss)",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Searching events: query='{}', category='{}', city='{}', page={} (cache miss)",
                 request.getQuery(), request.getCategory(), request.getCity(), request.getPage());
 
         List<Criteria> criteriaList = getCriteriaList(request);
@@ -234,7 +236,7 @@ public class EventServiceImpl implements EventService {
     @Override
     @CacheEvict(value = CacheConfig.CACHE_EVENT_DETAIL, key = "#a0")
     public EventDocument updateSeatAvailability(String eventId, String seatCategoryName, int delta) {
-        log.debug("Updating seat availability: event='{}', category='{}', delta={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Updating seat availability: event='{}', category='{}', delta={}",
                 eventId, seatCategoryName, delta);
 
         // Build the atomic query. For decrements, embed the seat-availability guard
@@ -268,7 +270,7 @@ public class EventServiceImpl implements EventService {
             throw new InsufficientSeatsException(eventId, seatCategoryName, -delta, 0);
         }
 
-        log.info("Seat availability updated: event='{}', category='{}', delta={}",
+        ApplicationLogger.logMessage(log, Level.INFO, "Seat availability updated: event='{}', category='{}', delta={}",
                 eventId, seatCategoryName, delta);
         return updated;
     }

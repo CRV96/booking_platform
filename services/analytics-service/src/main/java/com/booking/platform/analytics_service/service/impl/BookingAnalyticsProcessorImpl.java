@@ -5,7 +5,9 @@ import com.booking.platform.analytics_service.constants.AnalyticsConstants.Booki
 import com.booking.platform.analytics_service.dto.BookingDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.BookingAnalyticsProcessor;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
@@ -54,7 +56,7 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         incrementCategoryStatsByEventId(booking.eventId(), new Update()
                 .inc(Booking.TOTAL_BOOKINGS, 1));
 
-        log.debug("Processed BookingCreatedEvent: bookingId='{}', eventId='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed BookingCreatedEvent: bookingId='{}', eventId='{}'",
                 booking.bookingId(), booking.eventId());
     }
 
@@ -85,7 +87,7 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         incrementCategoryStatsByEventId(booking.eventId(), new Update()
                 .inc(Booking.TOTAL_REVENUE, booking.totalPrice()));
 
-        log.debug("Processed BookingConfirmedEvent: bookingId='{}', eventId='{}', revenue={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed BookingConfirmedEvent: bookingId='{}', eventId='{}', revenue={}",
                 booking.bookingId(), booking.eventId(), booking.totalPrice());
     }
 
@@ -104,7 +106,7 @@ public class BookingAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         // daily_metrics: increment bookingsCancelled
         upsertDailyMetrics(new Update().inc(Booking.BOOKINGS_CANCELLED, 1));
 
-        log.debug("Processed BookingCancelledEvent: bookingId='{}', eventId='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed BookingCancelledEvent: bookingId='{}', eventId='{}'",
                 booking.bookingId(), booking.eventId());
     }
 }

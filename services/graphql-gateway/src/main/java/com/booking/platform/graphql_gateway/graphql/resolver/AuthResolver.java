@@ -6,8 +6,10 @@ import com.booking.platform.graphql_gateway.dto.auth.LogoutPayload;
 import com.booking.platform.graphql_gateway.dto.auth.RegisterInput;
 import com.booking.platform.graphql_gateway.grpc.client.AuthClient;
 import com.booking.platform.graphql_gateway.annotations.PublicEndpoint;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.stereotype.Controller;
@@ -26,7 +28,7 @@ public class AuthResolver {
     @PublicEndpoint
     @MutationMapping
     public AuthPayload register(@Argument("input") RegisterInput input) {
-        log.info("GraphQL mutation: register for {}", input.email());
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: register for {}", input.email());
 
         return AuthPayload.fromGrpc(authClient.register(
             input.email(),
@@ -42,7 +44,7 @@ public class AuthResolver {
     @PublicEndpoint
     @MutationMapping
     public AuthPayload login(@Argument("input") LoginInput input) {
-        log.info("GraphQL mutation: login for {}", input.username());
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: login for {}", input.username());
 
         return AuthPayload.fromGrpc(authClient.login(input.username(), input.password()));
     }
@@ -50,14 +52,14 @@ public class AuthResolver {
     @PublicEndpoint
     @MutationMapping
     public AuthPayload refreshToken(@Argument("refreshToken") String refreshToken) {
-        log.debug("GraphQL mutation: refreshToken");
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL mutation: refreshToken");
 
         return AuthPayload.fromGrpc(authClient.refreshToken(refreshToken));
     }
 
     @MutationMapping
     public LogoutPayload logout(@Argument("refreshToken") String refreshToken) {
-        log.debug("GraphQL mutation: logout");
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL mutation: logout");
 
         return new LogoutPayload(authClient.logout(refreshToken));
     }

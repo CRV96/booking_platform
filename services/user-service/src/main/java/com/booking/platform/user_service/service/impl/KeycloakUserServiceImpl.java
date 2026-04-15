@@ -6,10 +6,13 @@ import com.booking.platform.user_service.exception.InternalException;
 import com.booking.platform.user_service.exception.user.UserAlreadyExistsException;
 import com.booking.platform.user_service.exception.user.UserNotFoundException;
 import com.booking.platform.user_service.service.KeycloakUserService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
@@ -50,7 +53,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     @Override
     public String createUser(String email, String password, String firstName, String lastName,
                              Map<String, String> attributes) {
-        log.debug("Creating a new user with email: {}", email);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Creating a new user with email: {}", email);
 
         UsersResource usersResource = getUsersResource();
 
@@ -70,7 +73,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     @Override
     public UserRepresentation updateUser(String userId, String firstName, String lastName,
                                          String email, Map<String, String> attributes) {
-        log.info("Updating user: {}", userId);
+        ApplicationLogger.logMessage(log, Level.INFO, "Updating user: {}", userId);
 
         UserResource userResource = getUsersResource().get(userId);
         UserRepresentation user = userResource.toRepresentation();
@@ -79,14 +82,14 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         updateAttributes(user, attributes);
 
         userResource.update(user);
-        log.info("User updated successfully: {}", userId);
+        ApplicationLogger.logMessage(log, Level.INFO, "User updated successfully: {}", userId);
 
         return userResource.toRepresentation();
     }
 
     @Override
     public List<UserRepresentation> searchUsers(String search, int page, int pageSize) {
-        log.debug("Searching users with query: '{}', page: {}, size: {}", search, page, pageSize);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Searching users with query: '{}', page: {}, size: {}", search, page, pageSize);
 
         UsersResource usersResource = getUsersResource();
         int firstResult = page * pageSize;
@@ -110,12 +113,12 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     @Cacheable(value = CacheConfig.CACHE_USER_BY_ID, key = "#a0")
     @Override
     public UserRepresentation getUserById(String userId) {
-        log.debug("Fetching user by ID: {}", userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetching user by ID: {}", userId);
 
         try {
             return getUsersResource().get(userId).toRepresentation();
         } catch (NotFoundException e) {
-            log.warn("User not found with ID: {}", userId);
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.USER_NOT_FOUND, "User not found with ID: {}", userId);
             throw UserNotFoundException.forId(userId);
         }
     }
@@ -123,7 +126,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     @Cacheable(value = CacheConfig.CACHE_USER_BY_USERNAME, key = "#a0")
     @Override
     public UserRepresentation getUserByUsername(String username) {
-        log.debug("Fetching user by username: {}", username);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetching user by username: {}", username);
 
         List<UserRepresentation> users = getUsersResource().searchByUsername(username, true);
         if (users.isEmpty()) {
@@ -135,7 +138,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     @Cacheable(value = CacheConfig.CACHE_USER_BY_EMAIL, key = "#a0")
     @Override
     public UserRepresentation getUserByEmail(String email) {
-        log.debug("Fetching user by email: {}", email);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetching user by email: {}", email);
 
         List<UserRepresentation> users = getUsersResource().searchByEmail(email, true);
         if (users.isEmpty()) {
@@ -155,7 +158,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
                     try {
                         return getUsersResource().get(id).toRepresentation();
                     } catch (NotFoundException e) {
-                        log.warn("User not found for ID '{}'", id);
+                        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.USER_NOT_FOUND, "User not found for ID '{}'", id);
                         return null;
                     }
                 })
@@ -174,7 +177,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
             return Map.of();
         }
 
-        log.debug("Fetching roles for {} users in parallel", userIds.size());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetching roles for {} users in parallel", userIds.size());
 
         Map<String, List<String>> result = new ConcurrentHashMap<>();
 
@@ -192,7 +195,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
     @Override
     public void sendVerificationEmail(String userId) {
-        log.info("Sending verification email for userId='{}'", userId);
+        ApplicationLogger.logMessage(log, Level.INFO, "Sending verification email for userId='{}'", userId);
 
         getUsersResource().get(userId)
                 .executeActionsEmail(List.of("VERIFY_EMAIL"), verificationEmailLifespanSeconds);
@@ -205,12 +208,12 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
             @CacheEvict(value = CacheConfig.CACHE_USER_BY_USERNAME, allEntries = true)
     })
     public void deleteUser(String userId) {
-        log.info("Deleting user: '{}'", userId);
+        ApplicationLogger.logMessage(log, Level.INFO, "Deleting user: '{}'", userId);
 
         try {
             getUsersResource().get(userId).remove();
         } catch (NotFoundException e) {
-            log.warn("User not found for deletion: '{}'", userId);
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.USER_NOT_FOUND, "User not found for deletion: '{}'", userId);
         }
     }
 
@@ -263,17 +266,17 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
         if (status == Response.Status.CREATED.getStatusCode()) {
             String userId = extractUserIdFromResponse(response);
-            log.info("User created successfully with ID: {}", userId);
+            ApplicationLogger.logMessage(log, Level.INFO, "User created successfully with ID: {}", userId);
             return userId;
         }
 
         if (status == Response.Status.CONFLICT.getStatusCode()) {
-            log.warn("User already exists with email: {}", email);
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.USER_ALREADY_EXISTS, "User already exists with email: {}", email);
             throw new UserAlreadyExistsException("User with email " + email + " already exists");
         }
 
         String error = response.readEntity(String.class);
-        log.error("Failed to create user. Status: {}, Error: {}", status, error);
+        ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.USER_CREATION_FAILED, "Failed to create user. Status: {}, Error: {}", status, error);
         throw new InternalException("Failed to create user: " + error);
     }
 

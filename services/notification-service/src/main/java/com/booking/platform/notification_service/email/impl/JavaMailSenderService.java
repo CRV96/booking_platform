@@ -1,8 +1,11 @@
 package com.booking.platform.notification_service.email.impl;
 
 import com.booking.platform.notification_service.email.EmailService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -64,7 +67,7 @@ public class JavaMailSenderService implements EmailService {
     @Override
     public void sendHtml(String to, String subject, String templateName, Map<String, Object> variables) {
         try {
-            log.debug("Preparing email to='{}', subject='{}', template='{}'", to, subject, templateName);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Preparing email to='{}', subject='{}', template='{}'", to, subject, templateName);
             // ── 1. Render template ─────────────────────────────────────────
             Map<String, Object> enrichedVars = new HashMap<>(variables);
             enrichedVars.putIfAbsent("year", Year.now().getValue());
@@ -73,7 +76,7 @@ public class JavaMailSenderService implements EmailService {
             context.setVariables(enrichedVars);
             String htmlBody = templateEngine.process(templateName, context);
 
-            log.debug("Rendered email body for to='{}', template='{}': {}", to, templateName, htmlBody);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Rendered email body for to='{}', template='{}': {}", to, templateName, htmlBody);
             // ── 2. Build MIME message ──────────────────────────────────────
             var message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -82,14 +85,15 @@ public class JavaMailSenderService implements EmailService {
             helper.setSubject(subject);
             helper.setText(htmlBody, true); // true = isHtml
 
-            log.debug("Built MIME message for to='{}', template='{}'", to, templateName);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Built MIME message for to='{}', template='{}'", to, templateName);
             // ── 3. Send ────────────────────────────────────────────────────
             mailSender.send(message);
-            log.info("[EMAIL_SENT] to='{}', subject='{}', template='{}'", to, subject, templateName);
+            ApplicationLogger.logMessage(log, Level.INFO, "[EMAIL_SENT] to='{}', subject='{}', template='{}'", to, subject, templateName);
 
         } catch (MessagingException e) {
             // Code bug (bad address, encoding) — not retryable, log and swallow.
-            log.error("[EMAIL_FAILED] Failed to build MIME message for to='{}', template='{}': {}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.EMAIL_SEND_FAILED,
+                    "[EMAIL_FAILED] Failed to build MIME message for to='{}', template='{}': {}",
                     to, templateName, e.getMessage(), e);
         }
         // MailException (SMTP down, connection refused) is intentionally NOT caught here.

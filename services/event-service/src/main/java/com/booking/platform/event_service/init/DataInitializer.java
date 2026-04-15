@@ -8,8 +8,10 @@ import com.booking.platform.event_service.document.enums.EventStatus;
 import com.booking.platform.event_service.dto.OrganizerDto;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.service.EventService;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Profile;
@@ -78,12 +80,12 @@ public class DataInitializer implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (eventRepository.count() > 0) {
-            log.info("DataInitializer: events already exist — skipping seed (found {} events)",
+            ApplicationLogger.logMessage(log, Level.INFO, "DataInitializer: events already exist — skipping seed (found {} events)",
                     eventRepository.count());
             return;
         }
 
-        log.info("DataInitializer: seeding 50 sample events...");
+        ApplicationLogger.logMessage(log, Level.INFO, "DataInitializer: seeding 50 sample events...");
 
         seedConcerts();
         seedSportsEvents();
@@ -93,7 +95,7 @@ public class DataInitializer implements ApplicationRunner {
         seedOtherEvents();
 
         long total = eventRepository.count();
-        log.info("DataInitializer: seeding complete — {} events created", total);
+        ApplicationLogger.logMessage(log, Level.INFO, "DataInitializer: seeding complete — {} events created", total);
     }
 
     // =========================================================================
@@ -979,7 +981,7 @@ public class DataInitializer implements ApplicationRunner {
                 organizer
         );
         eventService.publishEvent(event.getId());
-        log.debug("DataInitializer: published '{}'", title);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "DataInitializer: published '{}'", title);
     }
 
     /** Create an event through the service and leave it in DRAFT status. */
@@ -991,7 +993,7 @@ public class DataInitializer implements ApplicationRunner {
                 buildRequest(title, description, category, dateTime, endDateTime, venue, seats, tags),
                 organizer
         );
-        log.debug("DataInitializer: created draft '{}'", title);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "DataInitializer: created draft '{}'", title);
     }
 
     /** Create an event, publish it, then cancel it. */
@@ -1005,7 +1007,7 @@ public class DataInitializer implements ApplicationRunner {
         );
         eventService.publishEvent(event.getId());
         eventService.cancelEvent(event.getId(), "Event cancelled — see description for details.");
-        log.debug("DataInitializer: cancelled '{}'", title);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "DataInitializer: cancelled '{}'", title);
     }
 
     /**
@@ -1033,7 +1035,7 @@ public class DataInitializer implements ApplicationRunner {
         event.setEndDateTime(endDateTime);
         event.setStatus(EventStatus.COMPLETED);
         eventRepository.save(event);
-        log.debug("DataInitializer: completed (past) '{}'", title);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "DataInitializer: completed (past) '{}'", title);
     }
 
     // ── Request builder ───────────────────────────────────────────────────────

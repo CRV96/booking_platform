@@ -7,9 +7,11 @@ import com.booking.platform.booking_service.properties.BookingProperties;
 import com.booking.platform.booking_service.service.BookingService;
 import com.booking.platform.common.grpc.booking.*;
 import com.booking.platform.common.grpc.context.GrpcUserContext;
+import com.booking.platform.common.logging.ApplicationLogger;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.data.domain.Page;
 
@@ -43,7 +45,7 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
                               StreamObserver<BookingResponse> responseObserver) {
         String userId = requireUserId();
 
-        log.debug("gRPC CreateBooking: user='{}', event='{}', category='{}', qty={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC CreateBooking: user='{}', event='{}', category='{}', qty={}",
                 userId, request.getEventId(), request.getSeatCategory(), request.getQuantity());
 
         validateCreateRequest(request);
@@ -56,7 +58,7 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
                 request.getIdempotencyKey()
         );
 
-        log.info("gRPC CreateBooking completed: bookingId='{}', event='{}'",
+        ApplicationLogger.logMessage(log, Level.INFO, "gRPC CreateBooking completed: bookingId='{}', event='{}'",
                 booking.getId(), request.getEventId());
         responseObserver.onNext(buildBookingResponse(booking));
         responseObserver.onCompleted();
@@ -67,7 +69,7 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
                            StreamObserver<BookingResponse> responseObserver) {
         String userId = requireUserId();
 
-        log.debug("gRPC GetBooking: user='{}', bookingId='{}'", userId, request.getBookingId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetBooking: user='{}', bookingId='{}'", userId, request.getBookingId());
 
         UUID bookingId = parseUuid(request.getBookingId(), "booking_id");
 
@@ -82,7 +84,7 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
                                 StreamObserver<GetUserBookingsResponse> responseObserver) {
         String userId = requireUserId();
 
-        log.debug("gRPC GetUserBookings: user='{}', page={}, pageSize={}, status='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetUserBookings: user='{}', page={}, pageSize={}, status='{}'",
                 userId, request.getPage(), request.getPageSize(),
                 request.hasStatusFilter() ? request.getStatusFilter() : "ALL");
 
@@ -115,14 +117,14 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
                               StreamObserver<BookingResponse> responseObserver) {
         String userId = requireUserId();
 
-        log.debug("gRPC CancelBooking: user='{}', bookingId='{}'", userId, request.getBookingId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC CancelBooking: user='{}', bookingId='{}'", userId, request.getBookingId());
 
         UUID bookingId = parseUuid(request.getBookingId(), "booking_id");
         String reason = request.getReason().isBlank() ? null : request.getReason();
 
         BookingEntity booking = bookingService.cancelBooking(bookingId, userId, reason);
 
-        log.info("gRPC CancelBooking completed: bookingId='{}', reason='{}'",
+        ApplicationLogger.logMessage(log, Level.INFO, "gRPC CancelBooking completed: bookingId='{}', reason='{}'",
                 bookingId, reason);
         responseObserver.onNext(buildBookingResponse(booking));
         responseObserver.onCompleted();
@@ -130,11 +132,11 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
 
     @Override
     public void getBookingAttendees(GetBookingAttendeesRequest request, StreamObserver<GetBookingAttendeesResponse> responseObserver) {
-        log.debug("gRPC GetBookingAttendees for the eventId='{}'", request.getEventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetBookingAttendees for the eventId='{}'", request.getEventId());
 
         final List<String> attendees = bookingService.getAttendeeIdsForEvent(request.getEventId(), BookingStatus.valueOf(request.getEventStatus()));
 
-        log.debug("Fetched {} attendees for eventId='{}'", attendees.size(), request.getEventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetched {} attendees for eventId='{}'", attendees.size(), request.getEventId());
 
         responseObserver.onNext(GetBookingAttendeesResponse.newBuilder().addAllAttendees(attendees).build());
         responseObserver.onCompleted();
