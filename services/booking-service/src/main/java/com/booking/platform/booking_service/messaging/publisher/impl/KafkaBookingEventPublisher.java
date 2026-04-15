@@ -2,6 +2,8 @@ package com.booking.platform.booking_service.messaging.publisher.impl;
 
 import com.booking.platform.booking_service.entity.BookingEntity;
 import com.booking.platform.booking_service.messaging.publisher.BookingEventPublisher;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import com.booking.platform.common.events.BookingCancelledEvent;
 import com.booking.platform.common.events.BookingConfirmedEvent;
 import com.booking.platform.common.events.BookingCreatedEvent;
@@ -9,6 +11,7 @@ import com.booking.platform.common.events.KafkaTopics;
 import com.google.protobuf.MessageLite;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
@@ -87,10 +90,10 @@ public class KafkaBookingEventPublisher implements BookingEventPublisher {
 
         future.whenComplete((result, ex) -> {
             if (ex != null) {
-                log.error("Failed to publish to topic '{}' for key '{}': {}",
-                        topic, key, ex.getMessage());
+                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.BOOKING_EVENT_PUBLISH_FAILED,
+                        "Failed to publish to topic '{}' for key '{}': {}", topic, key, ex.getMessage());
             } else {
-                log.debug("Published to topic='{}', partition={}, offset={}",
+                ApplicationLogger.logMessage(log, Level.DEBUG, "Published to topic='{}', partition={}, offset={}",
                         topic,
                         result.getRecordMetadata().partition(),
                         result.getRecordMetadata().offset());

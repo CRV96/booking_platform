@@ -3,9 +3,11 @@ package com.booking.platform.user_service.init;
 import com.booking.platform.user_service.constants.UserAttributes;
 import com.booking.platform.user_service.properties.KeycloakProperties;
 import com.booking.platform.user_service.service.KeycloakUserService;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
+import org.slf4j.event.Level;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
@@ -64,19 +66,19 @@ public class DataInitializer implements ApplicationRunner {
         try {
             int existing = keycloakUserService.getUserCount(null);
             if (existing > SKIP_THRESHOLD) {
-                log.info("DataInitializer: {} users already exist — skipping seed", existing);
+                ApplicationLogger.logMessage(log, Level.INFO, "DataInitializer: {} users already exist — skipping seed", existing);
                 return;
             }
 
-            log.info("DataInitializer: seeding 50 customers and 10 employees...");
+            ApplicationLogger.logMessage(log, Level.INFO, "DataInitializer: seeding 50 customers and 10 employees...");
 
             seedCustomers();
             seedEmployees();
 
-            log.info("DataInitializer: seeding complete — {} users now in Keycloak",
+            ApplicationLogger.logMessage(log, Level.INFO, "DataInitializer: seeding complete — {} users now in Keycloak",
                     keycloakUserService.getUserCount(null));
         } catch (Exception e) {
-            log.warn("DataInitializer: Keycloak is unavailable, skipping data seed — {}", e.getMessage());
+            ApplicationLogger.logMessage(log, Level.WARN, "DataInitializer: Keycloak is unavailable, skipping data seed — {}", e.getMessage());
         }
     }
 
@@ -200,7 +202,7 @@ public class DataInitializer implements ApplicationRunner {
         createCustomer("stefan.popa",    "Stefan",   "Popa",      "stefan.popa@outlook.com",
                 "StefanPass1!","+40 73 456 7890",  "Romania", "ro", "RON", "Europe/Bucharest",    "1983-08-31");
 
-        log.info("DataInitializer: 50 customers created");
+        ApplicationLogger.logMessage(log, Level.INFO, "DataInitializer: 50 customers created");
     }
 
     // =========================================================================
@@ -220,7 +222,7 @@ public class DataInitializer implements ApplicationRunner {
         createEmployee("iris.morgan",    "Iris",     "Morgan",    "iris.morgan@booking.platform",    "IrisPass1!");
         createEmployee("jack.reed",      "Jack",     "Reed",      "jack.reed@booking.platform",      "JackPass1!");
 
-        log.info("DataInitializer: 10 employees created");
+        ApplicationLogger.logMessage(log, Level.INFO, "DataInitializer: 10 employees created");
     }
 
     // =========================================================================
@@ -248,9 +250,9 @@ public class DataInitializer implements ApplicationRunner {
                     UserAttributes.SMS_NOTIFICATIONS,     "false"
             );
             keycloakUserService.createUser(email, password, firstName, lastName, attributes);
-            log.debug("DataInitializer: customer created — {}", username);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "DataInitializer: customer created — {}", username);
         } catch (Exception e) {
-            log.warn("DataInitializer: skipping customer '{}' — {}", username, e.getMessage());
+            ApplicationLogger.logMessage(log, Level.WARN, "DataInitializer: skipping customer '{}' — {}", username, e.getMessage());
         }
     }
 
@@ -284,14 +286,14 @@ public class DataInitializer implements ApplicationRunner {
 
             try (Response response = usersResource.create(user)) {
                 if (response.getStatus() == 201) {
-                    log.debug("DataInitializer: employee created — {}", username);
+                    ApplicationLogger.logMessage(log, Level.DEBUG, "DataInitializer: employee created — {}", username);
                 } else {
-                    log.warn("DataInitializer: failed to create employee '{}' — HTTP {}",
+                    ApplicationLogger.logMessage(log, Level.WARN, "DataInitializer: failed to create employee '{}' — HTTP {}",
                             username, response.getStatus());
                 }
             }
         } catch (Exception e) {
-            log.warn("DataInitializer: skipping employee '{}' — {}", username, e.getMessage());
+            ApplicationLogger.logMessage(log, Level.WARN, "DataInitializer: skipping employee '{}' — {}", username, e.getMessage());
         }
     }
 }

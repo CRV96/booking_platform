@@ -9,8 +9,11 @@ import com.booking.platform.notification_service.constants.NotificationConst;
 import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
 import com.booking.platform.notification_service.grpc.client.UserServiceClient;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -50,16 +53,11 @@ public class BookingNotificationConsumer {
     )
     public void onBookingCreated(ConsumerRecord<String, BookingCreatedEvent> record) {
         BookingCreatedEvent event = record.value();
-        log.info("[BOOKING_CREATED] bookingId='{}', eventId='{}', userId='{}', category='{}', qty={}, total={} {} | partition={}, offset={}",
-                event.getBookingId(),
-                event.getEventId(),
-                event.getUserId(),
-                event.getSeatCategory(),
-                event.getQuantity(),
-                event.getTotalPrice(),
-                event.getCurrency(),
-                record.partition(),
-                record.offset());
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "[BOOKING_CREATED] bookingId='{}', eventId='{}', userId='{}', category='{}', qty={}, total={} {} | partition={}, offset={}",
+                event.getBookingId(), event.getEventId(), event.getUserId(), event.getSeatCategory(),
+                event.getQuantity(), event.getTotalPrice(), event.getCurrency(),
+                record.partition(), record.offset());
         // No email — wait for BOOKING_CONFIRMED (payment success) before notifying user.
     }
 
@@ -76,13 +74,10 @@ public class BookingNotificationConsumer {
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
 
-        log.info("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', userId='{}', tickets={} | partition={}, offset={}",
-                event.getBookingId(),
-                event.getEventId(),
-                event.getUserId(),
-                event.getTicketIdsList(),
-                record.partition(),
-                record.offset());
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', userId='{}', tickets={} | partition={}, offset={}",
+                event.getBookingId(), event.getEventId(), event.getUserId(), event.getTicketIdsList(),
+                record.partition(), record.offset());
 
         final String recipientEmail = userServiceClient.getUserEmail(event.getUserId());
 
@@ -101,7 +96,7 @@ public class BookingNotificationConsumer {
                         EmailTemplatesConst.BookingConfirmation.Vars.CURRENCY,      event.getCurrency()
                 )
         );
-        log.debug("Sent booking confirmation email to '{}'", recipientEmail);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Sent booking confirmation email to '{}'", recipientEmail);
     }
 
     /**
@@ -114,13 +109,10 @@ public class BookingNotificationConsumer {
     )
     public void onBookingCancelled(ConsumerRecord<String, BookingCancelledEvent> record) {
         BookingCancelledEvent event = record.value();
-        log.info("[BOOKING_CANCELLED] bookingId='{}', eventId='{}', userId='{}', reason='{}' | partition={}, offset={}",
-                event.getBookingId(),
-                event.getEventId(),
-                event.getUserId(),
-                event.getReason(),
-                record.partition(),
-                record.offset());
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "[BOOKING_CANCELLED] bookingId='{}', eventId='{}', userId='{}', reason='{}' | partition={}, offset={}",
+                event.getBookingId(), event.getEventId(), event.getUserId(), event.getReason(),
+                record.partition(), record.offset());
 
         final String recipientEmail = userServiceClient.getUserEmail(event.getUserId());
 
@@ -136,7 +128,7 @@ public class BookingNotificationConsumer {
                 )
         );
 
-        log.debug("Sent booking cancellation email to '{}'", recipientEmail);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Sent booking cancellation email to '{}'", recipientEmail);
     }
 
     /**
@@ -153,12 +145,10 @@ public class BookingNotificationConsumer {
     )
     public void onPaymentFailed(ConsumerRecord<String, PaymentFailedEvent> record) {
         PaymentFailedEvent event = record.value();
-        log.warn("[PAYMENT_FAILED] paymentId='{}', bookingId='{}', reason='{}' | partition={}, offset={}",
-                event.getPaymentId(),
-                event.getBookingId(),
-                event.getReason(),
-                record.partition(),
-                record.offset());
+        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                "[PAYMENT_FAILED] paymentId='{}', bookingId='{}', reason='{}' | partition={}, offset={}",
+                event.getPaymentId(), event.getBookingId(), event.getReason(),
+                record.partition(), record.offset());
 
         // The BookingCancelledEvent listener (onBookingCancelled) handles the cancellation email.
         // This listener logs the payment failure details for observability.

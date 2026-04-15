@@ -5,8 +5,10 @@ import com.booking.platform.analytics_service.dto.EventDto;
 import com.booking.platform.analytics_service.service.EventAnalyticsProcessor;
 import com.booking.platform.common.events.*;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -32,7 +34,7 @@ public class EventLifecycleConsumer {
     public void onEventCreated(ConsumerRecord<String, EventCreatedEvent> record) {
         EventCreatedEvent event = record.value();
 
-        log.debug("[EVENT_CREATED] eventId='{}', title='{}', category='{}' | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[EVENT_CREATED] eventId='{}', title='{}', category='{}' | partition={}, offset={}",
                 event.getEventId(), event.getTitle(), event.getCategory(),
                 record.partition(), record.offset());
 
@@ -53,7 +55,7 @@ public class EventLifecycleConsumer {
     public void onEventUpdated(ConsumerRecord<String, EventUpdatedEvent> record) {
         EventUpdatedEvent event = record.value();
 
-        log.debug("[EVENT_UPDATED] eventId='{}', changedFields={} | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[EVENT_UPDATED] eventId='{}', changedFields={} | partition={}, offset={}",
                 event.getEventId(), event.getChangedFieldsList(),
                 record.partition(), record.offset());
 
@@ -73,7 +75,7 @@ public class EventLifecycleConsumer {
     public void onEventPublished(ConsumerRecord<String, EventPublishedEvent> record) {
         EventPublishedEvent event = record.value();
 
-        log.debug("[EVENT_PUBLISHED] eventId='{}', title='{}', category='{}' | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[EVENT_PUBLISHED] eventId='{}', title='{}', category='{}' | partition={}, offset={}",
                 event.getEventId(), event.getTitle(), event.getCategory(),
                 record.partition(), record.offset());
 
@@ -94,7 +96,7 @@ public class EventLifecycleConsumer {
     public void onEventCancelled(ConsumerRecord<String, EventCancelledEvent> record) {
         EventCancelledEvent event = record.value();
 
-        log.debug("[EVENT_CANCELLED] eventId='{}', reason='{}' | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[EVENT_CANCELLED] eventId='{}', reason='{}' | partition={}, offset={}",
                 event.getEventId(), event.getReason(),
                 record.partition(), record.offset());
 

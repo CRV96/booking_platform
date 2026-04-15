@@ -4,8 +4,10 @@ import com.booking.platform.event_service.cache.config.CacheConfig;
 import com.booking.platform.event_service.constants.DocumentConst;
 import com.booking.platform.event_service.document.EventDocument;
 import com.booking.platform.event_service.document.enums.EventStatus;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CachePut;
 import org.springframework.data.domain.Sort;
@@ -48,7 +50,7 @@ public class FeaturedEventsCacheService {
     @Scheduled(fixedDelayString = "${cache.featured-events.refresh-delay-ms:120000}")
     @CachePut(value = CacheConfig.CACHE_EVENTS_FEATURED, key = "'" + FEATURED_CACHE_KEY + "'")
     public List<EventDocument> refreshFeaturedEvents() {
-        log.debug("Refreshing featured events cache");
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Refreshing featured events cache");
 
         Query query = new Query(
                 Criteria.where(DocumentConst.Event.STATUS).is(EventStatus.PUBLISHED)
@@ -59,7 +61,7 @@ public class FeaturedEventsCacheService {
 
         List<EventDocument> featured = mongoTemplate.find(query, EventDocument.class);
 
-        log.info("Featured events cache refreshed: {} events", featured.size());
+        ApplicationLogger.logMessage(log, Level.INFO, "Featured events cache refreshed: {} events", featured.size());
         return featured;
     }
 }

@@ -4,7 +4,9 @@ import com.booking.platform.payment_service.constants.BkgConstants;
 import com.booking.platform.payment_service.dto.GatewayPaymentResponse;
 import com.booking.platform.payment_service.dto.GatewayRefundResponse;
 import com.booking.platform.payment_service.gateway.PaymentGateway;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
@@ -36,12 +38,12 @@ public class MockPaymentGateway implements PaymentGateway {
             BigDecimal amount, String currency, String idempotencyKey) {
         return CompletableFuture.supplyAsync(() -> {
 
-            log.info("[MOCK] Creating payment intent: amount={} {}, idempotencyKey='{}'",
+            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Creating payment intent: amount={} {}, idempotencyKey='{}'",
                     amount, currency, idempotencyKey);
             simulateDelay();
             String mockId = "mock_pi_" + UUID.randomUUID();
 
-            log.info("[MOCK] Payment intent created: id='{}'", mockId);
+            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Payment intent created: id='{}'", mockId);
 
             return new GatewayPaymentResponse(mockId, "requires_confirmation",
                     BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD);
@@ -51,9 +53,9 @@ public class MockPaymentGateway implements PaymentGateway {
     @Override
     public CompletableFuture<GatewayPaymentResponse> confirmPayment(String externalPaymentId) {
         return CompletableFuture.supplyAsync(() -> {
-            log.info("[MOCK] Confirming payment: id='{}'", externalPaymentId);
+            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Confirming payment: id='{}'", externalPaymentId);
             simulateDelay();
-            log.info("[MOCK] Payment confirmed: id='{}'", externalPaymentId);
+            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Payment confirmed: id='{}'", externalPaymentId);
 
             return new GatewayPaymentResponse(externalPaymentId, BkgConstants.BkgStripeConstants.RESPONSE_SUCCEEDED,
                     BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD);
@@ -64,10 +66,10 @@ public class MockPaymentGateway implements PaymentGateway {
     public CompletableFuture<GatewayRefundResponse> createRefund(
             String externalPaymentId, BigDecimal amount) {
         return CompletableFuture.supplyAsync(() -> {
-            log.info("[MOCK] Creating refund: paymentId='{}', amount={}", externalPaymentId, amount);
+            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Creating refund: paymentId='{}', amount={}", externalPaymentId, amount);
             simulateDelay();
             String mockRefundId = "mock_re_" + UUID.randomUUID();
-            log.info("[MOCK] Refund created: id='{}'", mockRefundId);
+            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Refund created: id='{}'", mockRefundId);
             return new GatewayRefundResponse(mockRefundId, BkgConstants.BkgStripeConstants.RESPONSE_SUCCEEDED);
         });
     }

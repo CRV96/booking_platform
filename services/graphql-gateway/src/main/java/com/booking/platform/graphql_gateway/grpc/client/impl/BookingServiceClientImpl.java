@@ -3,7 +3,9 @@ package com.booking.platform.graphql_gateway.grpc.client.impl;
 import com.booking.platform.common.grpc.booking.*;
 import com.booking.platform.graphql_gateway.constants.BookingServiceConst;
 import com.booking.platform.graphql_gateway.grpc.client.BookingClient;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +23,7 @@ public class BookingServiceClientImpl implements BookingClient {
     @Override
     public BookingResponse createBooking(String eventId, String seatCategory,
                                          int quantity, String idempotencyKey) {
-        log.debug("Calling booking-service: CreateBooking event='{}', category='{}', qty={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling booking-service: CreateBooking event='{}', category='{}', qty={}",
                 eventId, seatCategory, quantity);
 
         return bookingServiceStub.createBooking(
@@ -36,7 +38,7 @@ public class BookingServiceClientImpl implements BookingClient {
 
     @Override
     public BookingResponse getBooking(String bookingId) {
-        log.debug("Calling booking-service: GetBooking id='{}'", bookingId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling booking-service: GetBooking id='{}'", bookingId);
 
         return bookingServiceStub.getBooking(
                 GetBookingRequest.newBuilder()
@@ -48,7 +50,7 @@ public class BookingServiceClientImpl implements BookingClient {
     @Override
     public GetUserBookingsResponse getUserBookings(String userId, int page,
                                                     int pageSize, String statusFilter) {
-        log.debug("Calling booking-service: GetUserBookings user='{}', page={}, size={}, status='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling booking-service: GetUserBookings user='{}', page={}, size={}, status='{}'",
                 userId, page, pageSize, statusFilter);
 
         GetUserBookingsRequest.Builder builder = GetUserBookingsRequest.newBuilder()
@@ -65,7 +67,7 @@ public class BookingServiceClientImpl implements BookingClient {
 
     @Override
     public BookingResponse cancelBooking(String bookingId, String reason) {
-        log.debug("Calling booking-service: CancelBooking id='{}', reason='{}'", bookingId, reason);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling booking-service: CancelBooking id='{}', reason='{}'", bookingId, reason);
 
         CancelBookingRequest.Builder builder = CancelBookingRequest.newBuilder()
                 .setBookingId(bookingId);

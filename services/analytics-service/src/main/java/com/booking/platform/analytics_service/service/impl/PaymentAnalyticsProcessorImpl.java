@@ -4,7 +4,9 @@ import com.booking.platform.analytics_service.constants.AnalyticsConstants.Payme
 import com.booking.platform.analytics_service.dto.PaymentDto;
 import com.booking.platform.analytics_service.repository.EventLogRepository;
 import com.booking.platform.analytics_service.service.PaymentAnalyticsProcessor;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
@@ -40,7 +42,7 @@ public class PaymentAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         upsertDailyMetrics(new Update()
                 .inc(Payment.PAYMENTS_COMPLETED, 1));
 
-        log.debug("Processed PaymentCompletedEvent: paymentId='{}', bookingId='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed PaymentCompletedEvent: paymentId='{}', bookingId='{}'",
                 payment.paymentId(), payment.bookingId());
     }
 
@@ -52,7 +54,7 @@ public class PaymentAnalyticsProcessorImpl extends BaseAnalyticsProcessor
         upsertDailyMetrics(new Update()
                 .inc(Payment.PAYMENTS_FAILED, 1));
 
-        log.debug("Processed PaymentFailedEvent: paymentId='{}', bookingId='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed PaymentFailedEvent: paymentId='{}', bookingId='{}'",
                 payment.paymentId(), payment.bookingId());
     }
 
@@ -65,7 +67,7 @@ public class PaymentAnalyticsProcessorImpl extends BaseAnalyticsProcessor
                 .inc(Payment.REFUNDS_COMPLETED, 1)
                 .inc(Payment.TOTAL_REFUNDS, payment.amount()));
 
-        log.debug("Processed RefundCompletedEvent: paymentId='{}', bookingId='{}', amount={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Processed RefundCompletedEvent: paymentId='{}', bookingId='{}', amount={}",
                 payment.paymentId(), payment.bookingId(), payment.amount());
     }
 }

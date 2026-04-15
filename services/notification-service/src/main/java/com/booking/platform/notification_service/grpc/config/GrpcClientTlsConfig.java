@@ -4,8 +4,11 @@ import io.grpc.netty.shaded.io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContext;
 import io.grpc.netty.shaded.io.netty.handler.ssl.SslContextBuilder;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.channelfactory.GrpcChannelConfigurer;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -42,7 +45,7 @@ public class GrpcClientTlsConfig {
         return (channelBuilder, name) -> {
             if (channelBuilder instanceof NettyChannelBuilder nettyBuilder) {
                 try {
-                    log.info("Configuring gRPC client '{}' with mTLS...", name);
+                    ApplicationLogger.logMessage(log, Level.INFO, "Configuring gRPC client '{}' with mTLS...", name);
 
                     SslContext sslContext = GrpcSslContexts.configure(
                             SslContextBuilder.forClient()
@@ -54,14 +57,15 @@ public class GrpcClientTlsConfig {
                     ).build();
 
                     nettyBuilder.sslContext(sslContext);
-                    log.info("gRPC client '{}' mTLS configured successfully", name);
+                    ApplicationLogger.logMessage(log, Level.INFO, "gRPC client '{}' mTLS configured successfully", name);
 
                 } catch (IOException e) {
-                    log.error("Failed to configure gRPC client TLS for '{}'", name, e);
+                    ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.TLS_CONFIG_FAILED, "gRPC client '{}'", name, e);
                     throw new RuntimeException("Failed to configure gRPC client TLS", e);
                 }
             } else {
-                log.warn("Cannot configure TLS for non-Netty channel builder: {}",
+                ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.TLS_CONFIG_FAILED,
+                        "Cannot configure TLS for non-Netty channel builder: {}",
                         channelBuilder.getClass().getName());
             }
         };

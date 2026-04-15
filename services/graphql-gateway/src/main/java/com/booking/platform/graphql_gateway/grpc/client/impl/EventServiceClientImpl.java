@@ -7,7 +7,9 @@ import com.booking.platform.graphql_gateway.dto.event.EventSearchRequest;
 import com.booking.platform.graphql_gateway.dto.event.UpdateEventInput;
 import com.booking.platform.graphql_gateway.dto.event.VenueInput;
 import com.booking.platform.graphql_gateway.grpc.client.EventClient;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +22,7 @@ public class EventServiceClientImpl implements EventClient {
 
     @Override
     public EventResponse createEvent(CreateEventInput input) {
-        log.debug("Calling event-service: CreateEvent title='{}'", input.title());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling event-service: CreateEvent title='{}'", input.title());
 
         CreateEventRequest.Builder requestBuilder = CreateEventRequest.newBuilder()
                 .setTitle(input.title())
@@ -46,7 +48,7 @@ public class EventServiceClientImpl implements EventClient {
 
     @Override
     public EventResponse getEvent(String eventId) {
-        log.debug("Calling event-service: GetEvent {}", eventId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling event-service: GetEvent {}", eventId);
 
         return eventServiceStub.getEvent(
                 GetEventRequest.newBuilder().setEventId(eventId).build()
@@ -55,7 +57,7 @@ public class EventServiceClientImpl implements EventClient {
 
     @Override
     public EventResponse updateEvent(String eventId, UpdateEventInput input) {
-        log.debug("Calling event-service: UpdateEvent {}", eventId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling event-service: UpdateEvent {}", eventId);
 
         UpdateEventRequest.Builder requestBuilder = UpdateEventRequest.newBuilder()
                 .setEventId(eventId);
@@ -85,7 +87,7 @@ public class EventServiceClientImpl implements EventClient {
 
     @Override
     public EventResponse publishEvent(String eventId) {
-        log.debug("Calling event-service: PublishEvent {}", eventId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling event-service: PublishEvent {}", eventId);
 
         return eventServiceStub.publishEvent(
                 PublishEventRequest.newBuilder().setEventId(eventId).build()
@@ -94,7 +96,7 @@ public class EventServiceClientImpl implements EventClient {
 
     @Override
     public EventResponse cancelEvent(String eventId) {
-        log.debug("Calling event-service: CancelEvent {}", eventId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling event-service: CancelEvent {}", eventId);
 
         return eventServiceStub.cancelEvent(
                 CancelEventRequest.newBuilder().setEventId(eventId).build()
@@ -103,7 +105,7 @@ public class EventServiceClientImpl implements EventClient {
 
     @Override
     public SearchEventsResponse searchEvents(EventSearchRequest request) {
-        log.debug("Calling event-service: SearchEvents query='{}', category={}, city={}, page={}, size={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling event-service: SearchEvents query='{}', category={}, city={}, page={}, size={}",
                 request.query(), request.category(), request.city(), request.page(), request.pageSize());
 
         SearchEventsRequest.Builder requestBuilder = SearchEventsRequest.newBuilder()

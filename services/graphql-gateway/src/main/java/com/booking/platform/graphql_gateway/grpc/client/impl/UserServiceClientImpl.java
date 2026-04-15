@@ -4,7 +4,9 @@ import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.graphql_gateway.grpc.client.UserOperationsClient;
 import com.booking.platform.graphql_gateway.constants.UserServiceConst;
 import lombok.RequiredArgsConstructor;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +20,7 @@ public class UserServiceClientImpl implements UserOperationsClient {
 
     @Override
     public UserInfo getUser(String userId) {
-        log.debug("Calling user-service: GetUser {}", userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: GetUser {}", userId);
 
         GetUserRequest request = GetUserRequest.newBuilder()
                 .setUserId(userId)
@@ -30,7 +32,7 @@ public class UserServiceClientImpl implements UserOperationsClient {
 
     @Override
     public UserInfo getUserByUsername(String username) {
-        log.debug("Calling user-service: GetUserByUsername {}", username);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: GetUserByUsername {}", username);
 
         GetUserByUsernameRequest request = GetUserByUsernameRequest.newBuilder()
                 .setUsername(username)
@@ -45,7 +47,7 @@ public class UserServiceClientImpl implements UserOperationsClient {
                                String phoneNumber, String country, String preferredLanguage,
                                String preferredCurrency, String timezone, String profilePictureUrl,
                                Boolean emailNotifications, Boolean smsNotifications) {
-        log.debug("Calling user-service: UpdateUser {}", userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: UpdateUser {}", userId);
 
         UpdateUserRequest.Builder builder = UpdateUserRequest.newBuilder()
                 .setUserId(userId);
@@ -68,7 +70,7 @@ public class UserServiceClientImpl implements UserOperationsClient {
 
     @Override
     public SearchUsersResponse searchUsers(String query, int page, int pageSize) {
-        log.debug("Calling user-service: SearchUsers query='{}', page={}, size={}", query, page, pageSize);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: SearchUsers query='{}', page={}, size={}", query, page, pageSize);
 
         SearchUsersRequest.Builder builder = SearchUsersRequest.newBuilder()
                 .setPage(page)

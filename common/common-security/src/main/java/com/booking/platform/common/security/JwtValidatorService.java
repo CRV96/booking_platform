@@ -1,6 +1,9 @@
 package com.booking.platform.common.security;
 
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -42,7 +45,7 @@ public class JwtValidatorService {
 
         this.tokenBlacklistService = tokenBlacklistService;
 
-        log.info("Initializing JWT validator with JWKS URI: {}", jwkSetUri);
+        ApplicationLogger.logMessage(log, Level.INFO, "Initializing JWT validator with JWKS URI: {}", jwkSetUri);
 
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
 
@@ -57,7 +60,7 @@ public class JwtValidatorService {
         decoder.setJwtValidator(validator);
         this.jwtDecoder = decoder;
 
-        log.info("JWT validator initialized successfully");
+        ApplicationLogger.logMessage(log, Level.INFO, "JWT validator initialized successfully");
     }
 
     /**
@@ -80,7 +83,7 @@ public class JwtValidatorService {
         // 4: Blacklist check
         String jti = jwt.getId();
         if (jti != null && tokenBlacklistService.isBlacklisted(jti)) {
-            log.warn("Token has been revoked: {}", jti);
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.AUTH_TOKEN_INVALID, "Token has been revoked: {}", jti);
             throw new JwtException("Token has been revoked");
         }
 

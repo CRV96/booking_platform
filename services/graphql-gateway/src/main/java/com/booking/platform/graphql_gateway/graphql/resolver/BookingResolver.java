@@ -5,8 +5,10 @@ import com.booking.platform.graphql_gateway.dto.booking.BookingConnection;
 import com.booking.platform.graphql_gateway.dto.booking.CreateBookingInput;
 import com.booking.platform.graphql_gateway.grpc.client.BookingClient;
 import com.booking.platform.graphql_gateway.service.AuthService;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -39,7 +41,7 @@ public class BookingResolver {
     @QueryMapping
     public Booking booking(@Argument("id") String id) {
         String userId = authService.getAuthenticatedUserId();
-        log.debug("GraphQL query: booking({}) for user '{}'", id, userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: booking({}) for user '{}'", id, userId);
 
         return Booking.fromGrpc(bookingClient.getBooking(id).getBooking());
     }
@@ -51,7 +53,7 @@ public class BookingResolver {
             @Argument("status") String status) {
 
         String userId = authService.getAuthenticatedUserId();
-        log.debug("GraphQL query: myBookings(page={}, size={}, status='{}') for user '{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: myBookings(page={}, size={}, status='{}') for user '{}'",
                 page, pageSize, status, userId);
 
         int actualPage = page != null ? page : 0;
@@ -79,7 +81,7 @@ public class BookingResolver {
     @MutationMapping
     public Booking createBooking(@Argument("input") CreateBookingInput input) {
         String userId = authService.getAuthenticatedUserId();
-        log.info("GraphQL mutation: createBooking event='{}', category='{}', qty={} for user '{}'",
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: createBooking event='{}', category='{}', qty={} for user '{}'",
                 input.eventId(), input.seatCategory(), input.quantity(), userId);
 
         return Booking.fromGrpc(bookingClient.createBooking(
@@ -96,7 +98,7 @@ public class BookingResolver {
             @Argument("reason") String reason) {
 
         String userId = authService.getAuthenticatedUserId();
-        log.info("GraphQL mutation: cancelBooking({}, reason='{}') for user '{}'", id, reason, userId);
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: cancelBooking({}, reason='{}') for user '{}'", id, reason, userId);
 
         return Booking.fromGrpc(bookingClient.cancelBooking(id, reason).getBooking());
     }

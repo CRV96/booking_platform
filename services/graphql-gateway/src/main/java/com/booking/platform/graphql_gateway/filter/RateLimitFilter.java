@@ -9,8 +9,11 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
@@ -76,7 +79,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
         RateLimitResult result = rateLimitService.checkLimit(identity, tier.getLimit(), tier.getWindowSeconds());
 
         if (!result.allowed()) {
-            log.warn("Rate limit exceeded for {}: {}/{}", identity, result.currentCount(), result.limit());
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.RATE_LIMIT_STORE_FAILED,
+                    "Rate limit exceeded for {}: {}/{}", identity, result.currentCount(), result.limit());
             writeRateLimitResponse(response, result);
             return;
         }

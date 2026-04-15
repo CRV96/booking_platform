@@ -10,8 +10,10 @@ import com.booking.platform.notification_service.email.EmailService;
 import com.booking.platform.notification_service.constants.EmailTemplatesConst;
 import com.booking.platform.notification_service.grpc.client.BookingServiceClient;
 import com.booking.platform.notification_service.grpc.client.UserServiceClient;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -49,13 +51,10 @@ public class EventNotificationConsumer {
     )
     public void onEventCreated(ConsumerRecord<String, EventCreatedEvent> record) {
         EventCreatedEvent event = record.value();
-        log.info("[EVENT_CREATED] eventId='{}', title='{}', category='{}', organizer='{}' | partition={}, offset={}",
-                event.getEventId(),
-                event.getTitle(),
-                event.getCategory(),
-                event.getOrganizerId(),
-                record.partition(),
-                record.offset());
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "[EVENT_CREATED] eventId='{}', title='{}', category='{}', organizer='{}' | partition={}, offset={}",
+                event.getEventId(), event.getTitle(), event.getCategory(), event.getOrganizerId(),
+                record.partition(), record.offset());
 
         String organizerEmail = userServiceClient.getUserEmail(event.getOrganizerId());
 
@@ -74,7 +73,7 @@ public class EventNotificationConsumer {
                 )
         );
 
-        log.debug("Sent event-created email to organizer '{}'", organizerEmail);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Sent event-created email to organizer '{}'", organizerEmail);
     }
 
     /** Fields that are relevant to attendees — only these trigger an update email. */
@@ -92,31 +91,29 @@ public class EventNotificationConsumer {
     )
     public void onEventUpdated(ConsumerRecord<String, EventUpdatedEvent> record) {
         EventUpdatedEvent event = record.value();
-        log.info("[EVENT_UPDATED] eventId='{}', changedFields={} | partition={}, offset={}",
-                event.getEventId(),
-                event.getChangedFieldsList(),
-                record.partition(),
-                record.offset());
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "[EVENT_UPDATED] eventId='{}', changedFields={} | partition={}, offset={}",
+                event.getEventId(), event.getChangedFieldsList(), record.partition(), record.offset());
 
         List<String> relevantChanges = event.getChangedFieldsList().stream()
                 .filter(ATTENDEE_RELEVANT_FIELDS::contains)
                 .toList();
 
         if (relevantChanges.isEmpty()) {
-            log.debug("No attendee-relevant fields changed for event '{}', skipping notification", event.getEventId());
+            ApplicationLogger.logMessage(log, Level.DEBUG, "No attendee-relevant fields changed for event '{}', skipping notification", event.getEventId());
             return;
         }
 
         final List<String> recipientIds = bookingServiceClient.getBookingAttendees(event.getEventId(), CONFIRMED_STATUS);
-        log.debug("Fetched {} confirmed attendees for event '{}'", recipientIds.size(), event.getEventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetched {} confirmed attendees for event '{}'", recipientIds.size(), event.getEventId());
 
         if (recipientIds.isEmpty()) {
-            log.debug("No attendees to notify for updated event '{}'", event.getEventId());
+            ApplicationLogger.logMessage(log, Level.DEBUG, "No attendees to notify for updated event '{}'", event.getEventId());
             return;
         }
 
         final List<String> recipientEmails = userServiceClient.getUsersEmails(recipientIds);
-        log.debug("Fetched {} attendee emails for event '{}'", recipientEmails.size(), event.getEventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetched {} attendee emails for event '{}'", recipientEmails.size(), event.getEventId());
 
         for (String email : recipientEmails) {
             emailService.sendHtml(
@@ -129,10 +126,10 @@ public class EventNotificationConsumer {
                             EmailTemplatesConst.EventUpdated.Vars.TIMESTAMP,      event.getTimestamp()
                     )
             );
-            log.debug("Sent event-updated email to '{}'", email);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Sent event-updated email to '{}'", email);
         }
 
-        log.debug("Sent event-updated email to {} attendees", recipientEmails.size());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Sent event-updated email to {} attendees", recipientEmails.size());
     }
 
     /**
@@ -144,13 +141,10 @@ public class EventNotificationConsumer {
     )
     public void onEventPublished(ConsumerRecord<String, EventPublishedEvent> record) {
         EventPublishedEvent event = record.value();
-        log.info("[EVENT_PUBLISHED] eventId='{}', title='{}', category='{}', dateTime='{}' | partition={}, offset={}",
-                event.getEventId(),
-                event.getTitle(),
-                event.getCategory(),
-                event.getDateTime(),
-                record.partition(),
-                record.offset());
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "[EVENT_PUBLISHED] eventId='{}', title='{}', category='{}', dateTime='{}' | partition={}, offset={}",
+                event.getEventId(), event.getTitle(), event.getCategory(), event.getDateTime(),
+                record.partition(), record.offset());
 
         String organizerEmail = userServiceClient.getUserEmail(event.getOrganizerId());
 
@@ -166,7 +160,7 @@ public class EventNotificationConsumer {
                         EmailTemplatesConst.EventPublished.Vars.TIMESTAMP, event.getTimestamp()
                 )
         );
-        log.debug("Sent event-published email to organizer '{}'", organizerEmail);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Sent event-published email to organizer '{}'", organizerEmail);
     }
 
     /**
@@ -182,22 +176,20 @@ public class EventNotificationConsumer {
     )
     public void onEventCancelled(ConsumerRecord<String, EventCancelledEvent> record) {
         EventCancelledEvent event = record.value();
-        log.info("[EVENT_CANCELLED] eventId='{}', reason='{}' | partition={}, offset={}",
-                event.getEventId(),
-                event.getReason(),
-                record.partition(),
-                record.offset());
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "[EVENT_CANCELLED] eventId='{}', reason='{}' | partition={}, offset={}",
+                event.getEventId(), event.getReason(), record.partition(), record.offset());
 
         final List<String> recipientIds = bookingServiceClient.getBookingAttendees(event.getEventId(), CONFIRMED_STATUS);
-        log.debug("Fetched {} confirmed attendees for event '{}' from booking-service", recipientIds.size(), event.getEventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetched {} confirmed attendees for event '{}' from booking-service", recipientIds.size(), event.getEventId());
 
         if(recipientIds.isEmpty()) {
-            log.debug("No attendees to notify for cancelled event '{}'", event.getEventId());
+            ApplicationLogger.logMessage(log, Level.DEBUG, "No attendees to notify for cancelled event '{}'", event.getEventId());
             return;
         }
 
         final List<String> recipientEmails = userServiceClient.getUsersEmails(recipientIds);
-        log.debug("Fetched {} attendee emails for event '{}' from user-service", recipientEmails.size(), event.getEventId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Fetched {} attendee emails for event '{}' from user-service", recipientEmails.size(), event.getEventId());
 
         int counter = 0;
 
@@ -214,10 +206,10 @@ public class EventNotificationConsumer {
             );
             counter++;
 
-            log.debug("Sent event-cancelled email to '{}'", email);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Sent event-cancelled email to '{}'", email);
         }
 
-        log.debug("Sent event-cancelled email to {} attendees", counter);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Sent event-cancelled email to {} attendees", counter);
 
     }
 }

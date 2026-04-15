@@ -13,11 +13,14 @@ import com.booking.platform.booking_service.properties.BookingProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
 import com.booking.platform.common.grpc.event.EventInfo;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import com.booking.platform.common.grpc.event.EventResponse;
 import com.booking.platform.common.grpc.event.SeatCategoryInfo;
 import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -57,7 +60,7 @@ public class BookingServiceImpl implements BookingService {
         // 1. Idempotency check BEFORE lock — avoids lock contention on retries
         Optional<BookingEntity> existing = bookingRepository.findByIdempotencyKey(idempotencyKey);
         if (existing.isPresent()) {
-            log.info("Idempotent hit: returning existing booking for key='{}'", idempotencyKey);
+            ApplicationLogger.logMessage(log, Level.INFO, "Idempotent hit: returning existing booking for key='{}'", idempotencyKey);
             return existing.get();
         }
 
@@ -71,7 +74,7 @@ public class BookingServiceImpl implements BookingService {
             // 3. Double-check idempotency inside lock (race between step 1 and lock)
             existing = bookingRepository.findByIdempotencyKey(idempotencyKey);
             if (existing.isPresent()) {
-                log.info("Idempotent hit (post-lock): key='{}'", idempotencyKey);
+                ApplicationLogger.logMessage(log, Level.INFO, "Idempotent hit (post-lock): key='{}'", idempotencyKey);
                 return existing.get();
             }
 
@@ -102,7 +105,7 @@ public class BookingServiceImpl implements BookingService {
                     .build();
 
             BookingEntity saved = bookingRepository.save(booking);
-            log.info("Booking created: id='{}', event='{}', category='{}', qty={}, total={}",
+            ApplicationLogger.logMessage(log, Level.INFO, "Booking created: id='{}', event='{}', category='{}', qty={}, total={}",
                     saved.getId(), eventId, seatCategory, quantity, saved.getTotalPrice());
 
             // 8. Publish BookingCreatedEvent → triggers payment-service
@@ -168,7 +171,7 @@ public class BookingServiceImpl implements BookingService {
 
         // Idempotent: already confirmed → return as-is
         if (booking.getStatus() == BookingStatus.CONFIRMED) {
-            log.info("Booking '{}' is already CONFIRMED, returning as-is", bookingId);
+            ApplicationLogger.logMessage(log, Level.INFO, "Booking '{}' is already CONFIRMED, returning as-is", bookingId);
             return booking;
         }
 
@@ -179,7 +182,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.CONFIRMED);
         BookingEntity saved = bookingRepository.save(booking);
 
-        log.info("Booking confirmed: id='{}', event='{}', category='{}', qty={}, total={}",
+        ApplicationLogger.logMessage(log, Level.INFO, "Booking confirmed: id='{}', event='{}', category='{}', qty={}, total={}",
                 bookingId, booking.getEventId(), booking.getSeatCategory(),
                 booking.getQuantity(), booking.getTotalPrice());
 
@@ -211,7 +214,7 @@ public class BookingServiceImpl implements BookingService {
     public void markBookingAsRefunded(UUID bookingId) {
         Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
         if (optional.isEmpty()) {
-            log.debug("Booking '{}' no longer exists, skipping refund completion", bookingId);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Booking '{}' no longer exists, skipping refund completion", bookingId);
             return;
         }
 
@@ -219,13 +222,14 @@ public class BookingServiceImpl implements BookingService {
 
         // Idempotent: already refunded
         if (booking.getStatus() == BookingStatus.REFUNDED) {
-            log.info("Booking '{}' is already REFUNDED, skipping", bookingId);
+            ApplicationLogger.logMessage(log, Level.INFO, "Booking '{}' is already REFUNDED, skipping", bookingId);
             return;
         }
 
         // Guard: only CANCELLED bookings should receive a refund completion
         if (booking.getStatus() != BookingStatus.CANCELLED) {
-            log.warn("Booking '{}' has unexpected status '{}' for refund completion, skipping",
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.BOOKING_CANCELLATION_FAILED,
+                    "Booking '{}' has unexpected status '{}' for refund completion, skipping",
                     bookingId, booking.getStatus());
             return;
         }
@@ -233,7 +237,7 @@ public class BookingServiceImpl implements BookingService {
         booking.setStatus(BookingStatus.REFUNDED);
         bookingRepository.save(booking);
 
-        log.info("Booking REFUNDED: id='{}', eventId='{}', category='{}', total={}",
+        ApplicationLogger.logMessage(log, Level.INFO, "Booking REFUNDED: id='{}', eventId='{}', category='{}', total={}",
                 bookingId, booking.getEventId(), booking.getSeatCategory(), booking.getTotalPrice());
     }
 
@@ -249,7 +253,7 @@ public class BookingServiceImpl implements BookingService {
 
         final List<String> attendees = bookingRepository.findDistinctUserIdsByEventIdAndStatus(eventId, status);
 
-        log.debug("Found {} attendees for event '{}' and status {}", attendees.size(), eventId, status.name());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Found {} attendees for event '{}' and status {}", attendees.size(), eventId, status.name());
 
         return attendees;
     }
@@ -285,13 +289,13 @@ public class BookingServiceImpl implements BookingService {
     private Optional<BookingEntity> findPendingBooking(UUID bookingId, String operation) {
         Optional<BookingEntity> optional = bookingRepository.findById(bookingId);
         if (optional.isEmpty()) {
-            log.debug("Booking '{}' no longer exists, skipping {}", bookingId, operation);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Booking '{}' no longer exists, skipping {}", bookingId, operation);
             return Optional.empty();
         }
 
         BookingEntity booking = optional.get();
         if (booking.getStatus() != BookingStatus.PENDING) {
-            log.debug("Booking '{}' is no longer PENDING (status={}), skipping {}",
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Booking '{}' is no longer PENDING (status={}), skipping {}",
                     bookingId, booking.getStatus(), operation);
             return Optional.empty();
         }
@@ -310,7 +314,7 @@ public class BookingServiceImpl implements BookingService {
 
         releaseSeats(booking);
 
-        log.info("Booking cancelled: id='{}', reason='{}'", booking.getId(), reason);
+        ApplicationLogger.logMessage(log, Level.INFO, "Booking cancelled: id='{}', reason='{}'", booking.getId(), reason);
 
         bookingEventPublisher.publishBookingCancelled(saved);
         return saved;
@@ -321,8 +325,8 @@ public class BookingServiceImpl implements BookingService {
             eventServiceClient.updateSeatAvailability(
                     booking.getEventId(), booking.getSeatCategory(), booking.getQuantity());
         } catch (Exception e) {
-            log.error("Failed to release seats for booking '{}': {}",
-                    booking.getId(), e.getMessage());
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.SEAT_UPDATE_FAILED,
+                    "Failed to release seats for booking '{}'", booking.getId(), e);
             // Seats will be recovered by eventual consistency / reconciliation
         }
     }
@@ -335,7 +339,8 @@ public class BookingServiceImpl implements BookingService {
         try {
             return grpcCall.get();
         } catch (StatusRuntimeException e) {
-            log.error("Event-service gRPC call failed: {}", e.getStatus(), e);
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.GRPC_CALL_FAILED,
+                    "Event-service gRPC call failed: {}", e.getStatus(), e);
             throw switch (e.getStatus().getCode()) {
                 case NOT_FOUND -> new EventNotAvailableException(eventId, "Event not found");
                 case FAILED_PRECONDITION -> new EventNotAvailableException(eventId,

@@ -10,8 +10,11 @@ import com.booking.platform.common.events.EventUpdatedEvent;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.common.events.PaymentFailedEvent;
 import com.booking.platform.notification_service.constants.NotificationConst;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -45,9 +48,8 @@ public class DltConsumer {
     public void onEventCreatedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             EventCreatedEvent event = EventCreatedEvent.parseFrom(record.value());
-            log.error("[DLT] [EVENT_CREATED] email NOT sent | " +
-                      "eventId='{}', title='{}', organizerId='{}', timestamp='{}' | " +
-                      "topic='{}', partition={}, offset={}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[DLT] [EVENT_CREATED] email NOT sent | eventId='{}', title='{}', organizerId='{}', timestamp='{}' | topic='{}', partition={}, offset={}",
                     event.getEventId(), event.getTitle(), event.getOrganizerId(), event.getTimestamp(),
                     record.topic(), record.partition(), record.offset());
         } catch (InvalidProtocolBufferException e) {
@@ -59,9 +61,8 @@ public class DltConsumer {
     public void onEventUpdatedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             EventUpdatedEvent event = EventUpdatedEvent.parseFrom(record.value());
-            log.error("[DLT] [EVENT_UPDATED] notification NOT sent | " +
-                      "eventId='{}', changedFields={}, timestamp='{}' | " +
-                      "topic='{}', partition={}, offset={}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[DLT] [EVENT_UPDATED] notification NOT sent | eventId='{}', changedFields={}, timestamp='{}' | topic='{}', partition={}, offset={}",
                     event.getEventId(), event.getChangedFieldsList(), event.getTimestamp(),
                     record.topic(), record.partition(), record.offset());
         } catch (InvalidProtocolBufferException e) {
@@ -73,9 +74,8 @@ public class DltConsumer {
     public void onEventPublishedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             EventPublishedEvent event = EventPublishedEvent.parseFrom(record.value());
-            log.error("[DLT] [EVENT_PUBLISHED] notification NOT sent | " +
-                      "eventId='{}', title='{}', organizerId='{}', timestamp='{}' | " +
-                      "topic='{}', partition={}, offset={}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[DLT] [EVENT_PUBLISHED] notification NOT sent | eventId='{}', title='{}', organizerId='{}', timestamp='{}' | topic='{}', partition={}, offset={}",
                     event.getEventId(), event.getTitle(), event.getOrganizerId(), event.getTimestamp(),
                     record.topic(), record.partition(), record.offset());
         } catch (InvalidProtocolBufferException e) {
@@ -87,9 +87,8 @@ public class DltConsumer {
     public void onEventCancelledDlt(ConsumerRecord<String, byte[]> record) {
         try {
             EventCancelledEvent event = EventCancelledEvent.parseFrom(record.value());
-            log.error("[DLT] [EVENT_CANCELLED] cancellation email NOT sent to attendees | " +
-                      "eventId='{}', reason='{}', timestamp='{}' | " +
-                      "topic='{}', partition={}, offset={}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[DLT] [EVENT_CANCELLED] cancellation email NOT sent to attendees | eventId='{}', reason='{}', timestamp='{}' | topic='{}', partition={}, offset={}",
                     event.getEventId(), event.getReason(), event.getTimestamp(),
                     record.topic(), record.partition(), record.offset());
         } catch (InvalidProtocolBufferException e) {
@@ -103,9 +102,8 @@ public class DltConsumer {
     public void onBookingCreatedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             BookingCreatedEvent event = BookingCreatedEvent.parseFrom(record.value());
-            log.error("[DLT] [BOOKING_CREATED] notification NOT sent | " +
-                      "bookingId='{}', userId='{}', eventId='{}', timestamp='{}' | " +
-                      "topic='{}', partition={}, offset={}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[DLT] [BOOKING_CREATED] notification NOT sent | bookingId='{}', userId='{}', eventId='{}', timestamp='{}' | topic='{}', partition={}, offset={}",
                     event.getBookingId(), event.getUserId(), event.getEventId(), event.getTimestamp(),
                     record.topic(), record.partition(), record.offset());
         } catch (InvalidProtocolBufferException e) {
@@ -117,9 +115,8 @@ public class DltConsumer {
     public void onBookingConfirmedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             BookingConfirmedEvent event = BookingConfirmedEvent.parseFrom(record.value());
-            log.error("[DLT] [BOOKING_CONFIRMED] confirmation email NOT sent | " +
-                      "bookingId='{}', userId='{}', eventId='{}', ticketCount={}, timestamp='{}' | " +
-                      "topic='{}', partition={}, offset={}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[DLT] [BOOKING_CONFIRMED] confirmation email NOT sent | bookingId='{}', userId='{}', eventId='{}', ticketCount={}, timestamp='{}' | topic='{}', partition={}, offset={}",
                     event.getBookingId(), event.getUserId(), event.getEventId(),
                     event.getTicketIdsList().size(), event.getTimestamp(),
                     record.topic(), record.partition(), record.offset());
@@ -132,9 +129,8 @@ public class DltConsumer {
     public void onBookingCancelledDlt(ConsumerRecord<String, byte[]> record) {
         try {
             BookingCancelledEvent event = BookingCancelledEvent.parseFrom(record.value());
-            log.error("[DLT] [BOOKING_CANCELLED] cancellation email NOT sent | " +
-                      "bookingId='{}', userId='{}', eventId='{}', reason='{}', timestamp='{}' | " +
-                      "topic='{}', partition={}, offset={}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[DLT] [BOOKING_CANCELLED] cancellation email NOT sent | bookingId='{}', userId='{}', eventId='{}', reason='{}', timestamp='{}' | topic='{}', partition={}, offset={}",
                     event.getBookingId(), event.getUserId(), event.getEventId(),
                     event.getReason(), event.getTimestamp(),
                     record.topic(), record.partition(), record.offset());
@@ -147,9 +143,8 @@ public class DltConsumer {
     public void onPaymentFailedDlt(ConsumerRecord<String, byte[]> record) {
         try {
             PaymentFailedEvent event = PaymentFailedEvent.parseFrom(record.value());
-            log.error("[DLT] [PAYMENT_FAILED] payment failure notification NOT sent | " +
-                      "paymentId='{}', bookingId='{}', reason='{}', timestamp='{}' | " +
-                      "topic='{}', partition={}, offset={}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[DLT] [PAYMENT_FAILED] payment failure notification NOT sent | paymentId='{}', bookingId='{}', reason='{}', timestamp='{}' | topic='{}', partition={}, offset={}",
                     event.getPaymentId(), event.getBookingId(), event.getReason(), event.getTimestamp(),
                     record.topic(), record.partition(), record.offset());
         } catch (InvalidProtocolBufferException e) {
@@ -164,8 +159,8 @@ public class DltConsumer {
      */
     private void logPoisonPill(ConsumerRecord<String, byte[]> record) {
         int byteLength = record.value() != null ? record.value().length : 0;
-        log.error("[DLT] [POISON_PILL] Unreadable message — failed to deserialize | " +
-                  "topic='{}', partition={}, offset={}, key='{}', valueBytes={}",
+        ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                "[DLT] [POISON_PILL] Unreadable message — failed to deserialize | topic='{}', partition={}, offset={}, key='{}', valueBytes={}",
                 record.topic(), record.partition(), record.offset(), record.key(), byteLength);
     }
 }

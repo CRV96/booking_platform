@@ -3,7 +3,9 @@ package com.booking.platform.notification_service.grpc.auth;
 import com.booking.platform.notification_service.properties.KeycloakServiceProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -39,7 +41,7 @@ public class KeycloakServiceTokenProvider {
     }
 
     private String refreshToken() {
-        log.debug("Requesting new service account token from Keycloak");
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Requesting new service account token from Keycloak");
 
         String formBody = "grant_type=client_credentials"
                 + "&client_id=" + properties.clientId()
@@ -57,7 +59,7 @@ public class KeycloakServiceTokenProvider {
             cachedToken = json.get("access_token").asText();
             int expiresIn = json.get("expires_in").asInt();
             tokenExpiry = Instant.now().plusSeconds(expiresIn - EXPIRY_BUFFER_SECONDS);
-            log.debug("Obtained service account token, expires in {}s", expiresIn);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Obtained service account token, expires in {}s", expiresIn);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse Keycloak token response", e);
         }

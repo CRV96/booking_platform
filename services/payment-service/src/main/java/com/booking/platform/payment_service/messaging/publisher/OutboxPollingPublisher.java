@@ -10,8 +10,11 @@ import com.booking.platform.payment_service.repository.OutboxEventRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.MessageLite;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -87,7 +90,7 @@ public class OutboxPollingPublisher {
             return;
         }
 
-        log.debug("Outbox poller found {} unpublished event(s)", events.size());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Outbox poller found {} unpublished event(s)", events.size());
 
         for (OutboxEventEntity event : events) {
             try {
@@ -102,13 +105,13 @@ public class OutboxPollingPublisher {
                 event.setPublishedAt(Instant.now());
                 outboxEventRepository.save(event);
 
-                log.info("Outbox event published: id='{}', type='{}', topic='{}', key='{}'",
+                ApplicationLogger.logMessage(log, Level.INFO, "Outbox event published: id='{}', type='{}', topic='{}', key='{}'",
                         event.getId(), event.getEventType(), topic, key);
 
             } catch (Exception e) {
                 // Stop processing to maintain event ordering.
                 // This event (and all after it) will be retried on the next poll cycle.
-                log.warn("Failed to publish outbox event id='{}', type='{}', will retry: {}",
+                ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.OUTBOX_PUBLISH_FAILED, "Failed to publish outbox event id='{}', type='{}', will retry: {}",
                         event.getId(), event.getEventType(), e.getMessage());
                 break;
             }
@@ -126,7 +129,7 @@ public class OutboxPollingPublisher {
     public void cleanup() {
         final Instant cutoff = Instant.now().minus(Duration.ofHours(retentionHours));
         outboxEventRepository.deleteByPublishedAtBefore(cutoff);
-        log.debug("Outbox cleanup: deleted events published before {}", cutoff);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Outbox cleanup: deleted events published before {}", cutoff);
     }
 
     // ── Private helpers ─────────────────────────────────────────────────────

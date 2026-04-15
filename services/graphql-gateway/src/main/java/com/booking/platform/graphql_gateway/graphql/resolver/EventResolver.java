@@ -9,8 +9,10 @@ import com.booking.platform.graphql_gateway.grpc.client.EventClient;
 import com.booking.platform.graphql_gateway.dto.event.EventSearchRequest;
 import com.booking.platform.graphql_gateway.annotations.PublicEndpoint;
 import com.booking.platform.graphql_gateway.service.AuthService;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -52,7 +54,7 @@ public class EventResolver {
     @PublicEndpoint
     @QueryMapping
     public Event event(@Argument("id") String id) {
-        log.debug("GraphQL query: event({})", id);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: event({})", id);
 
         return Event.fromGrpc(eventClient.getEvent(id).getEvent());
     }
@@ -68,7 +70,7 @@ public class EventResolver {
             @Argument("page") Integer page,
             @Argument("pageSize") Integer pageSize) {
 
-        log.debug("GraphQL query: events(query={}, category={}, city={}, page={}, size={})",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: events(query={}, category={}, city={}, page={}, size={})",
                 query, category, city, page, pageSize);
 
         var response = eventClient.searchEvents(new EventSearchRequest(
@@ -101,7 +103,7 @@ public class EventResolver {
     @MutationMapping
     public Event createEvent(@Argument("input") CreateEventInput input) {
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.info("GraphQL mutation: createEvent title='{}'", input.title());
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: createEvent title='{}'", input.title());
 
         return Event.fromGrpc(eventClient.createEvent(input).getEvent());
     }
@@ -111,7 +113,7 @@ public class EventResolver {
             @Argument("id") String id,
             @Argument("input") UpdateEventInput input) {
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.info("GraphQL mutation: updateEvent({})", id);
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: updateEvent({})", id);
 
         return Event.fromGrpc(eventClient.updateEvent(id, input).getEvent());
     }
@@ -119,7 +121,7 @@ public class EventResolver {
     @MutationMapping
     public Event publishEvent(@Argument("id") String id) {
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.info("GraphQL mutation: publishEvent({})", id);
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: publishEvent({})", id);
 
         return Event.fromGrpc(eventClient.publishEvent(id).getEvent());
     }
@@ -127,7 +129,7 @@ public class EventResolver {
     @MutationMapping
     public Event cancelEvent(@Argument("id") String id) {
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.info("GraphQL mutation: cancelEvent({})", id);
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: cancelEvent({})", id);
 
         return Event.fromGrpc(eventClient.cancelEvent(id).getEvent());
     }

@@ -4,8 +4,11 @@ import com.booking.platform.graphql_gateway.annotations.PublicEndpoint;
 import com.booking.platform.graphql_gateway.exception.ErrorCode;
 import com.booking.platform.graphql_gateway.exception.GraphQLException;
 import com.booking.platform.graphql_gateway.service.AuthService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -47,7 +50,7 @@ public class AuthenticationAspect {
 
         // Check if method is marked as public
         if (method.isAnnotationPresent(PublicEndpoint.class)) {
-            log.debug("Public endpoint accessed: {}.{}",
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Public endpoint accessed: {}.{}",
                     method.getDeclaringClass().getSimpleName(),
                     method.getName());
             return joinPoint.proceed();
@@ -55,13 +58,14 @@ public class AuthenticationAspect {
 
         // Require authentication for non-public endpoints
         if (!authService.isAuthenticated()) {
-            log.warn("Authentication required for: {}.{}",
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.AUTH_TOKEN_INVALID,
+                    "Authentication required for: {}.{}",
                     method.getDeclaringClass().getSimpleName(),
                     method.getName());
             throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
         }
 
-        log.debug("Authenticated access to: {}.{}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Authenticated access to: {}.{}",
                 method.getDeclaringClass().getSimpleName(),
                 method.getName());
         return joinPoint.proceed();

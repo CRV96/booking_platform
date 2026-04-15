@@ -3,7 +3,9 @@ package com.booking.platform.graphql_gateway.grpc.client.impl;
 import com.booking.platform.common.grpc.ticket.*;
 import com.booking.platform.graphql_gateway.constants.TicketServiceConst;
 import com.booking.platform.graphql_gateway.grpc.client.TicketClient;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import net.devh.boot.grpc.client.inject.GrpcClient;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +22,7 @@ public class TicketServiceClientImpl implements TicketClient {
 
     @Override
     public GetMyTicketsResponse getMyTickets(int page, int pageSize) {
-        log.debug("Calling ticket-service: GetMyTickets page={}, size={}", page, pageSize);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling ticket-service: GetMyTickets page={}, size={}", page, pageSize);
 
         return ticketServiceStub.getMyTickets(
                 GetMyTicketsRequest.newBuilder()
@@ -32,7 +34,7 @@ public class TicketServiceClientImpl implements TicketClient {
 
     @Override
     public GetTicketsByBookingResponse getTicketsByBooking(String bookingId) {
-        log.debug("Calling ticket-service: GetTicketsByBooking bookingId='{}'", bookingId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling ticket-service: GetTicketsByBooking bookingId='{}'", bookingId);
 
         return ticketServiceStub.getTicketsByBooking(
                 GetTicketsByBookingRequest.newBuilder()
@@ -43,7 +45,7 @@ public class TicketServiceClientImpl implements TicketClient {
 
     @Override
     public GetTicketsByUserResponse getTicketsByUser(String userId, int page, int pageSize) {
-        log.debug("Calling ticket-service: GetTicketsByUser userId='{}', page={}, size={}", userId, page, pageSize);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling ticket-service: GetTicketsByUser userId='{}', page={}, size={}", userId, page, pageSize);
 
         return ticketServiceStub.getTicketsByUser(
                 GetTicketsByUserRequest.newBuilder()
@@ -56,7 +58,7 @@ public class TicketServiceClientImpl implements TicketClient {
 
     @Override
     public TicketResponse getTicketByNumber(String ticketNumber) {
-        log.debug("Calling ticket-service: GetTicketByNumber ticketNumber='{}'", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling ticket-service: GetTicketByNumber ticketNumber='{}'", ticketNumber);
 
         return ticketServiceStub.getTicketByNumber(
                 GetTicketByNumberRequest.newBuilder()
@@ -67,7 +69,7 @@ public class TicketServiceClientImpl implements TicketClient {
 
     @Override
     public TicketResponse validateTicket(String ticketNumber) {
-        log.debug("Calling ticket-service: ValidateTicket ticketNumber='{}'", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling ticket-service: ValidateTicket ticketNumber='{}'", ticketNumber);
 
         return ticketServiceStub.validateTicket(
                 ValidateTicketRequest.newBuilder()
@@ -78,7 +80,7 @@ public class TicketServiceClientImpl implements TicketClient {
 
     @Override
     public TicketResponse cancelTicket(String ticketNumber) {
-        log.debug("Calling ticket-service: CancelTicket ticketNumber='{}'", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling ticket-service: CancelTicket ticketNumber='{}'", ticketNumber);
 
         return ticketServiceStub.cancelTicket(
                 CancelTicketRequest.newBuilder()

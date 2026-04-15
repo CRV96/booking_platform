@@ -4,7 +4,10 @@ import com.booking.platform.graphql_gateway.constants.GatewayConstants;
 import com.booking.platform.graphql_gateway.exception.ErrorCode;
 import com.booking.platform.graphql_gateway.exception.GraphQLException;
 import com.booking.platform.graphql_gateway.service.AuthService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
@@ -26,7 +29,8 @@ public class JwtAuthServiceImpl implements AuthService {
                 return userId;
             }
 
-            log.error("JWT token has no 'sub' claim. Claims present: {}",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.AUTH_TOKEN_INVALID,
+                    "JWT token has no 'sub' claim. Claims present: {}",
                     jwtAuth.getToken().getClaims().keySet());
             throw new GraphQLException(ErrorCode.UNAUTHENTICATED, "Token missing user identity");
         }
@@ -58,7 +62,8 @@ public class JwtAuthServiceImpl implements AuthService {
             throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
         }
         if (!hasRole(role)) {
-            log.warn("Access denied: user does not have required role '{}'", role);
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.AUTH_TOKEN_INVALID,
+                    "Access denied: user does not have required role '{}'", role);
             throw new GraphQLException(ErrorCode.FORBIDDEN);
         }
     }

@@ -5,8 +5,10 @@ import com.booking.platform.analytics_service.dto.BookingDto;
 import com.booking.platform.analytics_service.service.BookingAnalyticsProcessor;
 import com.booking.platform.common.events.*;
 import com.booking.platform.common.events.KafkaTopics;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -32,7 +34,7 @@ public class BookingLifecycleConsumer {
     public void onBookingCreated(ConsumerRecord<String, BookingCreatedEvent> record) {
         BookingCreatedEvent event = record.value();
 
-        log.debug("[BOOKING_CREATED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[BOOKING_CREATED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(),
                 event.getTotalPrice(), event.getCurrency(),
                 record.partition(), record.offset());
@@ -55,7 +57,7 @@ public class BookingLifecycleConsumer {
     public void onBookingConfirmed(ConsumerRecord<String, BookingConfirmedEvent> record) {
         BookingConfirmedEvent event = record.value();
 
-        log.debug("[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[BOOKING_CONFIRMED] bookingId='{}', eventId='{}', totalPrice={} {} | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(),
                 event.getTotalPrice(), event.getCurrency(),
                 record.partition(), record.offset());
@@ -80,7 +82,7 @@ public class BookingLifecycleConsumer {
     public void onBookingCancelled(ConsumerRecord<String, BookingCancelledEvent> record) {
         BookingCancelledEvent event = record.value();
 
-        log.debug("[BOOKING_CANCELLED] bookingId='{}', eventId='{}', reason='{}' | partition={}, offset={}",
+        ApplicationLogger.logMessage(log, Level.DEBUG, "[BOOKING_CANCELLED] bookingId='{}', eventId='{}', reason='{}' | partition={}, offset={}",
                 event.getBookingId(), event.getEventId(), event.getReason(),
                 record.partition(), record.offset());
 

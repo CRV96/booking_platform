@@ -12,8 +12,11 @@ import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.validation.PaymentValidator;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -67,7 +70,8 @@ public class PaymentStateTransitionService {
                 .idempotencyKey(bookingId)
                 .maxRetries(maxRetries)
                 .build();
-        log.debug("Creating payment record for bookingId='{}', userId='{}', amount={}, currency='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "Creating payment record for bookingId='{}', userId='{}', amount={}, currency='{}'",
                 bookingId, userId, amount, currency);
         return paymentRepository.save(payment);
     }
@@ -81,7 +85,8 @@ public class PaymentStateTransitionService {
         payment.setExternalPaymentId(response.externalPaymentId());
         payment.setPaymentMethod(response.paymentMethod());
         payment.setStatus(PaymentStatus.PROCESSING);
-        log.debug("Payment id='{}' moved to PROCESSING with externalPaymentId='{}'",
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "Payment id='{}' moved to PROCESSING with externalPaymentId='{}'",
                 paymentId, response.externalPaymentId());
         return paymentRepository.save(payment);
     }
@@ -99,7 +104,8 @@ public class PaymentStateTransitionService {
         payment.setRetryCount(payment.getRetryCount() + 1);
         payment.setNextRetryAt(null);
         payment.setStatus(PaymentStatus.PROCESSING);
-        log.debug("Incremented retry count for payment id='{}' to {}, moving back to PROCESSING",
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "Incremented retry count for payment id='{}' to {}, moving back to PROCESSING",
                 paymentId, payment.getRetryCount());
         return paymentRepository.save(payment);
     }
@@ -137,7 +143,8 @@ public class PaymentStateTransitionService {
         payment.setStatus(PaymentStatus.PENDING_RETRY);
         payment.setFailureReason(reason);
         payment.setNextRetryAt(Instant.now().plusSeconds(computeBackoffSeconds(payment.getRetryCount())));
-        log.debug("Payment id='{}' marked as PENDING_RETRY with reason='{}', next retry at {}",
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "Payment id='{}' marked as PENDING_RETRY with reason='{}', next retry at {}",
                 paymentId, reason, payment.getNextRetryAt());
         return paymentRepository.save(payment);
     }
@@ -155,12 +162,13 @@ public class PaymentStateTransitionService {
     public PaymentEntity markRefundInitiated(UUID paymentId) {
         PaymentEntity payment = findOrThrow(paymentId);
         if (payment.getStatus() != PaymentStatus.COMPLETED) {
-            log.warn("Payment id='{}' is no longer COMPLETED (status={}), skipping refund initiation",
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_REFUND_FAILED,
+                    "Payment id='{}' is no longer COMPLETED (status={}), skipping refund initiation",
                     paymentId, payment.getStatus());
             return payment;
         }
         payment.setStatus(PaymentStatus.REFUND_INITIATED);
-        log.debug("Payment id='{}' marked as REFUND_INITIATED", paymentId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Payment id='{}' marked as REFUND_INITIATED", paymentId);
         return paymentRepository.save(payment);
     }
 
@@ -190,7 +198,7 @@ public class PaymentStateTransitionService {
                 .payload(payload)
                 .build();
         outboxEventRepository.save(outboxEvent);
-        log.debug("Outbox event saved: type='{}', aggregateId='{}'", eventType, payment.getId());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Outbox event saved: type='{}', aggregateId='{}'", eventType, payment.getId());
     }
 
     private String buildPayload(PaymentEntity payment, String refundId, String eventType) {

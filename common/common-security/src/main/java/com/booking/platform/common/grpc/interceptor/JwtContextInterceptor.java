@@ -2,11 +2,14 @@ package com.booking.platform.common.grpc.interceptor;
 
 import com.booking.platform.common.grpc.context.GrpcUserContext;
 import com.booking.platform.common.grpc.interceptor.config.InterceptorOrder;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import com.booking.platform.common.security.JwtValidatorService;
 import com.booking.platform.common.security.PublicEndpointRegistry;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
+import org.slf4j.event.Level;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -44,7 +47,7 @@ public class JwtContextInterceptor implements ServerInterceptor {
     public JwtContextInterceptor(JwtValidatorService jwtValidator, PublicEndpointRegistry publicEndpointRegistry) {
         this.jwtValidator = jwtValidator;
         this.publicEndpointRegistry = publicEndpointRegistry;
-        log.info("JwtContextInterceptor initialized — gRPC JWT authentication is ACTIVE");
+        ApplicationLogger.logMessage(log, Level.INFO, "JwtContextInterceptor initialized — gRPC JWT authentication is ACTIVE");
     }
 
     @Override
@@ -82,11 +85,11 @@ public class JwtContextInterceptor implements ServerInterceptor {
                         .withValue(GrpcUserContext.JWT_ID, jwt.getId())
                         .withValue(GrpcUserContext.JWT_EXPIRY, jwt.getExpiresAt());
 
-                log.debug("JWT validated for user: {} ({}) on method: {}", username, userId, methodName);
+                ApplicationLogger.logMessage(log, Level.DEBUG, "JWT validated for user: {} ({}) on method: {}", username, userId, methodName);
                 return Contexts.interceptCall(context, call, headers, next);
 
             } catch (JwtException e) {
-                log.warn("JWT validation failed for method {}: {}", methodName, e.getMessage());
+                ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.AUTH_TOKEN_INVALID, "JWT validation failed for method {}: {}", methodName, e.getMessage());
                 call.close(Status.UNAUTHENTICATED.withDescription("Invalid or expired token"), new Metadata());
                 return new ServerCall.Listener<>() {};
             }
@@ -94,12 +97,12 @@ public class JwtContextInterceptor implements ServerInterceptor {
 
         // Case 2: No token, but public endpoint - allow
         if (isPublic) {
-            log.debug("Public endpoint accessed without token: {}", methodName);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Public endpoint accessed without token: {}", methodName);
             return next.startCall(call, headers);
         }
 
         // Case 3: No token, private endpoint - reject
-        log.warn("Authentication required for method: {}", methodName);
+        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.AUTH_TOKEN_INVALID, "Authentication required for method: {}", methodName);
         call.close(Status.UNAUTHENTICATED.withDescription("Authentication required"), new Metadata());
         return new ServerCall.Listener<>() {};
     }

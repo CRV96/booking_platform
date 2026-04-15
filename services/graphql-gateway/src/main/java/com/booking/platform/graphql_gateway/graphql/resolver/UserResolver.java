@@ -8,8 +8,10 @@ import com.booking.platform.graphql_gateway.dto.user.User;
 import com.booking.platform.graphql_gateway.dto.user.UserConnection;
 import com.booking.platform.graphql_gateway.grpc.client.UserOperationsClient;
 import com.booking.platform.graphql_gateway.service.AuthService;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -32,7 +34,7 @@ public class UserResolver {
     @QueryMapping
     public User me() {
         String userId = authService.getAuthenticatedUserId();
-        log.debug("GraphQL query: me() for user {}", userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: me() for user {}", userId);
 
         UserInfo userInfo = userOperationsClient.getUser(userId);
         return User.fromGrpc(userInfo);
@@ -41,7 +43,7 @@ public class UserResolver {
     @QueryMapping
     public User user(@Argument("id") String id) {
         authService.requireRole(Roles.ADMIN.getValue());
-        log.debug("GraphQL query: user({})", id);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: user({})", id);
 
         UserInfo userInfo = userOperationsClient.getUser(id);
 
@@ -54,7 +56,7 @@ public class UserResolver {
             @Argument("page") Integer page,
             @Argument("pageSize") Integer pageSize) {
         authService.requireRole(Roles.ADMIN.getValue());
-        log.debug("GraphQL query: users(query={}, page={}, pageSize={})", query, page, pageSize);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: users(query={}, page={}, pageSize={})", query, page, pageSize);
 
         int actualPage = page != null ? page : 0;
         int actualPageSize = pageSize != null ? pageSize : 20;
@@ -77,7 +79,7 @@ public class UserResolver {
     @MutationMapping
     public User updateProfile(@Argument("input") UpdateProfileInput input) {
         String userId = authService.getAuthenticatedUserId();
-        log.info("GraphQL mutation: updateProfile for user {}", userId);
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: updateProfile for user {}", userId);
 
         UserInfo userInfo = userOperationsClient.updateUser(
                 userId,

@@ -4,8 +4,11 @@ import com.booking.platform.user_service.entity.UserEntity;
 import com.booking.platform.user_service.properties.KeycloakProperties;
 import com.booking.platform.user_service.repository.UserRepository;
 import com.booking.platform.user_service.service.KeycloakUserService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -49,20 +52,20 @@ public class UnverifiedUserCleanupScheduler {
                 cutoffMillis, keycloakProperties.realm());
 
         if (staleUsers.isEmpty()) {
-            log.debug("Unverified user cleanup: no stale accounts found");
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Unverified user cleanup: no stale accounts found");
             return;
         }
 
-        log.info("Unverified user cleanup: deleting {} account(s) older than {} day(s)",
+        ApplicationLogger.logMessage(log, Level.INFO, "Unverified user cleanup: deleting {} account(s) older than {} day(s)",
                 staleUsers.size(), retentionDays);
 
         for (UserEntity user : staleUsers) {
             try {
                 keycloakUserService.deleteUser(user.getId());
-                log.info("Deleted unverified user: id='{}', email='{}'",
+                ApplicationLogger.logMessage(log, Level.INFO, "Deleted unverified user: id='{}', email='{}'",
                         user.getId(), user.getEmail());
             } catch (Exception e) {
-                log.error("Failed to delete unverified user id='{}': {}",
+                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.UNVERIFIED_CLEANUP_FAILED, "Failed to delete unverified user id='{}': {}",
                         user.getId(), e.getMessage());
             }
         }

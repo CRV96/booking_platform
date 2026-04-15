@@ -4,7 +4,10 @@ import com.booking.platform.common.events.KafkaTopics;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.MeterBinder;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.ListOffsetsResult;
 import org.apache.kafka.clients.admin.OffsetSpec;
@@ -136,14 +139,15 @@ public class KafkaConsumerLagMetrics implements MeterBinder {
             long lag             = Math.max(0, latestOffset - committedOffset);
 
             if(isConsumerLagEnabled) {
-                log.debug("[KAFKA_LAG] topic='{}', partition={}, latest={}, committed={}, lag={}",
+                ApplicationLogger.logMessage(log, Level.DEBUG, "[KAFKA_LAG] topic='{}', partition={}, latest={}, committed={}, lag={}",
                         topic, partition, latestOffset, committedOffset, lag);
             }
 
             return lag;
 
         } catch (Exception e) {
-            log.warn("[KAFKA_LAG] Failed to fetch lag for topic='{}', partition={}: {}",
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.NOTIFICATION_CONSUMER_ERROR,
+                    "[KAFKA_LAG] Failed to fetch lag for topic='{}', partition={}: {}",
                     topic, partition, e.getMessage());
             return -1;
         }

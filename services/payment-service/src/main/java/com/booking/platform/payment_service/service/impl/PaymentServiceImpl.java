@@ -11,8 +11,11 @@ import com.booking.platform.payment_service.gateway.PaymentGateway;
 import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.service.PaymentService;
 import com.booking.platform.payment_service.validation.PaymentValidator;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -58,13 +61,14 @@ public class PaymentServiceImpl implements PaymentService {
 
         Optional<PaymentEntity> existing = paymentRepository.findByIdempotencyKey(bookingId);
         if (existing.isPresent()) {
-            log.info("Duplicate payment request for bookingId='{}' — returning existing payment id='{}'",
+            ApplicationLogger.logMessage(log, Level.INFO,
+                    "Duplicate payment request for bookingId='{}' — returning existing payment id='{}'",
                     bookingId, existing.get().getId());
             return existing.get();
         }
 
         PaymentEntity payment = transitions.createPaymentRecord(bookingId, userId, amount, normalizedCurrency);
-        log.info("Payment INITIATED: id='{}', bookingId='{}', amount={} {}",
+        ApplicationLogger.logMessage(log, Level.INFO, "Payment INITIATED: id='{}', bookingId='{}', amount={} {}",
                 payment.getId(), bookingId, amount, normalizedCurrency);
 
         try {
@@ -72,7 +76,7 @@ public class PaymentServiceImpl implements PaymentService {
                     paymentGateway.createPaymentIntent(amount, normalizedCurrency, bookingId).join();
 
             payment = transitions.updateToProcessing(payment.getId(), createResponse);
-            log.info("Payment PROCESSING: id='{}', externalId='{}'",
+            ApplicationLogger.logMessage(log, Level.INFO, "Payment PROCESSING: id='{}', externalId='{}'",
                     payment.getId(), createResponse.externalPaymentId());
 
             GatewayPaymentResponse confirmResponse =
@@ -80,10 +84,11 @@ public class PaymentServiceImpl implements PaymentService {
 
             if (BkgConstants.BkgStripeConstants.RESPONSE_SUCCEEDED.equals(confirmResponse.status())) {
                 payment = transitions.markCompleted(payment.getId(), confirmResponse);
-                log.info("Payment COMPLETED: id='{}', bookingId='{}'", payment.getId(), bookingId);
+                ApplicationLogger.logMessage(log, Level.INFO, "Payment COMPLETED: id='{}', bookingId='{}'", payment.getId(), bookingId);
             } else {
                 payment = transitions.markFailed(payment.getId(), GATEWAY_UNEXPECTED_STATUS + confirmResponse.status());
-                log.warn("Payment FAILED (unexpected status): id='{}', status='{}'",
+                ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_PROCESSING_FAILED,
+                        "Payment FAILED (unexpected status): id='{}', status='{}'",
                         payment.getId(), confirmResponse.status());
             }
 
@@ -91,11 +96,13 @@ public class PaymentServiceImpl implements PaymentService {
             payment = handleGatewayException(payment.getId(), bookingId, e.getCause());
         } catch (PaymentGatewayUnavailableException e) {
             payment = transitions.markPendingRetry(payment.getId(), e.getMessage());
-            log.warn("Payment PENDING_RETRY: id='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE,
+                    "Payment PENDING_RETRY: id='{}', bookingId='{}', reason='{}'",
                     payment.getId(), bookingId, e.getMessage());
         } catch (PaymentGatewayException e) {
             payment = transitions.markFailed(payment.getId(), e.getMessage());
-            log.error("Payment FAILED with PaymentGatewayException for -> id='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_PROCESSING_FAILED,
+                    "Payment FAILED with PaymentGatewayException for -> id='{}', bookingId='{}', reason='{}'",
                     payment.getId(), bookingId, e.getMessage());
         }
 
@@ -108,14 +115,16 @@ public class PaymentServiceImpl implements PaymentService {
 
         Optional<PaymentEntity> optional = paymentRepository.findByBookingId(bookingId);
         if (optional.isEmpty()) {
-            log.warn("No payment found for bookingId='{}', cannot process refund", bookingId);
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_REFUND_FAILED,
+                    "No payment found for bookingId='{}', cannot process refund", bookingId);
             return;
         }
 
         PaymentEntity payment = optional.get();
 
         if (payment.getStatus() != PaymentStatus.COMPLETED) {
-            log.info("Payment id='{}' for bookingId='{}' is not COMPLETED (status={}), skipping refund",
+            ApplicationLogger.logMessage(log, Level.INFO,
+                    "Payment id='{}' for bookingId='{}' is not COMPLETED (status={}), skipping refund",
                     payment.getId(), bookingId, payment.getStatus());
             return;
         }
@@ -126,7 +135,7 @@ public class PaymentServiceImpl implements PaymentService {
             return;
         }
 
-        log.info("Payment REFUND_INITIATED: id='{}', bookingId='{}'", payment.getId(), bookingId);
+        ApplicationLogger.logMessage(log, Level.INFO, "Payment REFUND_INITIATED: id='{}', bookingId='{}'", payment.getId(), bookingId);
 
         try {
             GatewayRefundResponse refundResponse =
@@ -134,20 +143,23 @@ public class PaymentServiceImpl implements PaymentService {
 
             if (BkgConstants.BkgStripeConstants.RESPONSE_SUCCEEDED.equals(refundResponse.status())) {
                 payment = transitions.markRefunded(payment.getId(), refundResponse);
-                log.info("Payment REFUNDED: id='{}', bookingId='{}', refundId='{}'",
+                ApplicationLogger.logMessage(log, Level.INFO, "Payment REFUNDED: id='{}', bookingId='{}', refundId='{}'",
                         payment.getId(), bookingId, refundResponse.refundId());
             } else {
-                log.warn("Refund returned unexpected status '{}' for payment id='{}', leaving as REFUND_INITIATED",
+                ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_REFUND_FAILED,
+                        "Refund returned unexpected status '{}' for payment id='{}', leaving as REFUND_INITIATED",
                         refundResponse.status(), payment.getId());
             }
 
         } catch (CompletionException e) {
             handleRefundException(payment.getId(), bookingId, e.getCause());
         } catch (PaymentGatewayUnavailableException e) {
-            log.warn("Refund PENDING (gateway unavailable): paymentId='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE,
+                    "Refund PENDING (gateway unavailable): paymentId='{}', bookingId='{}', reason='{}'",
                     payment.getId(), bookingId, e.getMessage());
         } catch (PaymentGatewayException e) {
-            log.error("Refund FAILED with PaymentGatewayException for -> paymentId='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_REFUND_FAILED,
+                    "Refund FAILED with PaymentGatewayException for -> paymentId='{}', bookingId='{}', reason='{}'",
                     payment.getId(), bookingId, e.getMessage());
         }
     }
@@ -156,7 +168,7 @@ public class PaymentServiceImpl implements PaymentService {
     public void retryPayment(PaymentEntity snapshot) {
         PaymentEntity payment = transitions.incrementRetryCount(snapshot.getId());
 
-        log.info("Payment RETRY attempt {}/{}: id='{}', bookingId='{}'",
+        ApplicationLogger.logMessage(log, Level.INFO, "Payment RETRY attempt {}/{}: id='{}', bookingId='{}'",
                 payment.getRetryCount(), payment.getMaxRetries(), payment.getId(), payment.getBookingId());
 
         try {
@@ -173,11 +185,12 @@ public class PaymentServiceImpl implements PaymentService {
 
             if (BkgConstants.BkgStripeConstants.RESPONSE_SUCCEEDED.equals(confirmResponse.status())) {
                 transitions.markCompleted(payment.getId(), confirmResponse);
-                log.info("Payment COMPLETED (after retry): id='{}', bookingId='{}'",
+                ApplicationLogger.logMessage(log, Level.INFO, "Payment COMPLETED (after retry): id='{}', bookingId='{}'",
                         payment.getId(), payment.getBookingId());
             } else {
                 transitions.markFailed(payment.getId(), GATEWAY_UNEXPECTED_STATUS + confirmResponse.status());
-                log.warn("Payment FAILED after retry (unexpected status): id='{}', status='{}'",
+                ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_PROCESSING_FAILED,
+                        "Payment FAILED after retry (unexpected status): id='{}', status='{}'",
                         payment.getId(), confirmResponse.status());
             }
 
@@ -187,7 +200,8 @@ public class PaymentServiceImpl implements PaymentService {
             handleRetryGatewayException(payment, e);
         } catch (PaymentGatewayException e) {
             transitions.markFailed(payment.getId(), e.getMessage());
-            log.error("Payment FAILED with PaymentGatewayException: id='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_PROCESSING_FAILED,
+                    "Payment FAILED with PaymentGatewayException: id='{}', bookingId='{}', reason='{}'",
                     payment.getId(), payment.getBookingId(), e.getMessage());
         }
     }
@@ -195,19 +209,22 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentEntity handleGatewayException(UUID paymentId, String bookingId, Throwable cause) {
         if (cause instanceof PaymentGatewayUnavailableException) {
             PaymentEntity payment = transitions.markPendingRetry(paymentId, cause.getMessage());
-            log.warn("Payment PENDING_RETRY (gateway unavailable): id='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE,
+                    "Payment PENDING_RETRY (gateway unavailable): id='{}', bookingId='{}', reason='{}'",
                     paymentId, bookingId, cause.getMessage());
             return payment;
         }
         if (cause instanceof PaymentGatewayException) {
             PaymentEntity payment = transitions.markFailed(paymentId, cause.getMessage());
-            log.error("Payment FAILED (gateway error): id='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_PROCESSING_FAILED,
+                    "Payment FAILED (gateway error): id='{}', bookingId='{}', reason='{}'",
                     paymentId, bookingId, cause.getMessage());
             return payment;
         }
         String reason = cause != null ? cause.getMessage() : "Unknown error";
         PaymentEntity payment = transitions.markFailed(paymentId, reason);
-        log.error("Payment FAILED (unexpected): id='{}', bookingId='{}', reason='{}'",
+        ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_PROCESSING_FAILED,
+                "Payment FAILED (unexpected): id='{}', bookingId='{}', reason='{}'",
                 paymentId, bookingId, reason);
         return payment;
     }
@@ -215,10 +232,12 @@ public class PaymentServiceImpl implements PaymentService {
     private void handleRefundException(UUID paymentId, String bookingId, Throwable cause) {
         String reason = cause != null ? cause.getMessage() : "Unknown error";
         if (cause instanceof PaymentGatewayUnavailableException || cause instanceof PaymentGatewayException) {
-            log.error("Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_REFUND_FAILED,
+                    "Refund FAILED (gateway error): paymentId='{}', bookingId='{}', reason='{}'",
                     paymentId, bookingId, reason);
         } else {
-            log.error("Refund FAILED (unexpected): paymentId='{}', bookingId='{}', reason='{}'",
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_REFUND_FAILED,
+                    "Refund FAILED (unexpected): paymentId='{}', bookingId='{}', reason='{}'",
                     paymentId, bookingId, reason);
         }
     }
@@ -227,11 +246,13 @@ public class PaymentServiceImpl implements PaymentService {
         if (cause instanceof PaymentGatewayUnavailableException) {
             if (payment.getRetryCount() >= payment.getMaxRetries()) {
                 transitions.markFailed(payment.getId(), "Max retries exhausted: " + cause.getMessage());
-                log.warn("Payment FAILED (max retries exhausted): id='{}', bookingId='{}', attempts={}",
+                ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_RETRY_FAILED,
+                        "Payment FAILED (max retries exhausted): id='{}', bookingId='{}', attempts={}",
                         payment.getId(), payment.getBookingId(), payment.getRetryCount());
             } else {
                 transitions.markPendingRetry(payment.getId(), cause.getMessage());
-                log.warn("Payment PENDING_RETRY (attempt {}/{}): id='{}', bookingId='{}'",
+                ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE,
+                        "Payment PENDING_RETRY (attempt {}/{}): id='{}', bookingId='{}'",
                         payment.getRetryCount(), payment.getMaxRetries(),
                         payment.getId(), payment.getBookingId());
             }
@@ -239,7 +260,8 @@ public class PaymentServiceImpl implements PaymentService {
         }
         String reason = cause != null ? cause.getMessage() : "Unknown error";
         transitions.markFailed(payment.getId(), reason);
-        log.error("Payment FAILED during retry: id='{}', bookingId='{}', reason='{}'",
+        ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_PROCESSING_FAILED,
+                "Payment FAILED during retry: id='{}', bookingId='{}', reason='{}'",
                 payment.getId(), payment.getBookingId(), reason);
     }
 }

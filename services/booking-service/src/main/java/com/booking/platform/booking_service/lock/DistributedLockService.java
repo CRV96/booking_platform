@@ -2,8 +2,11 @@ package com.booking.platform.booking_service.lock;
 
 import com.booking.platform.booking_service.constants.EntityConst;
 import com.booking.platform.booking_service.properties.DistributedLockProperties;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
@@ -65,19 +68,20 @@ public class DistributedLockService {
                     .setIfAbsent(lockKey, lockValue, ttl);
 
             if (Boolean.TRUE.equals(acquired)) {
-                log.debug("Lock acquired: key='{}', value='{}', attempt={}",
+                ApplicationLogger.logMessage(log, Level.DEBUG, "Lock acquired: key='{}', value='{}', attempt={}",
                         lockKey, lockValue, attempt);
                 return new LockHandle(lockKey, lockValue);
             }
 
             if (attempt < lockProperties.getMaxRetries()) {
-                log.debug("Lock contention on '{}', retry {}/{}",
+                ApplicationLogger.logMessage(log, Level.DEBUG, "Lock contention on '{}', retry {}/{}",
                         lockKey, attempt, lockProperties.getMaxRetries());
                 sleep(lockProperties.getRetryDelay().toMillis() * attempt);
             }
         }
 
-        log.warn("Failed to acquire lock after {} attempts: key='{}'",
+        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.BOOKING_LOCK_FAILED,
+                "Failed to acquire lock after {} attempts: key='{}'",
                 lockProperties.getMaxRetries(), lockKey);
         return null;
     }
@@ -97,11 +101,11 @@ public class DistributedLockService {
                 .setIfAbsent(key, lockValue, ttl);
 
         if (Boolean.TRUE.equals(acquired)) {
-            log.debug("Lock acquired: key='{}', value='{}'", key, lockValue);
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Lock acquired: key='{}', value='{}'", key, lockValue);
             return new LockHandle(key, lockValue);
         }
 
-        log.debug("Lock already held, skipping: key='{}'", key);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Lock already held, skipping: key='{}'", key);
         return null;
     }
 
@@ -122,9 +126,10 @@ public class DistributedLockService {
         );
 
         if (Long.valueOf(1L).equals(result)) {
-            log.debug("Lock released: key='{}'", handle.lockKey());
+            ApplicationLogger.logMessage(log, Level.DEBUG, "Lock released: key='{}'", handle.lockKey());
         } else {
-            log.warn("Lock already expired or stolen: key='{}'", handle.lockKey());
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.BOOKING_LOCK_FAILED,
+                    "Lock already expired or stolen: key='{}'", handle.lockKey());
         }
     }
 

@@ -5,8 +5,10 @@ import com.booking.platform.graphql_gateway.dto.ticket.Ticket;
 import com.booking.platform.graphql_gateway.dto.ticket.TicketConnection;
 import com.booking.platform.graphql_gateway.grpc.client.TicketClient;
 import com.booking.platform.graphql_gateway.service.AuthService;
+import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
@@ -51,7 +53,7 @@ public class TicketResolver {
             @Argument("pageSize") Integer pageSize) {
 
         String userId = authService.getAuthenticatedUserId();
-        log.debug("GraphQL query: myTickets(page={}, size={}) for user '{}'", page, pageSize, userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: myTickets(page={}, size={}) for user '{}'", page, pageSize, userId);
 
         int actualPage = page != null ? page : 0;
         int actualPageSize = pageSize != null ? pageSize : 20;
@@ -78,7 +80,7 @@ public class TicketResolver {
     @QueryMapping
     public List<Ticket> ticketsByBooking(@Argument("bookingId") String bookingId) {
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.debug("GraphQL query: ticketsByBooking({})", bookingId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: ticketsByBooking({})", bookingId);
 
         return ticketClient.getTicketsByBooking(bookingId).getTicketsList().stream()
                 .map(Ticket::fromGrpc)
@@ -92,7 +94,7 @@ public class TicketResolver {
             @Argument("pageSize") Integer pageSize) {
 
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.debug("GraphQL query: ticketsByUser(userId={}, page={}, size={})", userId, page, pageSize);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: ticketsByUser(userId={}, page={}, size={})", userId, page, pageSize);
 
         int actualPage = page != null ? page : 0;
         int actualPageSize = pageSize != null ? pageSize : 20;
@@ -115,7 +117,7 @@ public class TicketResolver {
     @QueryMapping
     public Ticket ticket(@Argument("ticketNumber") String ticketNumber) {
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.debug("GraphQL query: ticket({})", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: ticket({})", ticketNumber);
 
         return Ticket.fromGrpc(ticketClient.getTicketByNumber(ticketNumber).getTicket());
     }
@@ -127,7 +129,7 @@ public class TicketResolver {
     @MutationMapping
     public Ticket validateTicket(@Argument("ticketNumber") String ticketNumber) {
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.info("GraphQL mutation: validateTicket({})", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: validateTicket({})", ticketNumber);
 
         return Ticket.fromGrpc(ticketClient.validateTicket(ticketNumber).getTicket());
     }
@@ -135,7 +137,7 @@ public class TicketResolver {
     @MutationMapping
     public Ticket cancelTicket(@Argument("ticketNumber") String ticketNumber) {
         authService.requireRole(Roles.EMPLOYEE.getValue());
-        log.info("GraphQL mutation: cancelTicket({})", ticketNumber);
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: cancelTicket({})", ticketNumber);
 
         return Ticket.fromGrpc(ticketClient.cancelTicket(ticketNumber).getTicket());
     }

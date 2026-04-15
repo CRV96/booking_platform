@@ -1,9 +1,11 @@
 package com.booking.platform.common.grpc.interceptor;
 
 import com.booking.platform.common.grpc.context.GrpcUserContext;
+import com.booking.platform.common.logging.ApplicationLogger;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.client.interceptor.GrpcGlobalClientInterceptor;
+import org.slf4j.event.Level;
 
 /**
  * gRPC client interceptor that propagates the JWT token from the incoming gRPC context
@@ -36,7 +38,7 @@ public class JwtPropagationClientInterceptor implements ClientInterceptor {
 
                 if (jwtToken != null) {
                     headers.put(AUTHORIZATION_KEY, "Bearer " + jwtToken);
-                    log.debug("Propagating JWT to gRPC call: {}", method.getFullMethodName());
+                    ApplicationLogger.logMessage(log, Level.DEBUG, "Propagating JWT to gRPC call: {}", method.getFullMethodName());
                 }
 
                 super.start(responseListener, headers);

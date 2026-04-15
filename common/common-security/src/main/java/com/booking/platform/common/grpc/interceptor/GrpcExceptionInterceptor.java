@@ -2,9 +2,12 @@ package com.booking.platform.common.grpc.interceptor;
 
 import com.booking.platform.common.exception.ServiceException;
 import com.booking.platform.common.grpc.interceptor.config.InterceptorOrder;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
 import io.grpc.*;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.interceptor.GrpcGlobalServerInterceptor;
+import org.slf4j.event.Level;
 import org.springframework.core.annotation.Order;
 
 import java.security.AccessControlException;
@@ -46,9 +49,9 @@ public class GrpcExceptionInterceptor implements ServerInterceptor {
         Status status = mapExceptionToStatus(e);
 
         if (status.getCode() == Status.Code.INTERNAL) {
-            log.error("gRPC call failed: {}", call.getMethodDescriptor().getFullMethodName(), e);
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.GRPC_CALL_FAILED, "gRPC call failed: {}", call.getMethodDescriptor().getFullMethodName(), e);
         } else {
-            log.warn("gRPC call failed: {} - {}", call.getMethodDescriptor().getFullMethodName(), e.getMessage());
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.GRPC_CALL_FAILED, "gRPC call failed: {} - {}", call.getMethodDescriptor().getFullMethodName(), e.getMessage());
         }
 
         call.close(status, new Metadata());
