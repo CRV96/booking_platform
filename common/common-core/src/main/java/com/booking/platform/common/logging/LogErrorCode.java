@@ -35,8 +35,6 @@ public enum LogErrorCode {
     USER_CREATION_FAILED     (1002, "Failed to create user in Keycloak"),
     USER_NOT_FOUND           (1003, "User not found"),
     USER_ALREADY_EXISTS      (1004, "User already exists"),
-    USER_UPDATE_FAILED       (1005, "Failed to update user"),
-    USER_DELETE_FAILED       (1006, "Failed to delete user"),
     USER_LOGIN_FAILED        (1007, "User login failed"),
     TOKEN_REFRESH_FAILED     (1008, "Token refresh failed"),
     UNVERIFIED_CLEANUP_FAILED(1009, "Failed to delete unverified user during cleanup"),
@@ -53,20 +51,14 @@ public enum LogErrorCode {
 
     // ── event-service (3000–3999) ─────────────────────────────────────────────
 
-    EVENT_CREATION_FAILED   (3001, "Failed to create event"),
-    EVENT_UPDATE_FAILED     (3002, "Failed to update event"),
     EVENT_PUBLISH_FAILED    (3003, "Failed to publish event"),
-    EVENT_CANCELLATION_FAILED(3004, "Failed to cancel event"),
-    EVENT_NOT_FOUND         (3005, "Event not found"),
     SEAT_UPDATE_FAILED      (3006, "Failed to update seat availability"),
     EVENT_ACCESS_DENIED     (3007, "Access denied: insufficient permissions for event operation"),
 
     // ── booking-service (4000–4999) ───────────────────────────────────────────
 
     BOOKING_CREATION_FAILED     (4001, "Failed to create booking"),
-    BOOKING_CONFIRMATION_FAILED (4002, "Failed to confirm booking"),
     BOOKING_CANCELLATION_FAILED (4003, "Failed to cancel booking"),
-    BOOKING_NOT_FOUND           (4004, "Booking not found"),
     BOOKING_LOCK_FAILED         (4005, "Failed to acquire booking lock"),
     BOOKING_EVENT_PUBLISH_FAILED(4006, "Failed to publish booking event"),
 
@@ -78,12 +70,7 @@ public enum LogErrorCode {
     // ── ticket-service (6000–6999) ────────────────────────────────────────────
 
     TICKET_GENERATION_FAILED(6001, "Failed to generate ticket"),
-    TICKET_NOT_FOUND        (6002, "Ticket not found"),
     TICKET_ACCESS_DENIED    (6003, "Access denied: required role missing"),
-
-    // ── analytics-service (7000–7999) ─────────────────────────────────────────
-
-    ANALYTICS_EVENT_FAILED  (7001, "Failed to process analytics event"),
 
     // ── graphql-gateway (8000–8999) ───────────────────────────────────────────
 
