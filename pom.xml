@@ -382,6 +382,23 @@
                     </executions>
                 </plugin>
 
+                <!-- Maven Surefire — test runner -->
+                <!-- @{argLine} late-binding picks up the JaCoCo agent prepended at prepare-agent -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.4</version>
+                    <configuration>
+                        <argLine>
+                            @{argLine}
+                            -XX:+EnableDynamicAgentLoading
+                            --add-opens java.base/java.lang=ALL-UNNAMED
+                            --add-opens java.base/java.util=ALL-UNNAMED
+                            --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        </argLine>
+                    </configuration>
+                </plugin>
+
                 <!-- SonarQube scanner -->
                 <plugin>
                     <groupId>org.sonarsource.scanner.maven</groupId>
@@ -395,6 +412,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
