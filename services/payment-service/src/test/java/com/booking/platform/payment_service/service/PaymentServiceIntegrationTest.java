@@ -431,6 +431,12 @@ class PaymentServiceIntegrationTest extends BaseIntegrationTest {
                     pendingRetryPayment.getId());
             pendingRetryPayment.setExternalPaymentId("pi_existing_123");
 
+            // Reset to clear the @BeforeEach createPaymentIntent interaction, then re-stub confirm
+            reset(paymentGateway);
+            when(paymentGateway.confirmPayment(anyString()))
+                    .thenReturn(CompletableFuture.completedFuture(
+                            new GatewayPaymentResponse("pi_existing_123", "succeeded", "card")));
+
             paymentService.retryPayment(pendingRetryPayment);
 
             // createPaymentIntent should NOT be called — only confirmPayment
