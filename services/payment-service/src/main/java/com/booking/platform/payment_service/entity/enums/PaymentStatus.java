@@ -10,6 +10,8 @@ import java.util.Set;
  * Allowed transitions:
  *
  *   INITIATED        → PROCESSING        (charge request sent to payment gateway)
+ *   INITIATED        → PENDING_RETRY     (createPaymentIntent failed — gateway unavailable before PROCESSING)
+ *   INITIATED        → FAILED            (createPaymentIntent failed — business error before PROCESSING)
  *   PROCESSING       → COMPLETED         (payment gateway confirmed success)
  *   PROCESSING       → FAILED            (payment gateway declined — business failure)
  *   PROCESSING       → PENDING_RETRY     (gateway temporarily unavailable — circuit open / timeout)
@@ -53,8 +55,8 @@ public enum PaymentStatus {
 
     static {
         VALID_TRANSITIONS = Map.of(
-            INITIATED,        Set.of(PROCESSING),
-            PROCESSING,       Set.of(COMPLETED, FAILED, PENDING_RETRY),
+            INITIATED,        Set.of(PROCESSING, PENDING_RETRY, FAILED),
+            PROCESSING,       Set.of(PROCESSING, COMPLETED, FAILED, PENDING_RETRY),
             PENDING_RETRY,    Set.of(PROCESSING, FAILED),
             COMPLETED,        Set.of(REFUND_INITIATED),
             FAILED,           Set.of(),
