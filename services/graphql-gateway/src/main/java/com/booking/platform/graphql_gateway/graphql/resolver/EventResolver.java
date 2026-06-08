@@ -68,10 +68,11 @@ public class EventResolver {
             @Argument("dateFrom") String dateFrom,
             @Argument("dateTo") String dateTo,
             @Argument("page") Integer page,
-            @Argument("pageSize") Integer pageSize) {
+            @Argument("pageSize") Integer pageSize,
+            @Argument("organizerId") String organizerId) {
 
-        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: events(query={}, category={}, city={}, page={}, size={})",
-                query, category, city, page, pageSize);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: events(query={}, category={}, city={}, page={}, size={}, organizerId={})",
+                query, category, city, page, pageSize, organizerId);
 
         var response = eventClient.searchEvents(new EventSearchRequest(
                 query,
@@ -80,7 +81,8 @@ public class EventResolver {
                 dateFrom,
                 dateTo,
                 page != null ? page : 0,
-                pageSize != null ? pageSize : 20
+                pageSize != null ? pageSize : 20,
+                organizerId
         ));
 
         List<Event> events = response.getEventsList().stream()

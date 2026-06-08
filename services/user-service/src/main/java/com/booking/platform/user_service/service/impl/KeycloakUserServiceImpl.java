@@ -34,6 +34,7 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+import static com.booking.platform.common.enums.Keycloak.CUSTOMERS_GROUP;
 import static com.booking.platform.common.enums.Keycloak.EMPLOYEES_GROUP;
 
 /**
@@ -52,12 +53,12 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
 
     @Override
     public String createUser(String email, String password, String firstName, String lastName,
-                             Map<String, String> attributes) {
+                             String role, Map<String, String> attributes) {
         ApplicationLogger.logMessage(log, Level.DEBUG, "Creating a new user with email: {}", email);
 
         UsersResource usersResource = getUsersResource();
 
-        UserRepresentation user = buildUserRepresentation(email, firstName, lastName, attributes);
+        UserRepresentation user = buildUserRepresentation(email, firstName, lastName, role, attributes);
         user.setCredentials(createPasswordCredential(password));
 
         try (Response response = usersResource.create(user)) {
@@ -230,7 +231,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     }
 
     private UserRepresentation buildUserRepresentation(String email, String firstName, String lastName,
-                                                       Map<String, String> attributes) {
+                                                       String role, Map<String, String> attributes) {
         UserRepresentation user = new UserRepresentation();
         user.setUsername(email);
         user.setEmail(email);
@@ -238,7 +239,10 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         user.setLastName(lastName);
         user.setEnabled(true);
         user.setEmailVerified(false);
-        user.setGroups(List.of(EMPLOYEES_GROUP.getValue()));
+        String group = "customer".equalsIgnoreCase(role)
+                ? CUSTOMERS_GROUP.getValue()
+                : EMPLOYEES_GROUP.getValue();
+        user.setGroups(List.of(group));
 
         if (attributes != null && !attributes.isEmpty()) {
             Map<String, List<String>> userAttributes = new HashMap<>();

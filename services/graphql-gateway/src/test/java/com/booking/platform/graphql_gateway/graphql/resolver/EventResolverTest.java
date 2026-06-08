@@ -62,7 +62,7 @@ class EventResolverTest {
     void events_defaultsPageToZeroAndPageSizeToTwenty() {
         when(eventClient.searchEvents(any())).thenReturn(SearchEventsResponse.getDefaultInstance());
 
-        resolver.events(null, null, null, null, null, null, null);
+        resolver.events(null, null, null, null, null, null, null, null);
 
         ArgumentCaptor<com.booking.platform.graphql_gateway.dto.event.EventSearchRequest> captor =
                 ArgumentCaptor.forClass(com.booking.platform.graphql_gateway.dto.event.EventSearchRequest.class);
@@ -75,7 +75,7 @@ class EventResolverTest {
     void events_passesSearchParamsToClient() {
         when(eventClient.searchEvents(any())).thenReturn(SearchEventsResponse.getDefaultInstance());
 
-        resolver.events("jazz", "MUSIC", "Berlin", "2024-01-01", "2024-12-31", 2, 10);
+        resolver.events("jazz", "MUSIC", "Berlin", "2024-01-01", "2024-12-31", 2, 10, null);
 
         ArgumentCaptor<com.booking.platform.graphql_gateway.dto.event.EventSearchRequest> captor =
                 ArgumentCaptor.forClass(com.booking.platform.graphql_gateway.dto.event.EventSearchRequest.class);
@@ -92,7 +92,7 @@ class EventResolverTest {
     void events_mapsResponseToConnection() {
         when(eventClient.searchEvents(any())).thenReturn(SearchEventsResponse.getDefaultInstance());
 
-        EventConnection conn = resolver.events(null, null, null, null, null, null, null);
+        EventConnection conn = resolver.events(null, null, null, null, null, null, null, null);
 
         assertThat(conn).isNotNull();
         assertThat(conn.events()).isEmpty();

@@ -39,7 +39,7 @@ class UserServiceAuthClientImplTest {
 
     @Test
     void register_allFieldsNonNull_setsAllOnRequest() {
-        client.register("a@b.com", "pass", "Alice", "Smith", "+1234", "US", "en");
+        client.register("a@b.com", "pass", "Alice", "Smith", "+1234", "US", "en", "customer");
 
         ArgumentCaptor<RegisterRequest> captor = ArgumentCaptor.forClass(RegisterRequest.class);
         verify(stub).register(captor.capture());
@@ -55,7 +55,7 @@ class UserServiceAuthClientImplTest {
 
     @Test
     void register_optionalFieldsNull_notSetOnRequest() {
-        client.register("a@b.com", "pass", "Alice", "Smith", null, null, null);
+        client.register("a@b.com", "pass", "Alice", "Smith", null, null, null, null);
 
         ArgumentCaptor<RegisterRequest> captor = ArgumentCaptor.forClass(RegisterRequest.class);
         verify(stub).register(captor.capture());
@@ -67,7 +67,7 @@ class UserServiceAuthClientImplTest {
 
     @Test
     void register_returnsAuthResponse() {
-        AuthResponse result = client.register("a@b.com", "pass", "Alice", "Smith", null, null, null);
+        AuthResponse result = client.register("a@b.com", "pass", "Alice", "Smith", null, null, null, null);
         assertThat(result).isEqualTo(defaultAuthResponse);
     }
 

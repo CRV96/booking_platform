@@ -42,6 +42,9 @@ message RegisterRequest {
   optional string phone_number = 5;
   optional string country = 6;
   optional string preferred_language = 7;
+
+  // "customer" or "employee" — determines Keycloak group assignment
+  optional string role = 8;
 }
 
 message LoginRequest {

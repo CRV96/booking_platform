@@ -50,6 +50,7 @@ input RegisterInput {
     phoneNumber: String
     country: String
     preferredLanguage: String
+    role: String
 }
 
 input LoginInput {

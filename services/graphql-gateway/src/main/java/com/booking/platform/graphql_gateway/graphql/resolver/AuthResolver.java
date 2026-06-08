@@ -37,7 +37,8 @@ public class AuthResolver {
             input.lastName(),
             input.phoneNumber(),
             input.country(),
-            input.preferredLanguage()
+            input.preferredLanguage(),
+            input.role()
         ));
     }
 

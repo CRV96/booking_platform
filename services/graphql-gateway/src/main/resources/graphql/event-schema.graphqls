@@ -6,7 +6,7 @@ extend type Query {
     """Get an event by ID (public)"""
     event(id: ID!): Event
 
-    """Search and list published events with optional filters (public)"""
+    """Search and list events with optional filters (public). Pass organizerId to see all statuses for a specific organizer."""
     events(
         query: String
         category: EventCategory
@@ -15,6 +15,7 @@ extend type Query {
         dateTo: String
         page: Int = 0
         pageSize: Int = 20
+        organizerId: String
     ): EventConnection!
 }
 

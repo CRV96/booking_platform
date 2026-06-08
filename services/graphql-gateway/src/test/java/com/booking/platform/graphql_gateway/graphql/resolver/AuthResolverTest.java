@@ -37,22 +37,22 @@ class AuthResolverTest {
     void register_delegatesToAuthClient() {
         RegisterInput input = new RegisterInput(
                 "alice@test.com", "pass", "Alice", "Smith",
-                "+1234567890", "US", "en");
+                "+1234567890", "US", "en", "customer");
         when(authClient.register(anyString(), anyString(), anyString(), anyString(),
-                anyString(), anyString(), anyString())).thenReturn(AUTH_RESPONSE);
+                anyString(), anyString(), anyString(), anyString())).thenReturn(AUTH_RESPONSE);
 
         resolver.register(input);
 
         verify(authClient).register("alice@test.com", "pass", "Alice", "Smith",
-                "+1234567890", "US", "en");
+                "+1234567890", "US", "en", "customer");
     }
 
     @Test
     void register_mapsGrpcResponseToAuthPayload() {
         RegisterInput input = new RegisterInput(
                 "bob@test.com", "secret", "Bob", "Jones",
-                "+44000", "GB", "en");
-        when(authClient.register(any(), any(), any(), any(), any(), any(), any()))
+                "+44000", "GB", "en", "customer");
+        when(authClient.register(any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(AUTH_RESPONSE);
 
         AuthPayload payload = resolver.register(input);

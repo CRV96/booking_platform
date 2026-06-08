@@ -30,6 +30,9 @@ public final class DocumentConst {
         public static final String IMAGES = "images";
         public static final String TAGS = "tags";
 
+        // ── Nested organizer fields ──────────────────────────────────────
+        public static final String ORGANIZER_USER_ID = "organizer.userId";
+
         // ── Nested venue fields ──────────────────────────────────────────
         public static final String VENUE_CITY = "venue.city";
 

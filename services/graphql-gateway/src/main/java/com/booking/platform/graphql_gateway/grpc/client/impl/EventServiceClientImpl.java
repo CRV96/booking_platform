@@ -117,6 +117,7 @@ public class EventServiceClientImpl implements EventClient {
         if (request.city() != null) requestBuilder.setCity(request.city());
         if (request.dateFrom() != null) requestBuilder.setDateFrom(request.dateFrom());
         if (request.dateTo() != null) requestBuilder.setDateTo(request.dateTo());
+        if (request.organizerId() != null) requestBuilder.setOrganizerId(request.organizerId());
 
         return eventServiceStub.searchEvents(requestBuilder.build());
     }

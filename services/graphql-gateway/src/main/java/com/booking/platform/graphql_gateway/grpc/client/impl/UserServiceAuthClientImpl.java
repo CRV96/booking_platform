@@ -24,7 +24,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
 
     @Override
     public AuthResponse register(String email, String password, String firstName, String lastName,
-                                  String phoneNumber, String country, String preferredLanguage) {
+                                  String phoneNumber, String country, String preferredLanguage, String role) {
         ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: Register for {}", email);
 
         RegisterRequest.Builder builder = RegisterRequest.newBuilder()
@@ -36,6 +36,7 @@ public class UserServiceAuthClientImpl implements AuthClient {
         if (phoneNumber != null) builder.setPhoneNumber(phoneNumber);
         if (country != null) builder.setCountry(country);
         if (preferredLanguage != null) builder.setPreferredLanguage(preferredLanguage);
+        if (role != null) builder.setRole(role);
 
         return authServiceStub.register(builder.build());
     }
