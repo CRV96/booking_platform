@@ -146,6 +146,7 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD'];
     .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .seat-form { border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
     .seat-form:last-child { margin-bottom: 0; }
+    .inp.ng-invalid.ng-touched { border-color: var(--danger); }
   `]
 })
 export class EventFormComponent implements OnInit {
@@ -221,9 +222,17 @@ export class EventFormComponent implements OnInit {
   }
 
   save() {
-    if (this.form.invalid) { this.form.markAllAsTouched(); return; }
-    this.saving.set(true);
     this.saveError.set('');
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      this.saveError.set('Please fill in all required fields.');
+      return;
+    }
+    if (this.seats.length === 0) {
+      this.saveError.set('Add at least one seat category.');
+      return;
+    }
+    this.saving.set(true);
 
     const v = this.form.value;
     const dateTime = v.dateTime ? new Date(v.dateTime!).toISOString() : '';
