@@ -1163,4 +1163,4 @@ the component uses `seed % PALETTES.length` and there are already 8 entries
 
 ---
 
-*Last updated: April 2026*
+*Last updated: June 2026*

@@ -386,6 +386,45 @@ are accessible without authentication:
 
 ---
 
+## Frontend
+
+The Angular SPA lives in `frontend/`. It connects to the GraphQL gateway via a dev proxy.
+
+### Prerequisites
+
+| Tool | Version |
+|------|---------|
+| Node.js | 18+ |
+| npm | 9+ |
+
+### Start the dev server
+
+```bash
+cd frontend
+npm install          # first time only
+npm start            # http://localhost:4200
+```
+
+`npm start` runs `ng serve --proxy-config proxy.conf.json`, which forwards all `/graphql` requests to `http://localhost:8080`. The backend (Option A or Option B) must be running first.
+
+| Mode | Frontend URL | GraphQL URL |
+|------|-------------|-------------|
+| Option A (local dev) | http://localhost:4200 | http://localhost:8080/graphql |
+| Option B (Docker) | http://localhost:4200 | http://localhost/graphql |
+
+> For Option B, update `proxy.conf.json` to point to `http://localhost` instead of `http://localhost:8080`.
+
+### Build for production
+
+```bash
+cd frontend
+npm run build        # output in frontend/dist/
+```
+
+See **[docs/frontend-guide.md](docs/frontend-guide.md)** for a complete walkthrough of the Angular app structure, components, and how to make changes.
+
+---
+
 ## SonarQube (Optional — Local)
 
 For local code quality analysis:
