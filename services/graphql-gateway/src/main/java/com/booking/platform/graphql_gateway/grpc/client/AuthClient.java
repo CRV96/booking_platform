@@ -5,7 +5,7 @@ import com.booking.platform.common.grpc.user.AuthResponse;
 public interface AuthClient {
 
     AuthResponse register(String email, String password, String firstName, String lastName,
-                          String phoneNumber, String country, String preferredLanguage);
+                          String phoneNumber, String country, String preferredLanguage, String role);
 
     AuthResponse login(String username, String password);
 

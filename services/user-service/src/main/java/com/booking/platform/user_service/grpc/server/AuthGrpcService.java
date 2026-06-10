@@ -54,23 +54,18 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
                 request.getPassword(),
                 request.getFirstName(),
                 request.getLastName(),
+                request.hasRole() ? request.getRole() : "customer",
                 attributes
         );
 
-        // Auto-login: get tokens for the new user
-        TokenResponseDTO tokens = authService.login(request.getEmail(), request.getPassword());
-
-        UserRepresentation user = keycloakUserService.getUserById(userId);
-        List<String> roles = keycloakUserService.getUserRoles(userId);
-
-        // Trigger Keycloak to send the verification email directly via MailHog
         keycloakUserService.sendVerificationEmail(userId);
 
-        AuthResponse response = buildAuthResponse(tokens, user, roles);
+        // Return empty tokens — client must verify email before logging in
+        AuthResponse response = AuthResponse.newBuilder().build();
 
         responseObserver.onNext(response);
         responseObserver.onCompleted();
-        ApplicationLogger.logMessage(log, Level.DEBUG, "User registered successfully: {}", userId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "User registered successfully, verification email sent: {}", userId);
     }
 
     @PublicEndpoint

@@ -7,5 +7,6 @@ public record RegisterInput(
     String lastName,
     String phoneNumber,
     String country,
-    String preferredLanguage
+    String preferredLanguage,
+    String role
 ) {}

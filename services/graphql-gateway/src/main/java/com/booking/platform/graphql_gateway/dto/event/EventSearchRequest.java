@@ -11,6 +11,7 @@ public record EventSearchRequest(
         String dateFrom,
         String dateTo,
         int page,
-        int pageSize
+        int pageSize,
+        String organizerId
 ) {
 }

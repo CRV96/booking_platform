@@ -12,7 +12,7 @@ import java.util.Map;
 public interface KeycloakUserService extends UserLookupService<UserRepresentation> {
 
     String createUser(String email, String password, String firstName, String lastName,
-                      Map<String, String> attributes);
+                      String role, Map<String, String> attributes);
 
     UserRepresentation updateUser(String userId, String firstName, String lastName,
                                   String email, Map<String, String> attributes);

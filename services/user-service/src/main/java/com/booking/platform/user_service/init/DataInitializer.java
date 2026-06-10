@@ -249,7 +249,7 @@ public class DataInitializer implements ApplicationRunner {
                     UserAttributes.EMAIL_NOTIFICATIONS,   "true",
                     UserAttributes.SMS_NOTIFICATIONS,     "false"
             );
-            keycloakUserService.createUser(email, password, firstName, lastName, attributes);
+            keycloakUserService.createUser(email, password, firstName, lastName, "customer", attributes);
             ApplicationLogger.logMessage(log, Level.DEBUG, "DataInitializer: customer created — {}", username);
         } catch (Exception e) {
             ApplicationLogger.logMessage(log, Level.WARN, "DataInitializer: skipping customer '{}' — {}", username, e.getMessage());

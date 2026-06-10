@@ -77,14 +77,10 @@ class AuthGrpcServiceTest {
     // ── register ──────────────────────────────────────────────────────────────
 
     @Test
-    void register_createsUserAndAutoLogins() {
-        UserRepresentation user = makeUser("new-user", "alice@example.com");
+    void register_createsUserAndSendsVerificationEmail() {
         when(attributeMapper.fromRegisterRequest(any())).thenReturn(Map.of());
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), any()))
+        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
                 .thenReturn("new-user");
-        when(authService.login("alice@example.com", "P@ssw0rd")).thenReturn(TOKENS);
-        when(keycloakUserService.getUserById("new-user")).thenReturn(user);
-        when(keycloakUserService.getUserRoles("new-user")).thenReturn(List.of("customer"));
 
         RegisterRequest request = RegisterRequest.newBuilder()
                 .setEmail("alice@example.com")
@@ -96,41 +92,11 @@ class AuthGrpcServiceTest {
 
         verify(authValidator).validateRegisterRequest(request);
         verify(attributeMapper).fromRegisterRequest(request);
-        verify(keycloakUserService).createUser("alice@example.com", "P@ssw0rd", "Alice", "Smith", Map.of());
-        verify(authService).login("alice@example.com", "P@ssw0rd");
-        verify(keycloakUserService).getUserById("new-user");
-        verify(keycloakUserService).getUserRoles("new-user");
+        verify(keycloakUserService).createUser("alice@example.com", "P@ssw0rd", "Alice", "Smith", "customer", Map.of());
         verify(keycloakUserService).sendVerificationEmail("new-user");
-        verify(userGrpcMapper).toUserInfo(eq(user), eq(List.of("customer")));
+        verify(authService, never()).login(anyString(), anyString());
         verify(responseObserver).onNext(any(AuthResponse.class));
         verify(responseObserver).onCompleted();
-    }
-
-    @Test
-    void register_responseContainsTokenFields() {
-        UserRepresentation user = makeUser("new-user", "alice@example.com");
-        when(attributeMapper.fromRegisterRequest(any())).thenReturn(Map.of());
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), any()))
-                .thenReturn("new-user");
-        when(authService.login(anyString(), anyString())).thenReturn(TOKENS);
-        when(keycloakUserService.getUserById("new-user")).thenReturn(user);
-        when(keycloakUserService.getUserRoles("new-user")).thenReturn(List.of());
-
-        RegisterRequest request = RegisterRequest.newBuilder()
-                .setEmail("alice@example.com")
-                .setPassword("P@ssw0rd")
-                .setFirstName("Alice")
-                .setLastName("Smith")
-                .build();
-        service.register(request, responseObserver);
-
-        verify(responseObserver).onNext(argThat(resp ->
-                resp.getAccessToken().equals("access-tok") &&
-                resp.getRefreshToken().equals("refresh-tok") &&
-                resp.getExpiresIn() == 300 &&
-                resp.getRefreshExpiresIn() == 1800 &&
-                resp.getTokenType().equals("Bearer")
-        ));
     }
 
     // ── login ─────────────────────────────────────────────────────────────────

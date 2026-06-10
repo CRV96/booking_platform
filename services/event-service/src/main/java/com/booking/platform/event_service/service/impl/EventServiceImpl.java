@@ -331,7 +331,13 @@ public class EventServiceImpl implements EventService {
     private List<Criteria> getCriteriaList(SearchEventsRequest request) {
         List<Criteria> criteriaList = new ArrayList<>();
 
-        criteriaList.add(Criteria.where(DocumentConst.Event.STATUS).is(EventStatus.PUBLISHED));
+        if (request.hasOrganizerId() && !request.getOrganizerId().isBlank()) {
+            // Organizer view: show all statuses for their own events only
+            criteriaList.add(Criteria.where(DocumentConst.Event.ORGANIZER_USER_ID).is(request.getOrganizerId()));
+        } else {
+            // Public view: only show published events
+            criteriaList.add(Criteria.where(DocumentConst.Event.STATUS).is(EventStatus.PUBLISHED));
+        }
 
         if (request.hasCategory() && !request.getCategory().isBlank()) {
             criteriaList.add(Criteria.where(DocumentConst.Event.CATEGORY).is(EventCategory.valueOf(request.getCategory())));

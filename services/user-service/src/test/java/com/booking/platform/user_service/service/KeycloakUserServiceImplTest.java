@@ -127,7 +127,7 @@ class KeycloakUserServiceImplTest {
                 .thenReturn("http://keycloak/admin/realms/booking-platform/users/new-user-id");
         when(usersResource.create(any())).thenReturn(response);
 
-        String userId = service.createUser("a@b.com", "Pass1!", "John", "Doe", Map.of());
+        String userId = service.createUser("a@b.com", "Pass1!", "John", "Doe", "customer", Map.of());
 
         assertThat(userId).isEqualTo("new-user-id");
     }
@@ -137,7 +137,7 @@ class KeycloakUserServiceImplTest {
         when(response.getStatus()).thenReturn(409);
         when(usersResource.create(any())).thenReturn(response);
 
-        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", Map.of()))
+        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", "customer", Map.of()))
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .hasMessageContaining("a@b.com");
     }
@@ -148,7 +148,7 @@ class KeycloakUserServiceImplTest {
         when(response.readEntity(String.class)).thenReturn("Internal Server Error");
         when(usersResource.create(any())).thenReturn(response);
 
-        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", Map.of()))
+        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", "customer", Map.of()))
                 .isInstanceOf(InternalException.class);
     }
 
@@ -158,7 +158,7 @@ class KeycloakUserServiceImplTest {
         when(response.getHeaderString(HttpHeaders.LOCATION)).thenReturn(null);
         when(usersResource.create(any())).thenReturn(response);
 
-        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", Map.of()))
+        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", "customer", Map.of()))
                 .isInstanceOf(InternalException.class)
                 .hasMessageContaining("user ID");
     }

@@ -1,0 +1,190 @@
+import { gql } from '@apollo/client/core';
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export const AUTH_FIELDS = `
+  accessToken
+  refreshToken
+  expiresIn
+  refreshExpiresIn
+  tokenType
+  user {
+    id username email firstName lastName roles
+  }
+`;
+
+export const LOGIN = gql`
+  mutation Login($input: LoginInput!) {
+    login(input: $input) { ${AUTH_FIELDS} }
+  }
+`;
+
+export const REGISTER = gql`
+  mutation Register($input: RegisterInput!) {
+    register(input: $input) { ${AUTH_FIELDS} }
+  }
+`;
+
+export const REFRESH_TOKEN = gql`
+  mutation RefreshToken($refreshToken: String!) {
+    refreshToken(refreshToken: $refreshToken) { ${AUTH_FIELDS} }
+  }
+`;
+
+export const LOGOUT = gql`
+  mutation Logout($refreshToken: String!) {
+    logout(refreshToken: $refreshToken) { success }
+  }
+`;
+
+// ── User ──────────────────────────────────────────────────────────────────────
+
+export const ME = gql`
+  query Me {
+    me {
+      id username email emailVerified enabled
+      firstName lastName createdAt
+      phoneNumber country preferredLanguage preferredCurrency
+      timezone profilePictureUrl emailNotifications smsNotifications
+      roles
+    }
+  }
+`;
+
+export const UPDATE_PROFILE = gql`
+  mutation UpdateProfile($input: UpdateProfileInput!) {
+    updateProfile(input: $input) {
+      id username email firstName lastName
+      phoneNumber country preferredLanguage preferredCurrency
+      timezone emailNotifications smsNotifications roles
+    }
+  }
+`;
+
+// ── Events ────────────────────────────────────────────────────────────────────
+
+const EVENT_FIELDS = `
+  id title description category status dateTime
+  venue { name address city country latitude longitude capacity }
+  organizer { userId name email }
+  seatCategories { name price currency totalSeats availableSeats }
+  createdAt updatedAt
+`;
+
+export const GET_EVENTS = gql`
+  query GetEvents(
+    $query: String $category: EventCategory $city: String
+    $dateFrom: String $dateTo: String $page: Int $pageSize: Int $organizerId: String
+  ) {
+    events(query: $query category: $category city: $city
+           dateFrom: $dateFrom dateTo: $dateTo page: $page pageSize: $pageSize organizerId: $organizerId) {
+      events { ${EVENT_FIELDS} }
+      totalCount page pageSize totalPages
+    }
+  }
+`;
+
+export const GET_EVENT = gql`
+  query GetEvent($id: ID!) {
+    event(id: $id) { ${EVENT_FIELDS} }
+  }
+`;
+
+export const CREATE_EVENT = gql`
+  mutation CreateEvent($input: CreateEventInput!) {
+    createEvent(input: $input) { ${EVENT_FIELDS} }
+  }
+`;
+
+export const UPDATE_EVENT = gql`
+  mutation UpdateEvent($id: ID!, $input: UpdateEventInput!) {
+    updateEvent(id: $id, input: $input) { ${EVENT_FIELDS} }
+  }
+`;
+
+export const PUBLISH_EVENT = gql`
+  mutation PublishEvent($id: ID!) {
+    publishEvent(id: $id) { id status }
+  }
+`;
+
+export const CANCEL_EVENT = gql`
+  mutation CancelEvent($id: ID!) {
+    cancelEvent(id: $id) { id status }
+  }
+`;
+
+// ── Bookings ──────────────────────────────────────────────────────────────────
+
+const BOOKING_FIELDS = `
+  id userId eventId eventTitle status seatCategory quantity
+  unitPrice totalPrice currency idempotencyKey
+  holdExpiresAt cancellationReason createdAt updatedAt
+`;
+
+export const GET_MY_BOOKINGS = gql`
+  query GetMyBookings($page: Int $pageSize: Int $status: BookingStatus) {
+    myBookings(page: $page pageSize: $pageSize status: $status) {
+      bookings { ${BOOKING_FIELDS} }
+      totalCount page pageSize totalPages
+    }
+  }
+`;
+
+export const GET_BOOKING = gql`
+  query GetBooking($id: ID!) {
+    booking(id: $id) { ${BOOKING_FIELDS} }
+  }
+`;
+
+export const CREATE_BOOKING = gql`
+  mutation CreateBooking($input: CreateBookingInput!) {
+    createBooking(input: $input) { ${BOOKING_FIELDS} }
+  }
+`;
+
+export const CANCEL_BOOKING = gql`
+  mutation CancelBooking($id: ID!, $reason: String) {
+    cancelBooking(id: $id, reason: $reason) { id status cancellationReason }
+  }
+`;
+
+// ── Tickets ───────────────────────────────────────────────────────────────────
+
+const TICKET_FIELDS = `
+  id bookingId eventId userId ticketNumber qrCodeData
+  seatCategory seatNumber status eventTitle createdAt
+`;
+
+export const GET_MY_TICKETS = gql`
+  query GetMyTickets($page: Int $pageSize: Int) {
+    myTickets(page: $page pageSize: $pageSize) {
+      tickets { ${TICKET_FIELDS} }
+      totalCount page pageSize totalPages
+    }
+  }
+`;
+
+export const GET_TICKETS_BY_BOOKING = gql`
+  query GetTicketsByBooking($bookingId: ID!) {
+    ticketsByBooking(bookingId: $bookingId) { ${TICKET_FIELDS} }
+  }
+`;
+
+export const GET_TICKET = gql`
+  query GetTicket($ticketNumber: String!) {
+    ticket(ticketNumber: $ticketNumber) { ${TICKET_FIELDS} }
+  }
+`;
+
+export const VALIDATE_TICKET = gql`
+  mutation ValidateTicket($ticketNumber: String!) {
+    validateTicket(ticketNumber: $ticketNumber) { id ticketNumber status }
+  }
+`;
+
+export const CANCEL_TICKET = gql`
+  mutation CancelTicket($ticketNumber: String!) {
+    cancelTicket(ticketNumber: $ticketNumber) { id ticketNumber status }
+  }
+`;
