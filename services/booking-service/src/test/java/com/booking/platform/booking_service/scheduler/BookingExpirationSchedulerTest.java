@@ -37,6 +37,7 @@ class BookingExpirationSchedulerTest {
     @InjectMocks private BookingExpirationScheduler scheduler;
 
     private static final LockHandle LOCK = new LockHandle("lock:scheduler:booking-expiration", "token");
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
 
     @BeforeEach
     void setUp() {
@@ -57,7 +58,7 @@ class BookingExpirationSchedulerTest {
                 .totalPrice(new BigDecimal("10.00"))
                 .currency("USD")
                 .idempotencyKey("key-" + id)
-                .holdExpiresAt(Instant.now().minus(Duration.ofMinutes(1)))
+                .holdExpiresAt(FIXED_NOW.minus(Duration.ofMinutes(1)))
                 .build();
     }
 

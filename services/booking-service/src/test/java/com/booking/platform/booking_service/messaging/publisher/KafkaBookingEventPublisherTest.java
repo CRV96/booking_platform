@@ -35,6 +35,7 @@ class KafkaBookingEventPublisherTest {
     @InjectMocks private KafkaBookingEventPublisher publisher;
 
     private static final UUID BOOKING_ID = UUID.fromString("cccccccc-cccc-cccc-cccc-cccccccccccc");
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
 
     @BeforeEach
     void setUp() {
@@ -55,7 +56,7 @@ class KafkaBookingEventPublisherTest {
                 .totalPrice(new BigDecimal("150.00"))
                 .currency("EUR")
                 .idempotencyKey("idem-key")
-                .holdExpiresAt(Instant.now())
+                .holdExpiresAt(FIXED_NOW)
                 .build();
     }
 

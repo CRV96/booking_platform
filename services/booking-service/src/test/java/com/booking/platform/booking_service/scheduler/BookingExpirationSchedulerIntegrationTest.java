@@ -13,7 +13,6 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,6 +25,10 @@ import static org.mockito.Mockito.*;
  * Event-service gRPC calls are mocked.
  */
 class BookingExpirationSchedulerIntegrationTest extends BaseIntegrationTest {
+
+    private static final Instant EXPIRED = Instant.parse("2020-01-01T00:00:00Z");
+    private static final Instant NOT_EXPIRED = Instant.parse("2040-01-01T00:00:00Z");
+
 
     @Autowired
     private BookingExpirationScheduler scheduler;
@@ -51,7 +54,7 @@ class BookingExpirationSchedulerIntegrationTest extends BaseIntegrationTest {
     void processExpiredBookings_expiredPendingBooking_cancelsWithHoldExpiredReason() {
         BookingEntity expired = saveBooking(
                 BookingStatus.PENDING,
-                Instant.now().minus(5, ChronoUnit.MINUTES)  // hold expired 5 min ago
+                EXPIRED  // hold expired 5 min ago
         );
 
         scheduler.processExpiredBookings();
@@ -67,7 +70,7 @@ class BookingExpirationSchedulerIntegrationTest extends BaseIntegrationTest {
     void processExpiredBookings_nonExpiredPendingBooking_remainsPending() {
         BookingEntity active = saveBooking(
                 BookingStatus.PENDING,
-                Instant.now().plus(5, ChronoUnit.MINUTES)   // hold expires in 5 min
+                NOT_EXPIRED   // hold expires in 5 min
         );
 
         scheduler.processExpiredBookings();
@@ -82,7 +85,7 @@ class BookingExpirationSchedulerIntegrationTest extends BaseIntegrationTest {
     void processExpiredBookings_releasesSeatsViaEventService() {
         BookingEntity expired = saveBooking(
                 BookingStatus.PENDING,
-                Instant.now().minus(1, ChronoUnit.MINUTES)
+                EXPIRED
         );
 
         scheduler.processExpiredBookings();
@@ -98,7 +101,7 @@ class BookingExpirationSchedulerIntegrationTest extends BaseIntegrationTest {
     void processExpiredBookings_alreadyCancelledBooking_noDoubleRelease() {
         BookingEntity cancelled = saveBooking(
                 BookingStatus.CANCELLED,
-                Instant.now().minus(5, ChronoUnit.MINUTES)
+                EXPIRED
         );
 
         scheduler.processExpiredBookings();
@@ -114,15 +117,15 @@ class BookingExpirationSchedulerIntegrationTest extends BaseIntegrationTest {
     void processExpiredBookings_multipleExpired_allCancelled() {
         BookingEntity expired1 = saveBooking(
                 BookingStatus.PENDING,
-                Instant.now().minus(10, ChronoUnit.MINUTES)
+                EXPIRED
         );
         BookingEntity expired2 = saveBooking(
                 BookingStatus.PENDING,
-                Instant.now().minus(3, ChronoUnit.MINUTES)
+                EXPIRED
         );
         BookingEntity active = saveBooking(
                 BookingStatus.PENDING,
-                Instant.now().plus(5, ChronoUnit.MINUTES)
+                NOT_EXPIRED
         );
 
         scheduler.processExpiredBookings();
@@ -145,7 +148,7 @@ class BookingExpirationSchedulerIntegrationTest extends BaseIntegrationTest {
 
         BookingEntity expired = saveBooking(
                 BookingStatus.PENDING,
-                Instant.now().minus(1, ChronoUnit.MINUTES)
+                EXPIRED
         );
 
         scheduler.processExpiredBookings();
@@ -159,7 +162,7 @@ class BookingExpirationSchedulerIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void processExpiredBookings_noExpiredBookings_doesNothing() {
-        saveBooking(BookingStatus.PENDING, Instant.now().plus(10, ChronoUnit.MINUTES));
+        saveBooking(BookingStatus.PENDING, NOT_EXPIRED);
 
         scheduler.processExpiredBookings();
 

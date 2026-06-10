@@ -5,18 +5,23 @@ import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.service.PaymentService;
 import jakarta.persistence.OptimisticLockException;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +32,13 @@ class PaymentRetrySchedulerTest {
 
     @InjectMocks private PaymentRetryScheduler scheduler;
 
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
+
+    @BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(scheduler, "clock", Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
+    }
+
     private PaymentEntity duePayment() {
         return PaymentEntity.builder()
                 .id(UUID.randomUUID())
@@ -35,7 +47,7 @@ class PaymentRetrySchedulerTest {
                 .amount(new BigDecimal("99.99"))
                 .currency("USD")
                 .status(PaymentStatus.PENDING_RETRY)
-                .nextRetryAt(Instant.now().minusSeconds(10))
+                .nextRetryAt(FIXED_NOW.minusSeconds(10))
                 .retryCount(1)
                 .maxRetries(3)
                 .build();
@@ -116,12 +128,10 @@ class PaymentRetrySchedulerTest {
         when(paymentRepository.findByStatusAndNextRetryAtBefore(any(), any()))
                 .thenReturn(List.of());
 
-        Instant before = Instant.now();
         scheduler.retryDuePayments();
-        Instant after = Instant.now();
 
         verify(paymentRepository).findByStatusAndNextRetryAtBefore(
                 eq(PaymentStatus.PENDING_RETRY),
-                argThat(cutoff -> !cutoff.isBefore(before) && !cutoff.isAfter(after)));
+                eq(FIXED_NOW));
     }
 }

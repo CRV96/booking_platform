@@ -12,7 +12,9 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClient;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -33,11 +35,14 @@ class KeycloakServiceTokenProviderTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
+    private final Clock clock = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
+
     private KeycloakServiceTokenProvider tokenProvider;
 
     @BeforeEach
     void setUp() {
-        tokenProvider = new KeycloakServiceTokenProvider(restClient, properties, objectMapper);
+        tokenProvider = new KeycloakServiceTokenProvider(restClient, properties, objectMapper, clock);
 
         when(restClient.post()).thenReturn(postSpec);
         when(postSpec.uri(anyString())).thenReturn(bodySpec);
@@ -98,7 +103,7 @@ class KeycloakServiceTokenProviderTest {
     void getToken_cachedAndNotExpired_returnsCachedWithoutCallingKeycloak() {
         // Pre-seed cache with a fresh token
         ReflectionTestUtils.setField(tokenProvider, "cachedToken", "cached-token");
-        ReflectionTestUtils.setField(tokenProvider, "tokenExpiry", Instant.now().plusSeconds(300));
+        ReflectionTestUtils.setField(tokenProvider, "tokenExpiry", FIXED_NOW.plusSeconds(300));
 
         String token = tokenProvider.getToken();
 
@@ -123,7 +128,7 @@ class KeycloakServiceTokenProviderTest {
     void getToken_expiredToken_refreshesFromKeycloak() {
         // Pre-seed with expired token
         ReflectionTestUtils.setField(tokenProvider, "cachedToken", "old-token");
-        ReflectionTestUtils.setField(tokenProvider, "tokenExpiry", Instant.now().minusSeconds(60));
+        ReflectionTestUtils.setField(tokenProvider, "tokenExpiry", FIXED_NOW.minusSeconds(60));
         when(responseSpec.body(String.class)).thenReturn(tokenResponse("new-token", 300));
 
         String token = tokenProvider.getToken();
@@ -138,15 +143,11 @@ class KeycloakServiceTokenProviderTest {
     void getToken_expirySetWithBuffer() {
         when(responseSpec.body(String.class)).thenReturn(tokenResponse("t", 300));
 
-        Instant before = Instant.now();
         tokenProvider.getToken();
-        Instant after = Instant.now();
 
         Instant expiry = (Instant) ReflectionTestUtils.getField(tokenProvider, "tokenExpiry");
-        // expiry = Instant.now() + expiresIn(300) - buffer(30) = now + 270s
-        Instant expectedMin = before.plusSeconds(270 - 2);
-        Instant expectedMax = after.plusSeconds(270 + 2);
-        assertThat(expiry).isBetween(expectedMin, expectedMax);
+        // expiry = clock.instant() + expiresIn(300) - buffer(30) = FIXED_NOW + 270s
+        assertThat(expiry).isEqualTo(FIXED_NOW.plusSeconds(270));
     }
 
     // ── Error handling ────────────────────────────────────────────────────────

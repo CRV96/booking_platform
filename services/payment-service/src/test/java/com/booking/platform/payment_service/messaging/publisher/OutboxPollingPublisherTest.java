@@ -18,7 +18,9 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -37,12 +39,14 @@ class OutboxPollingPublisherTest {
     @InjectMocks private OutboxPollingPublisher publisher;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
 
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(publisher, "objectMapper", objectMapper);
         ReflectionTestUtils.setField(publisher, "batchSize", 100);
         ReflectionTestUtils.setField(publisher, "retentionHours", 24);
+        ReflectionTestUtils.setField(publisher, "clock", Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     @SuppressWarnings("unchecked")
@@ -217,8 +221,6 @@ class OutboxPollingPublisherTest {
         verify(outboxEventRepository).deleteByPublishedAtBefore(cutoffCaptor.capture());
 
         Instant cutoff = cutoffCaptor.getValue();
-        Instant expectedCutoff = Instant.now().minusSeconds(24 * 3600);
-        // Allow 5-second tolerance for test execution time
-        assertThat(cutoff).isBetween(expectedCutoff.minusSeconds(5), expectedCutoff.plusSeconds(5));
+        assertThat(cutoff).isEqualTo(FIXED_NOW.minusSeconds(24 * 3600));
     }
 }

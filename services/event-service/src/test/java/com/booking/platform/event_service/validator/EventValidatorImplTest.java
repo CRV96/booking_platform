@@ -12,7 +12,6 @@ import com.booking.platform.event_service.validator.impl.EventValidatorImpl;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -23,9 +22,9 @@ class EventValidatorImplTest {
 
     private final EventValidatorImpl validator = new EventValidatorImpl();
 
-    private static final String FUTURE = Instant.now().plus(10, ChronoUnit.DAYS).toString();
-    private static final String FAR_FUTURE = Instant.now().plus(20, ChronoUnit.DAYS).toString();
-    private static final String PAST = Instant.now().minus(1, ChronoUnit.DAYS).toString();
+    private static final String FUTURE     = "2040-01-11T00:00:00Z";
+    private static final String FAR_FUTURE = "2040-01-21T00:00:00Z";
+    private static final String PAST       = "2020-01-01T00:00:00Z";
 
     private SeatCategoryInfo validSeatCategory() {
         return SeatCategoryInfo.newBuilder()
@@ -264,7 +263,7 @@ class EventValidatorImplTest {
     @Test
     void validateForPublish_pastDateTime_throwsValidation() {
         EventDocument event = fullyValidEvent();
-        event.setDateTime(Instant.now().minus(1, ChronoUnit.DAYS));
+        event.setDateTime(Instant.parse("2020-01-01T00:00:00Z"));
 
         assertThatThrownBy(() -> validator.validateForPublish(event))
                 .isInstanceOf(ValidationException.class)
@@ -299,7 +298,7 @@ class EventValidatorImplTest {
                 .title("Valid Event")
                 .category(EventCategory.CONCERT)
                 .status(EventStatus.DRAFT)
-                .dateTime(Instant.now().plus(10, ChronoUnit.DAYS))
+                .dateTime(Instant.parse("2040-01-01T00:00:00Z"))
                 .timezone("UTC")
                 .venue(com.booking.platform.event_service.document.VenueInfo.builder()
                         .name("Arena").city("Berlin").country("DE").build())

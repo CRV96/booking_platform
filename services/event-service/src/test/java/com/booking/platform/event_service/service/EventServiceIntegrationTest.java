@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,6 +40,8 @@ class EventServiceIntegrationTest extends BaseIntegrationTest {
     @Autowired
     private EventService eventService;
 
+    private static final Instant FUTURE_DATE = Instant.parse("2040-01-01T00:00:00Z");
+
     // =========================================================================
     // Helpers
     // =========================================================================
@@ -50,7 +51,7 @@ class EventServiceIntegrationTest extends BaseIntegrationTest {
                 .setTitle(title)
                 .setDescription("A great event")
                 .setCategory("CONCERT")
-                .setDateTime(Instant.now().plus(10, ChronoUnit.DAYS).toString())
+                .setDateTime(FUTURE_DATE.toString())
                 .setTimezone("UTC")
                 .setVenue(com.booking.platform.common.grpc.event.VenueInfo.newBuilder()
                         .setName("Arena")
@@ -387,7 +388,7 @@ class EventServiceIntegrationTest extends BaseIntegrationTest {
             CreateEventRequest invalidRequest = CreateEventRequest.newBuilder()
                     .setTitle("") // blank title — validation will reject
                     .setCategory("CONCERT")
-                    .setDateTime(Instant.now().plus(5, ChronoUnit.DAYS).toString())
+                    .setDateTime(FUTURE_DATE.toString())
                     .setTimezone("UTC")
                     .setVenue(com.booking.platform.common.grpc.event.VenueInfo.newBuilder()
                             .setName("Arena").setCity("Bucharest").setCountry("Romania").build())

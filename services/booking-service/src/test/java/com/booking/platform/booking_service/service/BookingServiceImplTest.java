@@ -58,6 +58,7 @@ class BookingServiceImplTest {
     private static final String SEAT_CATEGORY = "VIP";
     private static final String IDEM_KEY = "idem-abc";
     private static final LockHandle LOCK = new LockHandle("lock:seat:ev-1:VIP", "token-xyz");
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
 
     private BookingEntity pendingBooking(UUID id) {
         return BookingEntity.builder()
@@ -72,7 +73,7 @@ class BookingServiceImplTest {
                 .totalPrice(new BigDecimal("100.00"))
                 .currency("USD")
                 .idempotencyKey(IDEM_KEY)
-                .holdExpiresAt(Instant.now().plus(Duration.ofMinutes(10)))
+                .holdExpiresAt(FIXED_NOW.plus(Duration.ofMinutes(10)))
                 .build();
     }
 

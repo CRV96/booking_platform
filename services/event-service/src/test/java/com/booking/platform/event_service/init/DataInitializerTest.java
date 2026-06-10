@@ -152,7 +152,7 @@ class DataInitializerTest {
         ArgumentCaptor<EventDocument> captor = ArgumentCaptor.forClass(EventDocument.class);
         verify(eventRepository, times(11)).save(captor.capture());
 
-        Instant now = Instant.now();
+        Instant now = Instant.parse("2099-01-01T00:00:00Z");
         List<EventDocument> saved = captor.getAllValues();
         assertThat(saved).allMatch(doc -> doc.getDateTime().isBefore(now));
         assertThat(saved).allMatch(doc -> doc.getEndDateTime().isBefore(now));

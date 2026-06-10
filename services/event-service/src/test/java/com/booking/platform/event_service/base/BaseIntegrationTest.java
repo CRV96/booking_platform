@@ -148,11 +148,14 @@ public abstract class BaseIntegrationTest {
         return eventRepository.save(event);
     }
 
+    private static final Instant FUTURE_REF = Instant.parse("2040-01-01T00:00:00Z");
+    private static final Instant PAST_REF   = Instant.parse("2020-01-01T00:00:00Z");
+
     protected Instant futureDate(int daysFromNow) {
-        return Instant.now().plus(daysFromNow, ChronoUnit.DAYS);
+        return FUTURE_REF.plus(daysFromNow, ChronoUnit.DAYS);
     }
 
     protected Instant pastDate(int daysAgo) {
-        return Instant.now().minus(daysAgo, ChronoUnit.DAYS);
+        return PAST_REF.minus(daysAgo, ChronoUnit.DAYS);
     }
 }

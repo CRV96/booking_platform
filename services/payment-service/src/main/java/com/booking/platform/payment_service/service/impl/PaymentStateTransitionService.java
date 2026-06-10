@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -47,6 +48,7 @@ public class PaymentStateTransitionService {
     private final OutboxEventRepository outboxEventRepository;
     private final ObjectMapper objectMapper;
     private final PaymentValidator paymentValidator;
+    private final Clock clock;
 
     @Value("${payment.retry.max-attempts:3}")
     private int maxRetries;
@@ -142,7 +144,7 @@ public class PaymentStateTransitionService {
         paymentValidator.assertValidTransition(payment, PaymentStatus.PENDING_RETRY);
         payment.setStatus(PaymentStatus.PENDING_RETRY);
         payment.setFailureReason(reason);
-        payment.setNextRetryAt(Instant.now().plusSeconds(computeBackoffSeconds(payment.getRetryCount())));
+        payment.setNextRetryAt(Instant.now(clock).plusSeconds(computeBackoffSeconds(payment.getRetryCount())));
         ApplicationLogger.logMessage(log, Level.DEBUG,
                 "Payment id='{}' marked as PENDING_RETRY with reason='{}', next retry at {}",
                 paymentId, reason, payment.getNextRetryAt());
@@ -228,7 +230,7 @@ public class PaymentStateTransitionService {
         // Common fields present in every event
         node.put(BkgConstants.BkgOutboxConstants.PAYMENT_ID, payment.getId().toString());
         node.put(BkgConstants.BkgOutboxConstants.BOOKING_ID, payment.getBookingId());
-        node.put(BkgConstants.BkgOutboxConstants.TIMESTAMP, Instant.now().toString());
+        node.put(BkgConstants.BkgOutboxConstants.TIMESTAMP, Instant.now(clock).toString());
         return node.toString();
     }
 

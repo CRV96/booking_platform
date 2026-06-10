@@ -22,6 +22,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -62,6 +63,7 @@ public class OutboxPollingPublisher {
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, MessageLite> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     @Value("${outbox.poll.batch-size:100}")
     private int batchSize;
@@ -102,7 +104,7 @@ public class OutboxPollingPublisher {
                 // Synchronous send — blocks until Kafka confirms receipt
                 kafkaTemplate.send(topic, key, protoMessage).get();
 
-                event.setPublishedAt(Instant.now());
+                event.setPublishedAt(Instant.now(clock));
                 outboxEventRepository.save(event);
 
                 ApplicationLogger.logMessage(log, Level.INFO, "Outbox event published: id='{}', type='{}', topic='{}', key='{}'",
@@ -127,7 +129,7 @@ public class OutboxPollingPublisher {
     @Scheduled(fixedRateString = "${outbox.cleanup.interval:3600000}")
     @Transactional
     public void cleanup() {
-        final Instant cutoff = Instant.now().minus(Duration.ofHours(retentionHours));
+        final Instant cutoff = Instant.now(clock).minus(Duration.ofHours(retentionHours));
         outboxEventRepository.deleteByPublishedAtBefore(cutoff);
         ApplicationLogger.logMessage(log, Level.DEBUG, "Outbox cleanup: deleted events published before {}", cutoff);
     }

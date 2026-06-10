@@ -26,7 +26,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,7 +77,7 @@ class EventGrpcServiceTest {
                 .title("Fest")
                 .category(EventCategory.CONCERT)
                 .status(EventStatus.DRAFT)
-                .dateTime(Instant.now().plus(5, ChronoUnit.DAYS))
+                .dateTime(Instant.parse("2040-01-01T00:00:00Z"))
                 .timezone("UTC")
                 .venue(VenueInfo.builder().name("Arena").city("Berlin").country("DE").build())
                 .organizer(OrganizerInfo.builder().userId(userId).name("Alice").email("alice@example.com").build())

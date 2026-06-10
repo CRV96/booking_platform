@@ -48,6 +48,7 @@ class BookingGrpcServiceTest {
 
     private static final String USER_ID = "u-1";
     private static final UUID BOOKING_UUID = UUID.fromString("11111111-1111-1111-1111-111111111111");
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
 
     private Context.CancellableContext grpcCtx;
     private Context previousContext;
@@ -84,7 +85,7 @@ class BookingGrpcServiceTest {
                 .totalPrice(new BigDecimal("100.00"))
                 .currency("USD")
                 .idempotencyKey("idem-key")
-                .holdExpiresAt(Instant.now())
+                .holdExpiresAt(FIXED_NOW)
                 .build();
     }
 

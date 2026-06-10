@@ -29,7 +29,6 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -52,6 +51,7 @@ class EventServiceImplTest {
     private static final String EVENT_ID = "ev-1";
     private static final OrganizerDto ORGANIZER = OrganizerDto.builder()
             .userId("u-1").name("Alice").email("alice@example.com").build();
+    private static final Instant FUTURE_DATE = Instant.parse("2040-01-01T00:00:00Z");
 
     private EventDocument draftEvent() {
         return EventDocument.builder()
@@ -59,7 +59,7 @@ class EventServiceImplTest {
                 .title("Fest")
                 .category(EventCategory.CONCERT)
                 .status(EventStatus.DRAFT)
-                .dateTime(Instant.now().plus(5, ChronoUnit.DAYS))
+                .dateTime(FUTURE_DATE)
                 .timezone("UTC")
                 .venue(VenueInfo.builder().name("Arena").city("Berlin").country("DE").build())
                 .organizer(OrganizerInfo.builder().userId("u-1").name("Alice").email("alice@example.com").build())
@@ -73,7 +73,7 @@ class EventServiceImplTest {
         return CreateEventRequest.newBuilder()
                 .setTitle("Fest")
                 .setCategory("CONCERT")
-                .setDateTime(Instant.now().plus(5, ChronoUnit.DAYS).toString())
+                .setDateTime(FUTURE_DATE.toString())
                 .setTimezone("UTC")
                 .setVenue(com.booking.platform.common.grpc.event.VenueInfo.newBuilder()
                         .setName("Arena").setCity("Berlin").setCountry("DE").build())
@@ -87,7 +87,7 @@ class EventServiceImplTest {
     @Test
     void createEvent_validatesRequest() {
         when(eventValidator.parseInstant(anyString(), eq("dateTime")))
-                .thenReturn(Instant.now().plus(5, ChronoUnit.DAYS));
+                .thenReturn(FUTURE_DATE);
         when(eventRepository.save(any())).thenReturn(draftEvent());
 
         service.createEvent(validCreateRequest(), ORGANIZER);
@@ -99,7 +99,7 @@ class EventServiceImplTest {
     void createEvent_savesAndPublishes() {
         EventDocument saved = draftEvent();
         when(eventValidator.parseInstant(anyString(), eq("dateTime")))
-                .thenReturn(Instant.now().plus(5, ChronoUnit.DAYS));
+                .thenReturn(FUTURE_DATE);
         when(eventRepository.save(any())).thenReturn(saved);
 
         EventDocument result = service.createEvent(validCreateRequest(), ORGANIZER);
@@ -112,7 +112,7 @@ class EventServiceImplTest {
     @Test
     void createEvent_setsStatusToDraft() {
         when(eventValidator.parseInstant(anyString(), eq("dateTime")))
-                .thenReturn(Instant.now().plus(5, ChronoUnit.DAYS));
+                .thenReturn(FUTURE_DATE);
         ArgumentCaptor<EventDocument> captor = ArgumentCaptor.forClass(EventDocument.class);
         when(eventRepository.save(captor.capture())).thenReturn(draftEvent());
 
@@ -124,7 +124,7 @@ class EventServiceImplTest {
     @Test
     void createEvent_mapsOrganizerFromDto() {
         when(eventValidator.parseInstant(anyString(), eq("dateTime")))
-                .thenReturn(Instant.now().plus(5, ChronoUnit.DAYS));
+                .thenReturn(FUTURE_DATE);
         ArgumentCaptor<EventDocument> captor = ArgumentCaptor.forClass(EventDocument.class);
         when(eventRepository.save(captor.capture())).thenReturn(draftEvent());
 

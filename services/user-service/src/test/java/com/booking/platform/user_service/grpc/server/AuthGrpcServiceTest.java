@@ -50,6 +50,7 @@ class AuthGrpcServiceTest {
 
     private static final TokenResponseDTO TOKENS =
             new TokenResponseDTO("access-tok", "refresh-tok", 300, 1800, "Bearer");
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
 
     @BeforeEach
     void setUp() {
@@ -60,7 +61,7 @@ class AuthGrpcServiceTest {
         grpcCtx = Context.current()
                 .withValue(GrpcUserContext.USER_ID, "u-1")
                 .withValue(GrpcUserContext.JWT_ID, "jti-123")
-                .withValue(GrpcUserContext.JWT_EXPIRY, Instant.now().plusSeconds(300))
+                .withValue(GrpcUserContext.JWT_EXPIRY, FIXED_NOW.plusSeconds(300))
                 .withCancellation();
         previousContext = grpcCtx.attach();
 
@@ -216,7 +217,7 @@ class AuthGrpcServiceTest {
 
         grpcCtx = Context.current()
                 .withValue(GrpcUserContext.USER_ID, "u-1")
-                .withValue(GrpcUserContext.JWT_EXPIRY, Instant.now().plusSeconds(300))
+                .withValue(GrpcUserContext.JWT_EXPIRY, FIXED_NOW.plusSeconds(300))
                 .withCancellation();
         previousContext = grpcCtx.attach();
 

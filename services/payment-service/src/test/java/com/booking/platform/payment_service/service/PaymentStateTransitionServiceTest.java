@@ -24,7 +24,9 @@ import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,6 +46,7 @@ class PaymentStateTransitionServiceTest {
     @InjectMocks private PaymentStateTransitionService service;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
 
     @BeforeEach
     void setUp() {
@@ -51,6 +54,7 @@ class PaymentStateTransitionServiceTest {
         ReflectionTestUtils.setField(service, "maxRetries", 3);
         ReflectionTestUtils.setField(service, "backoffBaseSeconds", 60L);
         ReflectionTestUtils.setField(service, "backoffMultiplier", 2.0);
+        ReflectionTestUtils.setField(service, "clock", Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     private UUID id() { return UUID.randomUUID(); }
@@ -110,7 +114,7 @@ class PaymentStateTransitionServiceTest {
         PaymentEntity p = PaymentEntity.builder()
                 .id(id).bookingId("b").userId("u").amount(BigDecimal.TEN).currency("USD")
                 .status(PaymentStatus.PENDING_RETRY).retryCount(1).maxRetries(3)
-                .nextRetryAt(Instant.now().plusSeconds(60))
+                .nextRetryAt(FIXED_NOW.plusSeconds(60))
                 .build();
         when(paymentRepository.findById(id)).thenReturn(Optional.of(p));
         when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -220,15 +224,12 @@ class PaymentStateTransitionServiceTest {
         when(paymentRepository.findById(id)).thenReturn(Optional.of(payment(id, PaymentStatus.INITIATED)));
         when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Instant before = Instant.now();
         PaymentEntity result = service.markPendingRetry(id, "Circuit breaker open");
-        Instant after = Instant.now();
 
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.PENDING_RETRY);
         assertThat(result.getFailureReason()).isEqualTo("Circuit breaker open");
         // nextRetryAt = now + 60s (base) for retryCount=0
-        assertThat(result.getNextRetryAt()).isBetween(
-                before.plusSeconds(55), after.plusSeconds(65));
+        assertThat(result.getNextRetryAt()).isEqualTo(FIXED_NOW.plusSeconds(60));
         verify(outboxEventRepository, never()).save(any());
     }
 
@@ -242,13 +243,10 @@ class PaymentStateTransitionServiceTest {
         when(paymentRepository.findById(id)).thenReturn(Optional.of(p));
         when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Instant before = Instant.now();
         PaymentEntity result = service.markPendingRetry(id, "still down");
-        Instant after = Instant.now();
 
         // base=60, multiplier=2, retryCount=2 → 60 * 2^2 = 240s
-        assertThat(result.getNextRetryAt()).isBetween(
-                before.plusSeconds(235), after.plusSeconds(245));
+        assertThat(result.getNextRetryAt()).isEqualTo(FIXED_NOW.plusSeconds(240));
     }
 
     @Test
@@ -261,12 +259,9 @@ class PaymentStateTransitionServiceTest {
         when(paymentRepository.findById(id)).thenReturn(Optional.of(p));
         when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        Instant before = Instant.now();
         PaymentEntity result = service.markPendingRetry(id, "down");
-        Instant after = Instant.now();
 
-        assertThat(result.getNextRetryAt()).isBetween(
-                before.plusSeconds(3595), after.plusSeconds(3605));
+        assertThat(result.getNextRetryAt()).isEqualTo(FIXED_NOW.plusSeconds(3600));
     }
 
     // ── markRefundInitiated ───────────────────────────────────────────────────

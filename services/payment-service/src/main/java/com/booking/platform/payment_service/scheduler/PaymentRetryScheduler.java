@@ -13,6 +13,7 @@ import org.slf4j.event.Level;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 
@@ -44,11 +45,12 @@ public class PaymentRetryScheduler {
 
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
+    private final Clock clock;
 
     @Scheduled(fixedDelayString = "${payment.retry.scheduler.interval:60000}")
     public void retryDuePayments() {
         List<PaymentEntity> due = paymentRepository
-                .findByStatusAndNextRetryAtBefore(PaymentStatus.PENDING_RETRY, Instant.now());
+                .findByStatusAndNextRetryAtBefore(PaymentStatus.PENDING_RETRY, Instant.now(clock));
 
         if (due.isEmpty()) {
             return;

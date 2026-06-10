@@ -10,6 +10,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.time.Clock;
 import java.time.Instant;
 
 @Component
@@ -21,20 +22,23 @@ public class KeycloakServiceTokenProvider {
     private final RestClient restClient;
     private final KeycloakServiceProperties properties;
     private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     private volatile String cachedToken;
     private volatile Instant tokenExpiry = Instant.MIN;
 
     public KeycloakServiceTokenProvider(RestClient keycloakRestClient,
                                         KeycloakServiceProperties properties,
-                                        ObjectMapper objectMapper) {
+                                        ObjectMapper objectMapper,
+                                        Clock clock) {
         this.restClient = keycloakRestClient;
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.clock = clock;
     }
 
     public synchronized String getToken() {
-        if (cachedToken != null && Instant.now().isBefore(tokenExpiry)) {
+        if (cachedToken != null && Instant.now(clock).isBefore(tokenExpiry)) {
             return cachedToken;
         }
         return refreshToken();
@@ -58,7 +62,7 @@ public class KeycloakServiceTokenProvider {
             JsonNode json = objectMapper.readTree(responseBody);
             cachedToken = json.get("access_token").asText();
             int expiresIn = json.get("expires_in").asInt();
-            tokenExpiry = Instant.now().plusSeconds(expiresIn - EXPIRY_BUFFER_SECONDS);
+            tokenExpiry = Instant.now(clock).plusSeconds(expiresIn - EXPIRY_BUFFER_SECONDS);
             ApplicationLogger.logMessage(log, Level.DEBUG, "Obtained service account token, expires in {}s", expiresIn);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse Keycloak token response", e);
