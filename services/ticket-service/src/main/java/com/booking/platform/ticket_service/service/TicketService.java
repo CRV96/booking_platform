@@ -37,4 +37,7 @@ public interface TicketService {
 
     /** Cancels a ticket and marks it as CANCELLED. Throws if already used. */
     TicketDocument cancelTicket(String ticketNumber);
+
+    /** Cancels all tickets belonging to a booking. */
+    void cancelTicketsByBooking(String bookingId);
 }

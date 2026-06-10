@@ -1,5 +1,6 @@
 package com.booking.platform.ticket_service.messaging.consumer;
 
+import com.booking.platform.common.events.BookingCancelledEvent;
 import com.booking.platform.common.events.BookingConfirmedEvent;
 import com.booking.platform.common.events.KafkaTopics;
 import com.booking.platform.ticket_service.document.TicketDocument;
@@ -65,6 +66,26 @@ public class BookingTicketConsumer {
                     "Failed to generate tickets for booking '{}'", event.getBookingId(), e);
 
             throw e;  // re-throw to trigger retry + DLT
+        }
+    }
+
+    @KafkaListener(
+            topics = KafkaTopics.BOOKING_CANCELLED,
+            containerFactory = "bookingCancelledListenerFactory"
+    )
+    public void onBookingCancelled(ConsumerRecord<String, BookingCancelledEvent> record) {
+        BookingCancelledEvent event = record.value();
+
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "[BOOKING_CANCELLED] bookingId='{}', partition={}, offset={}",
+                event.getBookingId(), record.partition(), record.offset());
+
+        try {
+            ticketService.cancelTicketsByBooking(event.getBookingId());
+        } catch (Exception e) {
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.TICKET_GENERATION_FAILED,
+                    "Failed to cancel tickets for booking '{}'", event.getBookingId(), e);
+            throw e;
         }
     }
 }

@@ -149,6 +149,28 @@ public class TicketServiceImpl implements TicketService {
         return saved;
     }
 
+    /** Cancels all VALID tickets for a given booking. Already-cancelled tickets are skipped. */
+    @Override
+    public void cancelTicketsByBooking(String bookingId) {
+        bookingValidation.validateBookingId(bookingId);
+
+        List<TicketDocument> tickets = ticketRepository.findByBookingId(bookingId);
+        if (tickets.isEmpty()) {
+            ApplicationLogger.logMessage(log, Level.DEBUG, "No tickets found for booking '{}' — nothing to cancel", bookingId);
+            return;
+        }
+
+        List<TicketDocument> toCancel = tickets.stream()
+                .filter(t -> t.getStatus() != TicketStatus.CANCELLED)
+                .peek(t -> t.setStatus(TicketStatus.CANCELLED))
+                .toList();
+
+        if (!toCancel.isEmpty()) {
+            ticketRepository.saveAll(toCancel);
+            ApplicationLogger.logMessage(log, Level.INFO, "Cancelled {} ticket(s) for booking '{}'", toCancel.size(), bookingId);
+        }
+    }
+
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**

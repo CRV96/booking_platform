@@ -1,5 +1,6 @@
 package com.booking.platform.ticket_service.messaging.config;
 
+import com.booking.platform.common.events.BookingCancelledEvent;
 import com.booking.platform.common.events.BookingConfirmedEvent;
 import com.booking.platform.common.events.config.BaseKafkaConsumerConfig;
 import com.booking.platform.common.events.serialization.ProtobufDeserializer;
@@ -39,5 +40,20 @@ public class KafkaConsumerConfig extends BaseKafkaConsumerConfig {
     public ConcurrentKafkaListenerContainerFactory<String, BookingConfirmedEvent> bookingConfirmedListenerFactory(
             CommonErrorHandler errorHandler) {
         return buildFactory(bookingConfirmedConsumerFactory(), errorHandler);
+    }
+
+    // ── BookingCancelledEvent ─────────────────────────────────────────────────
+
+    @Bean
+    public ConsumerFactory<String, BookingCancelledEvent> bookingCancelledConsumerFactory() {
+        Map<String, Object> config = baseConfig();
+        config.put(ProtobufDeserializer.PARSER_CONFIG_KEY, BookingCancelledEvent.parser());
+        return new DefaultKafkaConsumerFactory<>(config);
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, BookingCancelledEvent> bookingCancelledListenerFactory(
+            CommonErrorHandler errorHandler) {
+        return buildFactory(bookingCancelledConsumerFactory(), errorHandler);
     }
 }

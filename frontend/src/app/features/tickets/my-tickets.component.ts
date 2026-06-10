@@ -152,7 +152,8 @@ export class MyTicketsComponent implements OnInit {
     this.loading.set(true);
     this.apollo.query<{ myTickets: TicketConnection }>({
       query: GET_MY_TICKETS,
-      variables: { page: this.page(), pageSize: 12 }
+      variables: { page: this.page(), pageSize: 12 },
+      fetchPolicy: 'network-only',
     }).subscribe({
       next: r => {
         this.loading.set(false);

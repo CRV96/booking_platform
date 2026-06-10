@@ -1,6 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { Apollo } from 'apollo-angular';
 import { GET_MY_BOOKINGS, CANCEL_BOOKING } from '../../shared/graphql/documents';
@@ -12,7 +11,7 @@ const STATUSES = ['PENDING','PAYMENT_PROCESSING','CONFIRMED','CANCELLED','REFUND
 @Component({
   selector: 'app-my-bookings',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe, EventArtComponent],
+  imports: [RouterLink, DatePipe, EventArtComponent],
   template: `
     <div class="container page">
       <div class="section-head" style="margin-bottom:32px">
@@ -97,8 +96,6 @@ const STATUSES = ['PENDING','PAYMENT_PROCESSING','CONFIRMED','CANCELLED','REFUND
 })
 export class MyBookingsComponent implements OnInit {
   private apollo = inject(Apollo);
-  statuses = STATUSES;
-  statusFilter = '';
   activeTab = signal<'upcoming' | 'past'>('upcoming');
   bookings = signal<Booking[]>([]);
   connection = signal<BookingConnection | null>(null);
@@ -115,17 +112,26 @@ export class MyBookingsComponent implements OnInit {
     this.load();
   }
 
+  private static readonly UPCOMING_STATUSES = new Set(['PENDING', 'PAYMENT_PROCESSING', 'CONFIRMED']);
+
   load() {
     this.loading.set(true);
     this.error.set('');
     this.apollo.query<{ myBookings: BookingConnection }>({
       query: GET_MY_BOOKINGS,
-      variables: { page: this.page(), pageSize: 15, status: this.statusFilter || null }
+      variables: { page: this.page(), pageSize: 50 },
+      fetchPolicy: 'network-only',
     }).subscribe({
       next: r => {
         this.loading.set(false);
+        const all = r.data.myBookings.bookings;
+        const isUpcoming = this.activeTab() === 'upcoming';
+        this.bookings.set(all.filter(b =>
+          isUpcoming
+            ? MyBookingsComponent.UPCOMING_STATUSES.has(b.status)
+            : !MyBookingsComponent.UPCOMING_STATUSES.has(b.status)
+        ));
         this.connection.set(r.data.myBookings);
-        this.bookings.set(r.data.myBookings.bookings);
       },
       error: err => { this.loading.set(false); this.error.set(err.message || 'Failed to load'); }
     });
