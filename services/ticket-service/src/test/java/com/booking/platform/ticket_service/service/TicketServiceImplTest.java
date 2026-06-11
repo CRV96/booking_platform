@@ -9,10 +9,10 @@ import com.booking.platform.ticket_service.exception.TicketNotFoundException;
 import com.booking.platform.ticket_service.repository.TicketRepository;
 import com.booking.platform.ticket_service.service.impl.TicketServiceImpl;
 import com.booking.platform.ticket_service.validation.BookingValidation;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -20,6 +20,9 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,10 +34,18 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class TicketServiceImplTest {
 
+    private static final Instant FIXED_NOW = Instant.parse("2025-01-01T00:00:00Z");
+    private static final Clock FIXED_CLOCK = Clock.fixed(FIXED_NOW, ZoneOffset.UTC);
+
     @Mock private TicketRepository ticketRepository;
     @Mock private BookingValidation bookingValidation;
 
-    @InjectMocks private TicketServiceImpl ticketService;
+    private TicketServiceImpl ticketService;
+
+    @BeforeEach
+    void setUp() {
+        ticketService = new TicketServiceImpl(ticketRepository, bookingValidation, FIXED_CLOCK);
+    }
 
     private TicketDTO validDto(int quantity) {
         return TicketDTO.builder()
