@@ -7,6 +7,7 @@ import org.slf4j.event.Level;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -29,6 +30,7 @@ public class TokenBlacklistService {
     private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
 
     private final StringRedisTemplate redisTemplate;
+    private final Clock clock;
 
     /**
      * Adds a token to the blacklist.
@@ -42,7 +44,7 @@ public class TokenBlacklistService {
             return;
         }
 
-        long ttlSeconds = Duration.between(Instant.now(), expiry).getSeconds();
+        long ttlSeconds = Duration.between(Instant.now(clock), expiry).getSeconds();
 
         if (ttlSeconds <= 0) {
             ApplicationLogger.logMessage(log, Level.DEBUG, "Token already expired, no need to blacklist: {}", jti);

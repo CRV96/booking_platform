@@ -9,8 +9,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,7 +50,7 @@ class TokenBlacklistServiceTest {
                 return hasKeyStore.getOrDefault(key, false);
             }
         };
-        service = new TokenBlacklistService(redisTemplate);
+        service = new TokenBlacklistService(redisTemplate, Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
     // ── blacklist() ───────────────────────────────────────────────────────────
