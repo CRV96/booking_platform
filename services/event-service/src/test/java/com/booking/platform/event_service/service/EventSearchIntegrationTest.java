@@ -316,6 +316,8 @@ class EventSearchIntegrationTest extends BaseIntegrationTest {
             List<String> ids1 = page1.stream().map(EventDocument::getId).toList();
 
             // No overlap between pages
+            assertThat(ids0).isNotEmpty();
+            assertThat(ids1).isNotEmpty();
             assertThat(ids0).doesNotContainAnyElementsOf(ids1);
         }
     }

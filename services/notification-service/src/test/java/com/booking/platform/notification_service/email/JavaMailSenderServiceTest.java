@@ -19,6 +19,7 @@ import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
 import java.time.Year;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Properties;
 
@@ -79,7 +80,7 @@ class JavaMailSenderServiceTest {
         service.sendHtml("u@x.com", "S", "tmpl", Map.of("k", "v"));
 
         Context captured = contextCaptor.getValue();
-        assertThat(captured.getVariable("year")).isEqualTo(Year.now().getValue());
+        assertThat(captured.getVariable("year")).isEqualTo(Year.now(ZoneOffset.UTC).getValue());
     }
 
     @Test

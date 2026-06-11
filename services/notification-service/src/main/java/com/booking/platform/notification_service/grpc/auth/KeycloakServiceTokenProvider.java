@@ -62,7 +62,7 @@ public class KeycloakServiceTokenProvider {
             JsonNode json = objectMapper.readTree(responseBody);
             cachedToken = json.get("access_token").asText();
             int expiresIn = json.get("expires_in").asInt();
-            tokenExpiry = Instant.now(clock).plusSeconds(expiresIn - EXPIRY_BUFFER_SECONDS);
+            tokenExpiry = Instant.now(clock).plusSeconds((long) expiresIn - EXPIRY_BUFFER_SECONDS);
             ApplicationLogger.logMessage(log, Level.DEBUG, "Obtained service account token, expires in {}s", expiresIn);
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse Keycloak token response", e);

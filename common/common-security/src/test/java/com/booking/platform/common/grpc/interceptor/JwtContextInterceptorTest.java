@@ -33,6 +33,8 @@ class JwtContextInterceptorTest {
     @Mock private ServerCallHandler<Object, Object> handler;
     @Mock private ServerCall.Listener<Object> listener;
 
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-11T12:00:00Z");
+
     private JwtContextInterceptor interceptor;
 
     @BeforeEach
@@ -61,8 +63,8 @@ class JwtContextInterceptorTest {
                 .claim("preferred_username", "alice")
                 .claim("email", "a@b.com")
                 .claim("realm_access", Map.of("roles", List.of("customer")))
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(300))
+                .issuedAt(FIXED_NOW)
+                .expiresAt(FIXED_NOW.plusSeconds(300))
                 .build();
     }
 
@@ -168,8 +170,8 @@ class JwtContextInterceptorTest {
                 .subject("user-2")
                 .claim("preferred_username", "bob")
                 .claim("email", "b@c.com")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(300))
+                .issuedAt(FIXED_NOW)
+                .expiresAt(FIXED_NOW.plusSeconds(300))
                 .build();
         when(jwtValidator.validateAndDecode("tok2")).thenReturn(jwtNoRoles);
         when(publicEndpointRegistry.isPublicEndpoint(anyString())).thenReturn(false);

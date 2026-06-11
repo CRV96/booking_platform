@@ -30,6 +30,8 @@ class TokenBlacklistServiceTest {
     @Mock
     private ValueOperations<String, String> valueOps;
 
+    private static final Instant FIXED_NOW = Instant.parse("2025-06-11T12:00:00Z");
+
     private final Map<String, Boolean> hasKeyStore = new HashMap<>();
     private StringRedisTemplate redisTemplate;
     private TokenBlacklistService service;
@@ -53,7 +55,7 @@ class TokenBlacklistServiceTest {
 
     @Test
     void blacklist_storesKeyWithTtlInRedis() {
-        Instant expiry = Instant.now().plusSeconds(300);
+        Instant expiry = FIXED_NOW.plusSeconds(300);
 
         service.blacklist("jti-abc", expiry);
 
@@ -64,21 +66,21 @@ class TokenBlacklistServiceTest {
 
     @Test
     void blacklist_doesNothingForNullJti() {
-        service.blacklist(null, Instant.now().plusSeconds(300));
+        service.blacklist(null, FIXED_NOW.plusSeconds(300));
 
         verifyNoInteractions(valueOps);
     }
 
     @Test
     void blacklist_doesNothingForBlankJti() {
-        service.blacklist("   ", Instant.now().plusSeconds(300));
+        service.blacklist("   ", FIXED_NOW.plusSeconds(300));
 
         verifyNoInteractions(valueOps);
     }
 
     @Test
     void blacklist_doesNothingWhenTokenAlreadyExpired() {
-        service.blacklist("jti-expired", Instant.now().minusSeconds(10));
+        service.blacklist("jti-expired", FIXED_NOW.minusSeconds(10));
 
         verifyNoInteractions(valueOps);
     }

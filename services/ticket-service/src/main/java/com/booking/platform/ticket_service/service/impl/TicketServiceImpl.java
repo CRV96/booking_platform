@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ public class TicketServiceImpl implements TicketService {
 
     private final TicketRepository ticketRepository;
     private final BookingValidation bookingValidation;
+    private final Clock clock;
 
     /**
      * Generates tickets for a confirmed booking.
@@ -194,7 +196,7 @@ public class TicketServiceImpl implements TicketService {
      */
     private List<TicketDocument> generateTicketsForBooking(TicketDTO source) {
         List<TicketDocument> tickets = new ArrayList<>(source.quantity());
-        String datePrefix = LocalDate.now().format(DATE_FORMAT);
+        String datePrefix = LocalDate.now(clock).format(DATE_FORMAT);
 
         ApplicationLogger.logMessage(log, Level.DEBUG, "Generating {} tickets for booking '{}', event '{}', user '{}'",
                 source.quantity(), source.bookingId(), source.eventId(), source.userId());

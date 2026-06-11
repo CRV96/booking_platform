@@ -16,6 +16,7 @@ import org.thymeleaf.context.Context;
 
 import jakarta.mail.MessagingException;
 import java.time.Year;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -70,7 +71,7 @@ public class JavaMailSenderService implements EmailService {
             ApplicationLogger.logMessage(log, Level.DEBUG, "Preparing email to='{}', subject='{}', template='{}'", to, subject, templateName);
             // ── 1. Render template ─────────────────────────────────────────
             Map<String, Object> enrichedVars = new HashMap<>(variables);
-            enrichedVars.putIfAbsent("year", Year.now().getValue());
+            enrichedVars.putIfAbsent("year", Year.now(ZoneOffset.UTC).getValue());
 
             Context context = new Context();
             context.setVariables(enrichedVars);
