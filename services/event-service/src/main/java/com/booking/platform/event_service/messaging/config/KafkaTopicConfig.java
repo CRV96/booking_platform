@@ -36,7 +36,9 @@ public class KafkaTopicConfig {
 
     @Bean
     public KafkaAdmin kafkaAdmin() {
-        return new KafkaAdmin(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers));
+        KafkaAdmin admin = new KafkaAdmin(Map.of(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers));
+        admin.setFatalIfBrokerNotAvailable(false);
+        return admin;
     }
 
     // ── Event lifecycle topics ────────────────────────────────────────────────

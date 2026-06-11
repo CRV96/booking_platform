@@ -16,6 +16,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.kafka.core.KafkaAdmin;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MongoDBContainer;
@@ -93,6 +94,18 @@ public abstract class BaseIntegrationTest {
      */
     @MockBean
     protected EventPublisher eventPublisher;
+
+    /**
+     * Replaces the real KafkaAdmin with a no-op mock.
+     *
+     * <p>KafkaAdmin tries to connect to the broker during context initialization to
+     * pre-create topics. Without a live broker this blocks for up to 30 s (the default
+     * admin operation timeout) and then fails, causing Spring to cache a context failure
+     * that cascades to every test in the suite. Mocking it here ensures the context
+     * loads cleanly regardless of whether Kafka is available in the environment.
+     */
+    @MockBean
+    KafkaAdmin kafkaAdmin;
 
     // =========================================================================
     // Setup — clean state before every test
