@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: booking-platform
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-postgresql:5432/userdb
+  SPRING_DATASOURCE_USERNAME: postgres
+  DB_POSTGRES_USERNAME: postgres
+  SPRING_DATA_REDIS_HOST: redis-master
+  KEYCLOAK_ADMIN_SERVER_URL: http://keycloak
+  KEYCLOAK_AUTH_SERVER_URL: http://keycloak
+  SECURITY_JWT_ISSUER_URI: http://keycloak/realms/booking-platform
+  SECURITY_JWT_JWK_SET_URI: http://keycloak/realms/booking-platform/protocol/openid-connect/certs

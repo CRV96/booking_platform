@@ -1,0 +1,27 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: booking-platform-ingress
+  namespace: booking-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: booking.local
+      http:
+        paths:
+          - path: /graphql
+            pathType: Prefix
+            backend:
+              service:
+                name: graphql-gateway
+                port:
+                  number: 8080
+          - path: /graphiql
+            pathType: Prefix
+            backend:
+              service:
+                name: graphql-gateway
+                port:
+                  number: 8080

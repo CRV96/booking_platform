@@ -11,3 +11,6 @@ target
 logs/
 .vscode/
 
+
+# Kubernetes secrets
+infrastructure/k8s/.env.k8s

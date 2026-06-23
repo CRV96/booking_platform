@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eureka-service
+  namespace: booking-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eureka-service
+  template:
+    metadata:
+      labels:
+        app: eureka-service
+    spec:
+      containers:
+        - name: eureka-service
+          image: booking-platform/eureka-service:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8761
+          envFrom:
+            - configMapRef:
+                name: eureka-service-config
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8761
+            initialDelaySeconds: 45
+            periodSeconds: 10
+            failureThreshold: 6
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "768Mi"
+              cpu: "500m"

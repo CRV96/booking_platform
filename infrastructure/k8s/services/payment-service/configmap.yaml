@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: payment-service-config
+  namespace: booking-platform
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-postgresql:5432/paymentdb
+  SPRING_DATASOURCE_USERNAME: postgres
+  DB_POSTGRES_USERNAME: postgres
+  SPRING_DATA_REDIS_HOST: redis-master
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  SECURITY_JWT_ISSUER_URI: http://keycloak/realms/booking-platform
+  SECURITY_JWT_JWK_SET_URI: http://keycloak/realms/booking-platform/protocol/openid-connect/certs
