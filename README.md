@@ -101,7 +101,7 @@ When a booking is later cancelled, a `BookingCancelledEvent` triggers Ticket Ser
 | **Observability** | Prometheus, Grafana, Loki, Zipkin, Micrometer, structured logging |
 | **Code Quality** | JaCoCo, SonarQube/SonarCloud |
 | **CI/CD** | GitHub Actions (build, test, Docker build, SonarQube analysis) |
-| **Containerization** | Docker, Docker Compose (multi-stage builds), nginx reverse proxy |
+| **Containerization** | Docker, Docker Compose (multi-stage builds), Kubernetes (kind / Docker Desktop), Helm, nginx |
 | **Schema Management** | Flyway (PostgreSQL migrations) |
 | **Build** | Maven (multi-module), Protobuf/gRPC code generation |
 
@@ -259,11 +259,37 @@ docker compose -f infrastructure/docker/docker-compose.yaml up --build -d
 
 This starts all infrastructure and services. The GraphQL gateway will be available through nginx at `http://localhost/graphql` and the GraphiQL playground at `http://localhost/graphiql`.
 
+### Quick Start (Kubernetes)
+
+Requires a running Kubernetes cluster (kind or Docker Desktop with Kubernetes enabled) and `helm`.
+
+```bash
+git clone <repository-url>
+cd booking-platform
+
+# Fill in your secrets (gitignored)
+# Edit infrastructure/k8s/.env.k8s with your values
+
+# Start everything
+./infrastructure/k8s/run.sh
+```
+
+The script builds all service images, loads them into the cluster, installs infrastructure via Helm, and deploys all services in dependency order. On subsequent runs it skips already-healthy Helm releases and only re-applies changed manifests.
+
+To access the GraphQL gateway from the Angular frontend, port-forward it locally:
+
+```bash
+kubectl port-forward svc/graphql-gateway 8080:8080 -n booking-platform
+cd frontend && npm start   # proxies /graphql → localhost:8080
+```
+
 ### Full Setup
 
 See **[INSTALLATION.md](INSTALLATION.md)** for detailed instructions including:
 - Local development setup (services on host with hot-reload)
+- Local development setup (services on host with hot-reload)
 - Full Docker deployment
+- Kubernetes deployment (local cluster with kind or Docker Desktop)
 - Frontend development server
 - Environment variables and config server
 - Keycloak setup and test users
@@ -336,6 +362,15 @@ booking-platform/
 │   └── prod/                        # Production properties
 ├── infrastructure/
 │   ├── docker/                      # Docker Compose files, Dockerfile
+│   ├── k8s/                         # Kubernetes manifests
+│   │   ├── run.sh                   #   Single script — starts the entire platform
+│   │   ├── .env.k8s                 #   Secrets (gitignored)
+│   │   ├── namespace.yaml           #   booking-platform namespace
+│   │   ├── common/                  #   Shared ConfigMap (env vars for all services)
+│   │   ├── helm/                    #   Helm values for infra (postgres, mongo, redis, kafka, keycloak)
+│   │   ├── infrastructure/          #   Direct k8s manifests for zipkin, mailhog, kafka, keycloak
+│   │   ├── services/                #   Per-service configmap + deployment + service
+│   │   └── ingress/                 #   Ingress routing rules
 │   ├── certs/                       # mTLS certificate generation
 │   ├── grafana/                     # Grafana dashboards and datasources
 │   ├── keycloak/                    # Keycloak themes
