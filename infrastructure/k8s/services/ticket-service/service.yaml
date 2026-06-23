@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ticket-service
+  namespace: booking-platform
+spec:
+  selector:
+    app: ticket-service
+  ports:
+    - name: http
+      port: 8088
+      targetPort: 8088
+    - name: grpc
+      port: 9096
+      targetPort: 9096

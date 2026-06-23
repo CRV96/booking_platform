@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config-service-config
+  namespace: booking-platform
+data:
+  SPRING_PROFILES_ACTIVE: native
+  CONFIG_SERVER_CONFIGURATIONS_PATH: /config
+  MANAGEMENT_ZIPKIN_TRACING_ENDPOINT: http://zipkin:9411/api/v2/spans

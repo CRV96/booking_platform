@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailhog
+  namespace: booking-platform
+spec:
+  selector:
+    app: mailhog
+  ports:
+    - name: smtp
+      port: 1025
+      targetPort: 1025
+    - name: ui
+      port: 8025
+      targetPort: 8025

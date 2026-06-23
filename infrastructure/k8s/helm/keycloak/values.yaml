@@ -1,0 +1,26 @@
+auth:
+  adminUser: admin
+  adminPassword: admin
+
+production: false   # enables HTTP (no HTTPS required for local dev)
+proxy: edge
+
+extraEnvVars:
+  - name: KC_HOSTNAME
+    value: keycloak          # tokens will have iss: http://keycloak/realms/booking-platform
+  - name: KC_HOSTNAME_STRICT
+    value: "false"
+  - name: KC_HTTP_ENABLED
+    value: "true"
+  - name: KC_HEALTH_ENABLED
+    value: "true"
+
+postgresql:
+  enabled: false             # use the existing postgres Helm release instead
+
+externalDatabase:
+  host: postgres-postgresql
+  port: 5432
+  database: userdb
+  user: postgres
+  password: admin

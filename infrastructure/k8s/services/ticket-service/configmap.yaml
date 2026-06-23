@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ticket-service-config
+  namespace: booking-platform
+data:
+  SPRING_DATA_MONGODB_URI: mongodb://admin:admin@mongodb:27017/ticketdb?authSource=admin
+  DB_MONGO_USERNAME: admin
+  DB_MONGO_PASSWORD: admin
+  SPRING_DATA_REDIS_HOST: redis-master
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+  SECURITY_JWT_ISSUER_URI: http://keycloak/realms/booking-platform
+  SECURITY_JWT_JWK_SET_URI: http://keycloak/realms/booking-platform/protocol/openid-connect/certs
