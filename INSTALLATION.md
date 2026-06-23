@@ -118,6 +118,149 @@ docker compose -f infrastructure/docker/docker-compose.yaml down
 
 ---
 
+## Option C: Kubernetes (Local)
+
+Run the full platform on a local Kubernetes cluster. This mirrors a production-style deployment and is useful for learning Kubernetes or testing the platform with orchestration.
+
+### Prerequisites
+
+| Tool | Purpose |
+|------|---------|
+| `kubectl` | Kubernetes CLI |
+| `helm` | Package manager for k8s infra (Postgres, MongoDB, Redis) |
+| A running cluster | kind (`kind create cluster --name desktop`) or Docker Desktop with Kubernetes enabled |
+
+### 1. Fill in your secrets
+
+The file `infrastructure/k8s/.env.k8s` is gitignored and holds all sensitive values. Edit it before running:
+
+```bash
+# infrastructure/k8s/.env.k8s
+DB_POSTGRES_PASSWORD=admin
+DB_MONGO_USERNAME=admin
+DB_MONGO_PASSWORD=admin
+USER_SERVICE_KEYCLOAK_CLIENT_SECRET=user-service-secret
+NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET=notification-service-secret
+STRIPE_SECRET_KEY=sk_test_replace_with_your_key
+```
+
+### 2. Run the script
+
+```bash
+./infrastructure/k8s/run.sh
+```
+
+The script handles everything in order:
+
+1. Builds all 10 service Docker images
+2. Loads them into the cluster (automatically detected if kind)
+3. Creates namespace, ConfigMaps, and Secrets
+4. Installs ingress-nginx controller
+5. Installs infrastructure via Helm (PostgreSQL, MongoDB, Redis)
+6. Deploys Kafka and Keycloak directly (Bitnami images unavailable on Docker Hub)
+7. Deploys services in dependency order with readiness checks
+
+On subsequent runs, healthy Helm releases are skipped and only changed manifests are re-applied.
+
+### 3. k8s folder structure
+
+```
+infrastructure/k8s/
+├── run.sh                     ← single entrypoint — run this
+├── .env.k8s                   ← secrets (gitignored, fill before first run)
+├── namespace.yaml             ← booking-platform namespace
+├── common/
+│   └── configmap.yaml         ← env vars shared by all services
+├── helm/
+│   ├── postgres/values.yaml   ← creates userdb, bookingdb, paymentdb
+│   ├── mongodb/values.yaml    ← root user, all 3 mongo databases
+│   ├── redis/values.yaml      ← no auth, single node
+│   ├── kafka/values.yaml      ← KRaft mode (no Zookeeper), 1 replica
+│   └── keycloak/values.yaml   ← HTTP only, uses existing postgres
+├── infrastructure/
+│   ├── kafka/                 ← direct deployment (apache/kafka:3.9.0)
+│   ├── keycloak/              ← direct deployment (quay.io/keycloak/keycloak:26.0)
+│   ├── zipkin/                ← direct deployment
+│   └── mailhog/               ← direct deployment
+├── services/
+│   └── <service-name>/
+│       ├── configmap.yaml     ← non-sensitive config (URLs, addresses)
+│       ├── deployment.yaml    ← pod spec, probes, resource limits
+│       └── service.yaml       ← internal DNS name
+└── ingress/
+    └── ingress.yaml           ← routes booking.local → graphql-gateway
+```
+
+### 4. Accessing services
+
+The graphql-gateway is the only service exposed through the Ingress. Everything else requires port-forwarding:
+
+```bash
+# GraphQL gateway (needed for frontend dev)
+kubectl port-forward svc/graphql-gateway 8080:8080 -n booking-platform
+
+# Eureka dashboard
+kubectl port-forward svc/eureka-service 8761:8761 -n booking-platform
+# → http://localhost:8761
+
+# Keycloak admin console
+kubectl port-forward svc/keycloak 8080:80 -n booking-platform
+# → http://localhost:8080  (admin / admin)
+
+# Zipkin tracing
+kubectl port-forward svc/zipkin 9411:9411 -n booking-platform
+# → http://localhost:9411
+
+# Mailhog email UI
+kubectl port-forward svc/mailhog 8025:8025 -n booking-platform
+# → http://localhost:8025
+```
+
+### 5. Frontend with Kubernetes
+
+The Angular app's `proxy.conf.json` already forwards `/graphql` to `http://localhost:8080`. Port-forward the gateway first, then start the frontend normally:
+
+```bash
+# Terminal 1
+kubectl port-forward svc/graphql-gateway 8080:8080 -n booking-platform
+
+# Terminal 2
+cd frontend && npm start
+# → http://localhost:4200
+```
+
+### 6. Keycloak realm import
+
+Keycloak starts empty in Kubernetes — the realm JSON is not auto-imported (unlike Docker). Import it manually after Keycloak is running:
+
+```bash
+kubectl port-forward svc/keycloak 8080:80 -n booking-platform
+```
+
+Then open `http://localhost:8080`, log in with `admin / admin`, go to **Create realm**, and import `init/keycloak/booking-platform-realm.json`.
+
+### 7. Useful commands
+
+```bash
+# Watch all pods
+kubectl get pods -n booking-platform -w
+
+# Logs for a service
+kubectl logs -n booking-platform -l app=user-service -f
+
+# Restart a service after a code change
+docker build -f infrastructure/docker/Dockerfile.service \
+  --build-arg SERVICE_NAME=user-service \
+  -t booking-platform/user-service:latest .
+kind load docker-image booking-platform/user-service:latest --name <cluster-name>
+kubectl rollout restart deployment/user-service -n booking-platform
+
+# Describe a pod (events, errors)
+kubectl describe pod -n booking-platform -l app=booking-service
+```
+
+---
+
 ## Config Server
 
 The config server uses the native filesystem to serve configuration to all services.
@@ -411,8 +554,10 @@ npm start            # http://localhost:4200
 |------|-------------|-------------|
 | Option A (local dev) | http://localhost:4200 | http://localhost:8080/graphql |
 | Option B (Docker) | http://localhost:4200 | http://localhost/graphql |
+| Option C (Kubernetes) | http://localhost:4200 | http://localhost:8080/graphql (port-forwarded) |
 
 > For Option B, update `proxy.conf.json` to point to `http://localhost` instead of `http://localhost:8080`.
+> For Option C, run `kubectl port-forward svc/graphql-gateway 8080:8080 -n booking-platform` before starting the frontend.
 
 ### Build for production
 
