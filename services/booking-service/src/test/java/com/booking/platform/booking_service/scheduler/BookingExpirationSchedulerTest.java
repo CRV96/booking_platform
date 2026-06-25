@@ -2,8 +2,6 @@ package com.booking.platform.booking_service.scheduler;
 
 import com.booking.platform.booking_service.entity.BookingEntity;
 import com.booking.platform.booking_service.entity.enums.BookingStatus;
-import com.booking.platform.booking_service.lock.DistributedLockService;
-import com.booking.platform.booking_service.lock.LockHandle;
 import com.booking.platform.booking_service.properties.BookingExpirationProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
@@ -22,7 +20,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,17 +29,12 @@ class BookingExpirationSchedulerTest {
 
     @Mock private BookingRepository bookingRepository;
     @Mock private BookingService bookingService;
-    @Mock private DistributedLockService lockService;
     @Mock private BookingExpirationProperties properties;
 
     @InjectMocks private BookingExpirationScheduler scheduler;
 
-    private static final LockHandle LOCK = new LockHandle("lock:scheduler:booking-expiration", "token");
-    private static final Instant FIXED_NOW = Instant.parse("2025-06-10T12:00:00Z");
-
     @BeforeEach
     void setUp() {
-        when(properties.getLockTtl()).thenReturn(Duration.ofSeconds(25));
         when(properties.getBatchSize()).thenReturn(100);
     }
 
@@ -58,33 +51,19 @@ class BookingExpirationSchedulerTest {
                 .totalPrice(new BigDecimal("10.00"))
                 .currency("USD")
                 .idempotencyKey("key-" + id)
-                .holdExpiresAt(FIXED_NOW.minus(Duration.ofMinutes(1)))
+                .holdExpiresAt(Instant.now().minus(Duration.ofMinutes(1)))
                 .build();
-    }
-
-    // ── lock not acquired ─────────────────────────────────────────────────────
-
-    @Test
-    void processExpiredBookings_lockNotAcquired_skipsProcessing() {
-        when(lockService.tryAcquireOnce(anyString(), any())).thenReturn(null);
-
-        scheduler.processExpiredBookings();
-
-        verifyNoInteractions(bookingRepository);
-        verifyNoInteractions(bookingService);
     }
 
     // ── no expired bookings ───────────────────────────────────────────────────
 
     @Test
     void processExpiredBookings_noExpired_doesNotCallService() {
-        when(lockService.tryAcquireOnce(anyString(), any())).thenReturn(LOCK);
         when(bookingRepository.findExpiredHolds(any())).thenReturn(List.of());
 
         scheduler.processExpiredBookings();
 
         verifyNoInteractions(bookingService);
-        verify(lockService).release(LOCK);
     }
 
     // ── normal processing ─────────────────────────────────────────────────────
@@ -92,20 +71,17 @@ class BookingExpirationSchedulerTest {
     @Test
     void processExpiredBookings_oneExpired_expiresIt() {
         UUID id = UUID.randomUUID();
-        when(lockService.tryAcquireOnce(anyString(), any())).thenReturn(LOCK);
         when(bookingRepository.findExpiredHolds(any())).thenReturn(List.of(pendingBooking(id)));
 
         scheduler.processExpiredBookings();
 
         verify(bookingService).expireBooking(id);
-        verify(lockService).release(LOCK);
     }
 
     @Test
     void processExpiredBookings_multipleExpired_expiresAll() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
-        when(lockService.tryAcquireOnce(anyString(), any())).thenReturn(LOCK);
         when(bookingRepository.findExpiredHolds(any()))
                 .thenReturn(List.of(pendingBooking(id1), pendingBooking(id2)));
 
@@ -123,7 +99,6 @@ class BookingExpirationSchedulerTest {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
         UUID id3 = UUID.randomUUID();
-        when(lockService.tryAcquireOnce(anyString(), any())).thenReturn(LOCK);
         when(bookingRepository.findExpiredHolds(any()))
                 .thenReturn(List.of(pendingBooking(id1), pendingBooking(id2), pendingBooking(id3)));
 
@@ -140,28 +115,13 @@ class BookingExpirationSchedulerTest {
     void processExpiredBookings_oneBookingFails_continuesWithOthers() {
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
-        when(lockService.tryAcquireOnce(anyString(), any())).thenReturn(LOCK);
         when(bookingRepository.findExpiredHolds(any()))
                 .thenReturn(List.of(pendingBooking(id1), pendingBooking(id2)));
         doThrow(new RuntimeException("DB error")).when(bookingService).expireBooking(id1);
 
-        scheduler.processExpiredBookings(); // should not propagate
+        scheduler.processExpiredBookings();
 
         verify(bookingService).expireBooking(id1);
-        verify(bookingService).expireBooking(id2); // second one still processed
-    }
-
-    // ── lock always released ──────────────────────────────────────────────────
-
-    @Test
-    void processExpiredBookings_exceptionDuringProcessing_lockAlwaysReleased() {
-        when(lockService.tryAcquireOnce(anyString(), any())).thenReturn(LOCK);
-        when(bookingRepository.findExpiredHolds(any())).thenThrow(new RuntimeException("DB down"));
-
-        try {
-            scheduler.processExpiredBookings();
-        } catch (RuntimeException ignored) {}
-
-        verify(lockService).release(LOCK);
+        verify(bookingService).expireBooking(id2);
     }
 }

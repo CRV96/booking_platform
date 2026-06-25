@@ -77,6 +77,8 @@ public abstract class BaseIntegrationTest {
         // Delete in dependency order: attributes reference users
         jdbcTemplate.execute("DELETE FROM user_attribute");
         jdbcTemplate.execute("DELETE FROM user_entity");
+        // Clear ShedLock state so tests don't see locks from prior runs
+        jdbcTemplate.execute("DELETE FROM shedlock");
 
         cacheManager.getCacheNames().forEach(name -> {
             var cache = cacheManager.getCache(name);
