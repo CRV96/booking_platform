@@ -18,9 +18,6 @@ public class BookingExpirationProperties {
     /** Scheduler interval in milliseconds (default 30s). */
     private long interval = 30_000;
 
-    /** TTL for the distributed scheduler lock (default 25s). Must be less than interval. */
-    private Duration lockTtl = Duration.ofSeconds(25);
-
     /** Maximum number of expired bookings to process per scheduler tick. */
     private int batchSize = 100;
 

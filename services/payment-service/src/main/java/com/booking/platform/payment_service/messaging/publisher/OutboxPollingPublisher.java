@@ -82,8 +82,18 @@ public class OutboxPollingPublisher {
      * backlog. Reads at most {@code outbox.poll.batch-size} events per tick.
      * Events are published synchronously ({@code .get()}) to ensure Kafka confirms
      * receipt before marking as published.
+     *
+     * <p>ShedLock ensures only one instance publishes at a time across a multi-node
+     * deployment — without it, every node would read the same unpublished rows and
+     * emit duplicate Kafka messages. {@code lockAtLeastFor = PT0S} keeps the lock
+     * released as soon as the poll finishes, preserving the ~500ms cluster cadence.
      */
     @Scheduled(fixedDelayString = "${outbox.poll.interval:500}")
+    @SchedulerLock(
+            name = "outbox-poll",
+            lockAtMostFor = "PT30S",
+            lockAtLeastFor = "PT0S"
+    )
     public void pollAndPublish() {
         List<OutboxEventEntity> events =
                 outboxEventRepository.findByPublishedAtIsNullOrderByCreatedAtAsc(
