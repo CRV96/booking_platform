@@ -8,6 +8,7 @@ import com.booking.platform.common.logging.ApplicationLogger;
 import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -43,6 +44,11 @@ public class UnverifiedUserCleanupScheduler {
     private int retentionDays;
 
     @Scheduled(cron = "${cleanup.unverified.scheduler.cron:0 0 2 * * *}")
+    @SchedulerLock(
+            name = "unverified-user-cleanup",
+            lockAtMostFor = "PT10M",
+            lockAtLeastFor = "PT1M"
+    )
     public void deleteUnverifiedUsers() {
         long cutoffMillis = Instant.now()
                 .minus(retentionDays, ChronoUnit.DAYS)

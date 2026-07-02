@@ -92,6 +92,16 @@
             <artifactId>mapstruct</artifactId>
         </dependency>
 
+        <!-- ShedLock — distributed scheduler lock via PostgreSQL -->
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-spring</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>net.javacrumbs.shedlock</groupId>
+            <artifactId>shedlock-provider-jdbc-template</artifactId>
+        </dependency>
+
         <!-- Testcontainers — spin up real PostgreSQL + Redis in tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

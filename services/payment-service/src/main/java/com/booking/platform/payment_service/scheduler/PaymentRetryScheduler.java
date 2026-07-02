@@ -9,6 +9,7 @@ import com.booking.platform.common.logging.ApplicationLogger;
 import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.event.Level;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -37,6 +38,9 @@ import java.util.List;
  *   <li>When {@code retryCount >= maxRetries}, the payment transitions to
  *       {@link PaymentStatus#FAILED} and a {@code PaymentFailed} outbox event is written.</li>
  * </ul>
+ *
+ * {@code @EnableScheduling} and {@code @EnableSchedulerLock} are activated
+ * by {@code ShedLockConfig} in common-core when a {@code DataSource} is present.
  */
 @Slf4j
 @Component
@@ -48,6 +52,11 @@ public class PaymentRetryScheduler {
     private final Clock clock;
 
     @Scheduled(fixedDelayString = "${payment.retry.scheduler.interval:60000}")
+    @SchedulerLock(
+            name = "payment-retry",
+            lockAtMostFor = "PT55S",
+            lockAtLeastFor = "PT10S"
+    )
     public void retryDuePayments() {
         List<PaymentEntity> due = paymentRepository
                 .findByStatusAndNextRetryAtBefore(PaymentStatus.PENDING_RETRY, Instant.now(clock));

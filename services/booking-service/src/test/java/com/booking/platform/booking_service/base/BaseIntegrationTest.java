@@ -85,5 +85,7 @@ public abstract class BaseIntegrationTest {
     @BeforeEach
     void cleanState() {
         jdbcTemplate.execute("DELETE FROM bookings");
+        // Clear ShedLock state so tests don't see locks from prior runs
+        jdbcTemplate.execute("DELETE FROM shedlock");
     }
 }

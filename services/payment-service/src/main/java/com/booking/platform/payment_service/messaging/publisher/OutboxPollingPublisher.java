@@ -14,6 +14,7 @@ import com.booking.platform.common.logging.ApplicationLogger;
 import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -81,8 +82,18 @@ public class OutboxPollingPublisher {
      * backlog. Reads at most {@code outbox.poll.batch-size} events per tick.
      * Events are published synchronously ({@code .get()}) to ensure Kafka confirms
      * receipt before marking as published.
+     *
+     * <p>ShedLock ensures only one instance publishes at a time across a multi-node
+     * deployment — without it, every node would read the same unpublished rows and
+     * emit duplicate Kafka messages. {@code lockAtLeastFor = PT0S} keeps the lock
+     * released as soon as the poll finishes, preserving the ~500ms cluster cadence.
      */
     @Scheduled(fixedDelayString = "${outbox.poll.interval:500}")
+    @SchedulerLock(
+            name = "outbox-poll",
+            lockAtMostFor = "PT30S",
+            lockAtLeastFor = "PT0S"
+    )
     public void pollAndPublish() {
         List<OutboxEventEntity> events =
                 outboxEventRepository.findByPublishedAtIsNullOrderByCreatedAtAsc(
@@ -127,6 +138,11 @@ public class OutboxPollingPublisher {
      * Runs every hour. Published events are kept for 24h to allow debugging/auditing.
      */
     @Scheduled(fixedRateString = "${outbox.cleanup.interval:3600000}")
+    @SchedulerLock(
+            name = "outbox-cleanup",
+            lockAtMostFor = "PT5M",
+            lockAtLeastFor = "PT1M"
+    )
     @Transactional
     public void cleanup() {
         final Instant cutoff = Instant.now(clock).minus(Duration.ofHours(retentionHours));

@@ -59,6 +59,5 @@ public final class EntityConst {
         private RedisKeys() {}
 
         public static final String SEAT_LOCK_PREFIX = "lock:seat:";
-        public static final String SCHEDULER_LOCK_BOOKING_EXPIRATION = "lock:scheduler:booking-expiration";
     }
 }

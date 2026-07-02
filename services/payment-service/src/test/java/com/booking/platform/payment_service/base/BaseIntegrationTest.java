@@ -76,5 +76,7 @@ public abstract class BaseIntegrationTest {
     void cleanState() {
         jdbcTemplate.execute("DELETE FROM outbox_events");
         jdbcTemplate.execute("DELETE FROM payments");
+        // Clear ShedLock state so tests don't see locks from prior runs
+        jdbcTemplate.execute("DELETE FROM shedlock");
     }
 }

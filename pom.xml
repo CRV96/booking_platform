@@ -57,6 +57,9 @@
         <mapstruct.version>1.6.3</mapstruct.version>
 
 
+        <!-- ShedLock -->
+        <shedlock.version>5.16.0</shedlock.version>
+
         <!-- Code Quality -->
         <jacoco.version>0.8.13</jacoco.version>
         <sonar.projectKey>Booking-Platform</sonar.projectKey>
@@ -171,6 +174,18 @@
                 <groupId>org.mapstruct</groupId>
                 <artifactId>mapstruct-processor</artifactId>
                 <version>${mapstruct.version}</version>
+            </dependency>
+
+            <!-- ShedLock -->
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-spring</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-provider-jdbc-template</artifactId>
+                <version>${shedlock.version}</version>
             </dependency>
 
             <!-- Common modules -->
