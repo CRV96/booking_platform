@@ -14,6 +14,7 @@ import com.booking.platform.common.logging.ApplicationLogger;
 import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.event.Level;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
@@ -127,6 +128,11 @@ public class OutboxPollingPublisher {
      * Runs every hour. Published events are kept for 24h to allow debugging/auditing.
      */
     @Scheduled(fixedRateString = "${outbox.cleanup.interval:3600000}")
+    @SchedulerLock(
+            name = "outbox-cleanup",
+            lockAtMostFor = "PT5M",
+            lockAtLeastFor = "PT1M"
+    )
     @Transactional
     public void cleanup() {
         final Instant cutoff = Instant.now(clock).minus(Duration.ofHours(retentionHours));

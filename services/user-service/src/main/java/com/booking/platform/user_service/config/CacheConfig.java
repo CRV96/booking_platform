@@ -13,14 +13,16 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import org.springframework.scheduling.annotation.EnableScheduling;
-
 import java.time.Duration;
 import java.util.Map;
 
+/**
+ * {@code @EnableScheduling} and {@code @EnableSchedulerLock} are activated
+ * by {@code ShedLockConfig} in common-core — adding the ShedLock dependency
+ * is enough.
+ */
 @Configuration
 @EnableCaching
-@EnableScheduling
 public class CacheConfig {
 
     public static final String CACHE_USER_BY_ID   = "user:profile";

@@ -1,9 +1,6 @@
 package com.booking.platform.booking_service.scheduler;
 
-import com.booking.platform.booking_service.constants.EntityConst;
 import com.booking.platform.booking_service.entity.BookingEntity;
-import com.booking.platform.booking_service.lock.DistributedLockService;
-import com.booking.platform.booking_service.lock.LockHandle;
 import com.booking.platform.booking_service.properties.BookingExpirationProperties;
 import com.booking.platform.booking_service.repository.BookingRepository;
 import com.booking.platform.booking_service.service.BookingService;
@@ -11,6 +8,7 @@ import com.booking.platform.common.logging.ApplicationLogger;
 import com.booking.platform.common.logging.LogErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.slf4j.event.Level;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -21,69 +19,56 @@ import java.util.List;
 /**
  * Scheduled job that auto-cancels PENDING bookings whose hold timer has expired.
  *
- * <p>Runs at a fixed interval (default 30 seconds). A distributed Redis lock
- * ensures only one instance executes the cleanup across a multi-node deployment.
- * If the lock is already held, the tick is silently skipped.</p>
- *
- * <p>For each expired booking the scheduler:
- * <ol>
- *   <li>Sets status to CANCELLED with reason "HOLD_EXPIRED"</li>
- *   <li>Releases the reserved seats back to event-service (best-effort)</li>
- * </ol>
+ * <p>Runs at a fixed interval (default 30 seconds). ShedLock ensures only one
+ * instance runs the cleanup across a multi-node deployment — the lock is backed
+ * by the {@code shedlock} table in PostgreSQL (see V2__create_shedlock_table.sql).
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class BookingExpirationScheduler {
 
-    private static final String SCHEDULER_LOCK_KEY = EntityConst.RedisKeys.SCHEDULER_LOCK_BOOKING_EXPIRATION;
-
     private final BookingRepository bookingRepository;
     private final BookingService bookingService;
-    private final DistributedLockService lockService;
     private final BookingExpirationProperties properties;
 
     @Scheduled(fixedRateString = "${booking.expiration.interval:30000}")
+    @SchedulerLock(
+            name = "booking-expiration",
+            lockAtMostFor = "${booking.expiration.lock-ttl:PT25S}",
+            lockAtLeastFor = "PT10S"
+    )
     public void checkExpiredBookings() {
         processExpiredBookings();
     }
 
     /**
      * Core expiration logic, extracted for direct invocation in integration tests.
+     * ShedLock is applied at the {@link #checkExpiredBookings()} level and does not
+     * wrap this method — tests can call it freely without holding a lock.
      */
     void processExpiredBookings() {
-        LockHandle lock = lockService.tryAcquireOnce(SCHEDULER_LOCK_KEY, properties.getLockTtl());
-        if (lock == null) {
-            ApplicationLogger.logMessage(log, Level.DEBUG, "Expiration scheduler skipped — another instance holds the lock");
+        List<BookingEntity> expired = bookingRepository.findExpiredHolds(Instant.now());
+
+        if (expired.isEmpty()) {
             return;
         }
 
-        try {
-            List<BookingEntity> expired = bookingRepository.findExpiredHolds(Instant.now());
+        int limit = Math.min(expired.size(), properties.getBatchSize());
+        int processed = 0;
 
-            if (expired.isEmpty()) {
-                return;
+        for (int i = 0; i < limit; i++) {
+            BookingEntity booking = expired.get(i);
+            try {
+                bookingService.expireBooking(booking.getId());
+                processed++;
+            } catch (Exception e) {
+                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.BOOKING_CANCELLATION_FAILED,
+                        "Failed to expire booking '{}'", booking.getId(), e);
             }
-
-            int limit = Math.min(expired.size(), properties.getBatchSize());
-            int processed = 0;
-
-            for (int i = 0; i < limit; i++) {
-                BookingEntity booking = expired.get(i);
-                try {
-                    bookingService.expireBooking(booking.getId());
-                    processed++;
-                } catch (Exception e) {
-                    ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.BOOKING_CANCELLATION_FAILED,
-                            "Failed to expire booking '{}'", booking.getId(), e);
-                }
-            }
-
-            ApplicationLogger.logMessage(log, Level.INFO, "Expiration scheduler completed: expired={}, total_found={}",
-                    processed, expired.size());
-
-        } finally {
-            lockService.release(lock);
         }
+
+        ApplicationLogger.logMessage(log, Level.INFO, "Expiration scheduler completed: expired={}, total_found={}",
+                processed, expired.size());
     }
 }
