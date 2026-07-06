@@ -16,6 +16,16 @@
     <description>Events, venues, ticket types, and availability management</description>
 
     <dependencies>
+        <!-- Common modules: proto stubs + gRPC security infrastructure -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-proto</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-security</artifactId>
+        </dependency>
+
         <!-- Service Discovery -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>
@@ -27,6 +37,65 @@
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
+
+        <!-- MongoDB -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-mongodb</artifactId>
+        </dependency>
+
+        <!-- Redis — used for token blacklist and application-level caching -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- Spring Cache abstraction — enables @Cacheable, @CacheEvict, @CachePut -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
+        <!-- Kafka producer — publishes domain events to Kafka topics -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
+        <!-- Domain event contracts (protobuf messages + KafkaTopics constants) -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-events</artifactId>
+        </dependency>
+
+        <!-- MapStruct for object mapping -->
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+        </dependency>
+
+        <!-- Testcontainers — spin up real MongoDB + Redis in tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mongodb</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.redis</groupId>
+            <artifactId>testcontainers-redis</artifactId>
+            <version>2.2.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -34,6 +103,25 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!--
+                Mockito inline mock-maker requires deep reflection access on Java 17+.
+                The add-opens flags below grant the necessary access so that Mockito
+                can instrument bytecode at test time (e.g. to mock KafkaTemplate).
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>
+                        @{argLine}
+                        --add-opens java.base/java.lang=ALL-UNNAMED
+                        --add-opens java.base/java.util=ALL-UNNAMED
+                        --add-opens java.base/java.util.concurrent=ALL-UNNAMED
+                        -Dnet.bytebuddy.experimental=true
+                    </argLine>
+                </configuration>
             </plugin>
         </plugins>
     </build>

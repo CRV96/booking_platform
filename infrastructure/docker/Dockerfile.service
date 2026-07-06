@@ -1,0 +1,39 @@
+# Shared multi-stage Dockerfile for all services
+# Usage: docker build --build-arg SERVICE_NAME=user-service -t user-service .
+
+# ==================== Stage 1: Build ====================
+FROM eclipse-temurin:21-jdk AS build
+
+ARG SERVICE_NAME
+
+RUN apt-get update && apt-get install -y --no-install-recommends unzip && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy Maven wrapper and project files
+COPY mvnw pom.xml ./
+COPY .mvn .mvn
+
+# Copy all modules (needed for inter-module dependencies)
+COPY common common
+COPY services services
+COPY config config
+
+# Fix line endings and build the target service
+# mvnw uses bash syntax, so run explicitly with bash
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && \
+    bash ./mvnw package -pl services/${SERVICE_NAME} -am -DskipTests -q
+
+# ==================== Stage 2: Runtime ====================
+FROM eclipse-temurin:21-jre
+
+ARG SERVICE_NAME
+
+WORKDIR /app
+
+# Copy the built JAR from the build stage
+COPY --from=build /app/services/${SERVICE_NAME}/target/*.jar app.jar
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "app.jar"]

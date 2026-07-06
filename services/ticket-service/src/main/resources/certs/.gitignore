@@ -1,0 +1,4 @@
+# Ignore certificates (copied by infrastructure/certs/generate-certs.sh)
+*.crt
+*.key
+*.pem

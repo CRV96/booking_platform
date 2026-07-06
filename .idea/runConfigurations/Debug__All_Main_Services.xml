@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Debug: All Main Services" type="CompoundRunConfigurationType">
+    <toRun name="Debug: graphql-gateway" type="Remote" />
+    <toRun name="Debug: user-service" type="Remote" />
+    <method v="2" />
+  </configuration>
+</component>

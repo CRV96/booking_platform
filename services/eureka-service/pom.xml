@@ -16,6 +16,12 @@
     <description>Netflix Eureka Server - Service Discovery</description>
 
     <dependencies>
+        <!-- Common Core — shared logging (LevelColourConverter) -->
+        <dependency>
+            <groupId>com.booking.platform</groupId>
+            <artifactId>common-core</artifactId>
+        </dependency>
+
         <!-- Eureka Server -->
         <dependency>
             <groupId>org.springframework.cloud</groupId>

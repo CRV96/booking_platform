@@ -11,7 +11,7 @@ import java.util.List;
  * Reads directly from the database for better performance.
  * Write operations should go through Keycloak Admin API.
  */
-public interface DatabaseUserService<USER, USER_ATTRIBUTE> extends UserService<USER> {
+public interface DatabaseUserService<USER, USER_ATTRIBUTE> extends UserLookupService<USER> {
 
     List<USER> getAllUsers();
 

@@ -1,0 +1,661 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "annotations": { "list": [] },
+  "description": "Analytics Service — MongoDB Aggregation Pipelines via Infinity Datasource",
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100,
+      "title": "Overview",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "orange", "value": 0.2 },
+              { "color": "red", "value": 0.5 }
+            ]
+          },
+          "unit": "percentunit",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 0, "y": 1 },
+      "id": 1,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^Cancellation Rate$/" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/cancellation-rate",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "cancellationRate", "text": "Cancellation Rate", "type": "number" },
+            { "selector": "totalBookingsCreated", "text": "Total Bookings", "type": "number" },
+            { "selector": "totalBookingsCancelled", "text": "Total Cancelled", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Cancellation Rate",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "blue", "value": null },
+              { "color": "green", "value": 50 }
+            ]
+          },
+          "unit": "currencyUSD",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 1 },
+      "id": 2,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^Average Booking Value$/" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/avg-booking-value",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "averageValue", "text": "Average Booking Value", "type": "number" },
+            { "selector": "totalRevenue", "text": "Total Revenue", "type": "number" },
+            { "selector": "totalConfirmedBookings", "text": "Confirmed Bookings", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Average Booking Value",
+      "type": "stat"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 7 },
+      "id": 101,
+      "title": "Revenue Analysis",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Revenue",
+            "fillOpacity": 80,
+            "gradientMode": "hue",
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 8 },
+      "id": 3,
+      "options": {
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": { "mode": "multi" },
+        "xField": "Event",
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/top-revenue?limit=10",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "eventTitle", "text": "Event", "type": "string" },
+            { "selector": "totalRevenue", "text": "Total Revenue", "type": "number" },
+            { "selector": "confirmedBookings", "text": "Confirmed Bookings", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Top 10 Events by Revenue",
+      "type": "barchart"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "unit": "currencyUSD",
+          "decimals": 2,
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisLabel": "Revenue",
+            "fillOpacity": 80,
+            "gradientMode": "hue",
+            "lineWidth": 1
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 8 },
+      "id": 4,
+      "options": {
+        "barWidth": 0.7,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "orientation": "horizontal",
+        "showValue": "auto",
+        "stacking": "none",
+        "tooltip": { "mode": "multi" },
+        "xField": "Category",
+        "xTickLabelRotation": 0
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/revenue-by-category",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "category", "text": "Category", "type": "string" },
+            { "selector": "totalRevenue", "text": "Total Revenue", "type": "number" },
+            { "selector": "totalBookings", "text": "Total Bookings", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Revenue by Category",
+      "type": "barchart"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 },
+      "id": 102,
+      "title": "Booking Trends",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisLabel": "Count"
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Total Revenue" },
+            "properties": [
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "unit", "value": "currencyUSD" },
+              { "id": "custom.axisLabel", "value": "Revenue" }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Bookings Created" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Bookings Confirmed" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Bookings Cancelled" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 19 },
+      "id": 5,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/booking-trends?days=30",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "date", "text": "Date", "type": "timestamp", "timestampFormat": "2006-01-02" },
+            { "selector": "bookingsCreated", "text": "Bookings Created", "type": "number" },
+            { "selector": "bookingsConfirmed", "text": "Bookings Confirmed", "type": "number" },
+            { "selector": "bookingsCancelled", "text": "Bookings Cancelled", "type": "number" },
+            { "selector": "totalRevenue", "text": "Total Revenue", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Booking Trends (Last 30 Days)",
+      "type": "timeseries"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 },
+      "id": 103,
+      "title": "Event Drill-Down",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          },
+          "unit": "currencyUSD",
+          "decimals": 2
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 30 },
+      "id": 6,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^Total Revenue$/" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/event/${eventId}",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "totalRevenue", "text": "Total Revenue", "type": "number" },
+            { "selector": "totalRefunds", "text": "Total Refunds", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Event Revenue",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 30 },
+      "id": 7,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^Confirmed Bookings$/" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/event/${eventId}",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "confirmedBookings", "text": "Confirmed Bookings", "type": "number" },
+            { "selector": "totalBookings", "text": "Total Bookings", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Event Bookings",
+      "type": "stat"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "orange", "value": null },
+              { "color": "red", "value": 5 }
+            ]
+          },
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 8, "x": 16, "y": 30 },
+      "id": 8,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "auto",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "/^Cancelled Bookings$/" },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/event/${eventId}",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "cancelledBookings", "text": "Cancelled Bookings", "type": "number" },
+            { "selector": "category", "text": "Category", "type": "string" }
+          ]
+        }
+      ],
+      "title": "Event Cancellations",
+      "type": "stat"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 },
+      "id": 104,
+      "title": "Payment Stats",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisLabel": "Count"
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Payments Completed" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Payments Failed" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Refunds Completed" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "orange", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Total Refunds" },
+            "properties": [
+              { "id": "custom.axisPlacement", "value": "right" },
+              { "id": "unit", "value": "currencyUSD" },
+              { "id": "custom.axisLabel", "value": "Refund Amount" },
+              { "id": "color", "value": { "fixedColor": "yellow", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 37 },
+      "id": 9,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/payment-trends?days=30",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "date", "text": "Date", "type": "timestamp", "timestampFormat": "2006-01-02" },
+            { "selector": "paymentsCompleted", "text": "Payments Completed", "type": "number" },
+            { "selector": "paymentsFailed", "text": "Payments Failed", "type": "number" },
+            { "selector": "refundsCompleted", "text": "Refunds Completed", "type": "number" },
+            { "selector": "totalRefunds", "text": "Total Refunds", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Payment Trends (Last 30 Days)",
+      "type": "timeseries"
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 47 },
+      "id": 105,
+      "title": "Event Lifecycle",
+      "type": "row"
+    },
+
+    {
+      "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "lineWidth": 2,
+            "fillOpacity": 15,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "axisBorderShow": false,
+            "axisLabel": "Count"
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Events Created" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Events Published" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }
+            ]
+          },
+          {
+            "matcher": { "id": "byName", "options": "Events Cancelled" },
+            "properties": [
+              { "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }
+            ]
+          }
+        ]
+      },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 48 },
+      "id": 10,
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi" }
+      },
+      "targets": [
+        {
+          "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://host.docker.internal:8087/api/analytics/event-lifecycle?days=30",
+          "url_options": { "method": "GET" },
+          "format": "table",
+          "root_selector": "",
+          "columns": [
+            { "selector": "date", "text": "Date", "type": "timestamp", "timestampFormat": "2006-01-02" },
+            { "selector": "eventsCreated", "text": "Events Created", "type": "number" },
+            { "selector": "eventsPublished", "text": "Events Published", "type": "number" },
+            { "selector": "eventsCancelled", "text": "Events Cancelled", "type": "number" }
+          ]
+        }
+      ],
+      "title": "Event Lifecycle (Last 30 Days)",
+      "type": "timeseries"
+    }
+
+  ],
+
+  "refresh": "",
+  "schemaVersion": 38,
+  "tags": ["analytics", "booking-platform", "mongodb"],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": { "type": "yesoreyeram-infinity-datasource", "uid": "analytics-infinity" },
+        "definition": "",
+        "hide": 0,
+        "includeAll": false,
+        "label": "Event",
+        "multi": false,
+        "name": "eventId",
+        "options": [],
+        "query": {
+          "refId": "variable",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "url": "http://host.docker.internal:8087/api/analytics/events",
+          "url_options": { "method": "GET" },
+          "root_selector": "",
+          "columns": [
+            { "selector": "eventId", "text": "__value", "type": "string" },
+            { "selector": "eventTitle", "text": "__text", "type": "string" }
+          ]
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": { "from": "now-30d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Analytics",
+  "uid": "analytics-pipelines",
+  "version": 2
+}

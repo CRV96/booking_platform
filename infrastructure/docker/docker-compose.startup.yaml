@@ -1,17 +1,17 @@
-name: booking-platform
+name: bkg-platform
 
 services:
 
 # ==================== DATABASES ====================
   postgres:
     image: postgres:16-alpine
-    container_name: booking-postgres
+    container_name: bkg-postgres
     ports:
       - "5432:5432"
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin
-      POSTGRES_MULTIPLE_DATABASES: userdb
+      POSTGRES_MULTIPLE_DATABASES: userdb,bookingdb,paymentdb
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./postgres/init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
@@ -22,11 +22,11 @@ services:
       retries: 10
       start_period: 30s
     networks:
-      - booking-network
+      - bkg-network
 
   mongodb:
     image: mongo:7
-    container_name: booking-mongodb
+    container_name: bkg-mongodb
     ports:
       - "27017:27017"
     environment:
@@ -40,11 +40,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
 
   redis:
     image: redis:7-alpine
-    container_name: booking-redis
+    container_name: bkg-redis
     ports:
       - "6379:6379"
     command: redis-server --appendonly yes
@@ -56,12 +56,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
 
 # ==================== MESSAGING ====================
   kafka:
     image: apache/kafka:3.9.0
-    container_name: booking-kafka
+    container_name: bkg-kafka
     ports:
       - "9092:9092"
     environment:
@@ -71,9 +71,11 @@ services:
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
       # Listeners
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      # PLAINTEXT      → used by host-machine clients (your app, CLI tools) via localhost:9092
+      # PLAINTEXT_INTERNAL → used by Docker-internal clients (Kafka UI) via bkg-kafka:29092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://bkg-kafka:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       # Topics
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
@@ -93,12 +95,12 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - booking-network
+      - bkg-network
 
 # ==================== SECURITY ====================
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
-    container_name: booking-keycloak
+    container_name: bkg-keycloak
     command: start-dev --import-realm
     ports:
       - "8180:8080"
@@ -107,7 +109,7 @@ services:
       KC_BOOTSTRAP_ADMIN_PASSWORD: admin
 
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://booking-postgres:5432/userdb
+      KC_DB_URL: jdbc:postgresql://bkg-postgres:5432/userdb
       KC_DB_USERNAME: admin
       KC_DB_PASSWORD: admin
 
@@ -120,16 +122,44 @@ services:
       KC_METRICS_ENABLED: "true"
 
     volumes:
-      - ../keycloak/realm:/opt/keycloak/data/import
+      - ../../init/keycloak:/opt/keycloak/data/import
+      - ../../infrastructure/keycloak/themes:/opt/keycloak/themes
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"status\": \"UP\"' <&3"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
     networks:
-      - booking-network
+      - bkg-network
+
+# ==================== RELEASE MANAGER ====================
+  release-manager:
+    image: alpine:3.19
+    container_name: bkg-release-manager
+    command: >
+      sh -c "apk add --no-cache curl --quiet &&
+             chmod +x /release/scripts/release-manager.sh &&
+             /release/scripts/release-manager.sh"
+    volumes:
+      - ../../release:/release
+      - ../../init:/init
+    environment:
+      KC_ADMIN_USER: ${KC_ADMIN_USER:-admin}
+      KC_ADMIN_PASSWORD: ${KC_ADMIN_PASSWORD:-admin}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    networks:
+      - bkg-network
+
 # ==================== OBSERVABILITY ====================
   zipkin:
     image: openzipkin/zipkin:3
-    container_name: booking-zipkin
+    container_name: bkg-zipkin
     ports:
       - "9411:9411"
     environment:
@@ -140,21 +170,150 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - booking-network
+      - bkg-network
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: bkg-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+    extra_hosts:
+      # Allows Prometheus (inside Docker) to reach services running on the host machine
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bkg-network
+
+  loki:
+    image: grafana/loki:3.3.0
+    container_name: bkg-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ../loki/loki.yml:/etc/loki/loki.yml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/loki.yml
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bkg-network
+
+  promtail:
+    image: grafana/promtail:3.3.0
+    container_name: bkg-promtail
+    volumes:
+      - ../promtail/promtail.yml:/etc/promtail/promtail.yml
+      # Docker socket — allows Promtail to read container logs directly
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Host microservice log files — services write JSON logs here via logback
+      # Promtail tails these files and ships them to Loki
+      # LOG_PATH must be exported before running docker-compose (see docs/initialization_READ_ME.md)
+      - ${LOG_PATH:-/tmp}/logs:/logs:ro
+    command: -config.file=/etc/promtail/promtail.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - bkg-network
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: bkg-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_EMAIL: admin@booking-platform.com
+      GF_INSTALL_PLUGINS: yesoreyeram-infinity-datasource
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      # Auto-provisions Prometheus, Loki and Zipkin datasources on first start
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bkg-network
+
 
 # ==================== DEV TOOLS ====================
+  mongo-express:
+    image: mongo-express:latest
+    container_name: bkg-mongo-express
+    ports:
+      - "8090:8081"
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: admin
+      ME_CONFIG_MONGODB_URL: mongodb://admin:admin@bkg-mongodb:27017/
+      ME_CONFIG_BASICAUTH: false
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - bkg-network
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: bkg-redisinsight
+    ports:
+      - "5540:5540"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - bkg-network
+
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: booking-mailhog
+    container_name: bkg-mailhog
     ports:
       - "1025:1025"   # SMTP
       - "8025:8025"   # Web UI
     networks:
-      - booking-network
+      - bkg-network
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: bkg-kafka-ui
+    ports:
+      - "8085:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: booking-platform
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: bkg-kafka:29092
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - bkg-network
 
   sonarqube:
     image: sonarqube:10-community
-    container_name: booking-sonarqube
+    container_name: bkg-sonarqube
     ports:
       - "9000:9000"
     environment:
@@ -170,27 +329,33 @@ services:
       retries: 5
       start_period: 120s
     networks:
-      - booking-network
+      - bkg-network
 
 # ==================== VOLUMES ====================
 volumes:
   postgres_data:
-    name: booking-postgres-data
+    name: bkg-postgres-data
   mongodb_data:
-    name: booking-mongodb-data
+    name: bkg-mongodb-data
   redis_data:
-    name: booking-redis-data
+    name: bkg-redis-data
   kafka_data:
-    name: booking-kafka-data
+    name: bkg-kafka-data
   sonarqube_data:
-    name: booking-sonarqube-data
+    name: bkg-sonarqube-data
   sonarqube_extensions:
-    name: booking-sonarqube-extensions
+    name: bkg-sonarqube-extensions
   sonarqube_logs:
-    name: booking-sonarqube-logs
+    name: bkg-sonarqube-logs
+  prometheus_data:
+    name: bkg-prometheus-data
+  grafana_data:
+    name: bkg-grafana-data
+  loki_data:
+    name: bkg-loki-data
 
 # ==================== NETWORKS ====================
 networks:
-  booking-network:
-    name: booking-network
+  bkg-network:
+    name: bkg-network
     driver: bridge

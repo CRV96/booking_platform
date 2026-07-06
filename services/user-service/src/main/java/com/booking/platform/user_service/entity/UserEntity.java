@@ -1,5 +1,6 @@
 package com.booking.platform.user_service.entity;
 
+import com.booking.platform.user_service.constants.EntityColumns;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -13,38 +14,38 @@ import java.util.List;
  * DO NOT use this for writes - use Keycloak Admin API instead.
  */
 @Entity
-@Table(name = "user_entity")
+@Table(name = EntityColumns.User.TABLE)
 @Immutable
 @Getter
 @NoArgsConstructor
 public class UserEntity {
 
     @Id
-    @Column(name = "id", length = 36)
+    @Column(name = EntityColumns.User.ID, length = 36)
     private String id;
 
-    @Column(name = "username", length = 255)
+    @Column(name = EntityColumns.User.USERNAME, length = 255)
     private String username;
 
-    @Column(name = "email", length = 255)
+    @Column(name = EntityColumns.User.EMAIL, length = 255)
     private String email;
 
-    @Column(name = "email_verified")
+    @Column(name = EntityColumns.User.EMAIL_VERIFIED)
     private Boolean emailVerified;
 
-    @Column(name = "enabled")
+    @Column(name = EntityColumns.User.ENABLED)
     private Boolean enabled;
 
-    @Column(name = "first_name", length = 255)
+    @Column(name = EntityColumns.User.FIRST_NAME, length = 255)
     private String firstName;
 
-    @Column(name = "last_name", length = 255)
+    @Column(name = EntityColumns.User.LAST_NAME, length = 255)
     private String lastName;
 
-    @Column(name = "realm_id", length = 255)
+    @Column(name = EntityColumns.User.REALM_ID, length = 255)
     private String realmId;
 
-    @Column(name = "created_timestamp")
+    @Column(name = EntityColumns.User.CREATED_TIMESTAMP)
     private Long createdTimestamp;
 
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)

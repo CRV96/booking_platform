@@ -1,0 +1,72 @@
+# ============================================================================
+# BOOKING PLATFORM - TICKET GRAPHQL SCHEMA
+# ============================================================================
+
+extend type Query {
+    """List the authenticated user's tickets (userId extracted from JWT)"""
+    myTickets(
+        page: Int = 0
+        pageSize: Int = 20
+    ): TicketConnection!
+
+    """Get all tickets for a specific booking (employee only)"""
+    ticketsByBooking(bookingId: ID!): [Ticket!]!
+
+    """Get all tickets for a specific user with pagination (employee only)"""
+    ticketsByUser(
+        userId: ID!
+        page: Int = 0
+        pageSize: Int = 20
+    ): TicketConnection!
+
+    """Get a single ticket by its ticket number (employee only)"""
+    ticket(ticketNumber: String!): Ticket
+}
+
+extend type Mutation {
+    """Validate a ticket at venue entry — marks it as USED (employee only)"""
+    validateTicket(ticketNumber: String!): Ticket!
+
+    """Cancel a ticket for refund — marks it as CANCELLED (employee only)"""
+    cancelTicket(ticketNumber: String!): Ticket!
+}
+
+# ============================================================================
+# TICKET TYPES
+# ============================================================================
+
+type Ticket {
+    id: ID!
+    bookingId: String!
+    eventId: String!
+    userId: String!
+    ticketNumber: String!
+    qrCodeData: String!
+    seatCategory: String!
+    seatNumber: String
+    status: TicketStatus!
+    eventTitle: String!
+    createdAt: String!
+}
+
+# ============================================================================
+# ENUMS
+# ============================================================================
+
+enum TicketStatus {
+    VALID
+    USED
+    CANCELLED
+}
+
+# ============================================================================
+# PAGINATION
+# ============================================================================
+
+type TicketConnection {
+    tickets: [Ticket!]!
+    totalCount: Int!
+    page: Int!
+    pageSize: Int!
+    totalPages: Int!
+}

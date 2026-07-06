@@ -4,7 +4,12 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
-@SpringBootApplication
+@SpringBootApplication(
+		scanBasePackages = {
+				"com.booking.platform.booking_service",
+				"com.booking.platform.common"
+		}
+)
 @EnableDiscoveryClient
 public class BookingServiceApplication {
 

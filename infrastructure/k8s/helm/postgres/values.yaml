@@ -1,0 +1,10 @@
+auth:
+  postgresPassword: admin   # postgres superuser — matches DB_POSTGRES_PASSWORD in .env.k8s
+
+primary:
+  initdb:
+    scripts:
+      create-dbs.sql: |
+        CREATE DATABASE userdb;
+        CREATE DATABASE bookingdb;
+        CREATE DATABASE paymentdb;

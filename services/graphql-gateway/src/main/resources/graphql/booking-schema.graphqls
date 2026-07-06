@@ -1,0 +1,81 @@
+# ============================================================================
+# BOOKING PLATFORM - BOOKING GRAPHQL SCHEMA
+# ============================================================================
+
+extend type Query {
+    """Get a booking by ID (authenticated user's own bookings only)"""
+    booking(id: ID!): Booking
+
+    """List the authenticated user's bookings with optional status filter"""
+    myBookings(
+        page: Int = 0
+        pageSize: Int = 20
+        status: BookingStatus
+    ): BookingConnection!
+}
+
+extend type Mutation {
+    """Create a new booking (reserves seats, returns PENDING booking)"""
+    createBooking(input: CreateBookingInput!): Booking!
+
+    """Cancel a booking (PENDING or CONFIRMED → CANCELLED, releases seats)"""
+    cancelBooking(id: ID!, reason: String): Booking!
+}
+
+# ============================================================================
+# BOOKING TYPES
+# ============================================================================
+
+type Booking {
+    id: ID!
+    userId: String!
+    eventId: String!
+    eventTitle: String!
+    status: BookingStatus!
+    seatCategory: String!
+    quantity: Int!
+    unitPrice: String!           # Decimal as string ("49.99") — avoids float precision loss
+    totalPrice: String!          # Decimal as string
+    currency: String!            # ISO 4217 (e.g. "USD")
+    idempotencyKey: String!
+    holdExpiresAt: String        # ISO 8601 — null once booking leaves PENDING
+    cancellationReason: String
+    createdAt: String!           # ISO 8601
+    updatedAt: String!           # ISO 8601
+}
+
+# ============================================================================
+# ENUMS
+# ============================================================================
+
+enum BookingStatus {
+    PENDING
+    PAYMENT_PROCESSING
+    CONFIRMED
+    CANCELLED
+    REFUND_PENDING
+    REFUNDED
+}
+
+# ============================================================================
+# INPUTS
+# ============================================================================
+
+input CreateBookingInput {
+    eventId: String!
+    seatCategory: String!
+    quantity: Int!
+    idempotencyKey: String!      # Client-generated UUID — prevents duplicate submissions
+}
+
+# ============================================================================
+# PAGINATION
+# ============================================================================
+
+type BookingConnection {
+    bookings: [Booking!]!
+    totalCount: Int!
+    page: Int!
+    pageSize: Int!
+    totalPages: Int!
+}

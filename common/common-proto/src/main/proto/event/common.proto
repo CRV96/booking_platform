@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package booking.event;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.event";
+option java_outer_classname = "EventCommonProto";
+
+// ============================================================================
+// SHARED EVENT MESSAGES
+// ============================================================================
+
+message EventInfo {
+  string id = 1;
+  string title = 2;
+  string description = 3;
+  string category = 4;   // EventCategory enum value as string
+  string status = 5;     // EventStatus enum value as string
+
+  VenueInfo venue = 6;
+
+  string date_time = 7;      // ISO 8601
+  string end_date_time = 8;  // ISO 8601
+  string timezone = 9;
+
+  OrganizerInfo organizer = 10;
+
+  repeated SeatCategoryInfo seat_categories = 11;
+
+  repeated string images = 12;
+  repeated string tags = 13;
+
+  string created_at = 14;  // ISO 8601
+  string updated_at = 15;  // ISO 8601
+}
+
+message VenueInfo {
+  string name = 1;
+  string address = 2;
+  string city = 3;
+  string country = 4;
+  optional double latitude = 5;
+  optional double longitude = 6;
+  optional int32 capacity = 7;
+}
+
+message OrganizerInfo {
+  string user_id = 1;
+  string name = 2;
+  string email = 3;
+}
+
+message SeatCategoryInfo {
+  string name = 1;
+  double price = 2;
+  string currency = 3;
+  int32 total_seats = 4;
+  int32 available_seats = 5;
+}
+
+message PaginationInfo {
+  int32 total_count = 1;
+  int32 page = 2;        // 0-indexed
+  int32 page_size = 3;
+  int32 total_pages = 4;
+}

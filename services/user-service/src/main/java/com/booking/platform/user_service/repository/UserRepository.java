@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -24,6 +25,17 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
+
+    /**
+     * Returns users whose email is not yet verified and who registered before the
+     * given cutoff (expressed as epoch-millis, matching Keycloak's createdTimestamp column).
+     * Filtered by realmId to avoid touching users from other Keycloak realms.
+     */
+    @Query("SELECT u FROM UserEntity u WHERE u.emailVerified = false " +
+           "AND u.createdTimestamp < :cutoff AND u.realmId = :realmId")
+    List<UserEntity> findUnverifiedUsersOlderThan(
+            @Param("cutoff") Long cutoff,
+            @Param("realmId") String realmId);
 
     @Query("SELECT u FROM UserEntity u WHERE " +
            "LOWER(u.username) LIKE LOWER(CONCAT('%', :search, '%')) " +

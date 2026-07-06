@@ -1,0 +1,15 @@
+apiVersion: 1
+
+datasources:
+  - name: Analytics API
+    type: yesoreyeram-infinity-datasource
+    uid: analytics-infinity
+    # host.docker.internal resolves to the host machine from inside Docker,
+    # allowing Grafana to reach the analytics-service running locally
+    url: http://host.docker.internal:8087
+    access: proxy
+    isDefault: false
+    editable: true
+    jsonData:
+      allowedHosts:
+        - http://host.docker.internal:8087

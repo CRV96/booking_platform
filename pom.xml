@@ -40,14 +40,14 @@
         <spring-cloud.version>2024.0.0</spring-cloud.version>
 
         <!-- gRPC & Protobuf -->
-        <grpc.version>1.75.0</grpc.version>
+        <grpc.version>1.80.0</grpc.version>
         <protobuf.version>4.29.2</protobuf.version>
         <grpc-spring-boot.version>3.1.0.RELEASE</grpc-spring-boot.version>
         <os-maven-plugin.version>1.7.1</os-maven-plugin.version>
         <protobuf-maven-plugin.version>0.6.1</protobuf-maven-plugin.version>
 
         <!-- Databases -->
-        <postgresql.version>42.7.4</postgresql.version>
+        <postgresql.version>42.7.11</postgresql.version>
 
         <!-- Security -->
         <keycloak.version>26.0.7</keycloak.version>
@@ -56,8 +56,12 @@
         <lombok.version>1.18.38</lombok.version>
         <mapstruct.version>1.6.3</mapstruct.version>
 
+
+        <!-- ShedLock -->
+        <shedlock.version>5.16.0</shedlock.version>
+
         <!-- Code Quality -->
-        <jacoco.version>0.8.12</jacoco.version>
+        <jacoco.version>0.8.13</jacoco.version>
         <sonar.projectKey>Booking-Platform</sonar.projectKey>
         <sonar.projectName>Booking Platform</sonar.projectName>
         <sonar.host.url>http://localhost:9000</sonar.host.url>
@@ -172,10 +176,37 @@
                 <version>${mapstruct.version}</version>
             </dependency>
 
-            <!-- Common module (shared protos, DTOs, utils) -->
+            <!-- ShedLock -->
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-spring</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.javacrumbs.shedlock</groupId>
+                <artifactId>shedlock-provider-jdbc-template</artifactId>
+                <version>${shedlock.version}</version>
+            </dependency>
+
+            <!-- Common modules -->
             <dependency>
                 <groupId>com.booking.platform</groupId>
-                <artifactId>common</artifactId>
+                <artifactId>common-proto</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.booking.platform</groupId>
+                <artifactId>common-core</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.booking.platform</groupId>
+                <artifactId>common-security</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.booking.platform</groupId>
+                <artifactId>common-events</artifactId>
                 <version>${project.version}</version>
             </dependency>
         </dependencies>
@@ -216,6 +247,34 @@
             <artifactId>spring-boot-devtools</artifactId>
             <scope>runtime</scope>
             <optional>true</optional>
+        </dependency>
+
+        <!-- Prometheus metrics endpoint (/actuator/prometheus) -->
+        <!-- Exposes all Micrometer metrics in the format Prometheus can scrape -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Structured JSON logging (Loki-friendly log output) -->
+        <!-- Produces one JSON object per log line: {"@timestamp":...,"level":...,"message":...,"traceId":...} -->
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>7.4</version>
+        </dependency>
+
+        <!-- Distributed Tracing (Zipkin via Micrometer + Brave) -->
+        <!-- micrometer-tracing-bridge-brave: creates spans for every HTTP request/response -->
+        <!-- zipkin-reporter-brave: ships those spans to the Zipkin server over HTTP -->
+        <!-- Both are required — properties alone (management.zipkin.tracing.endpoint) do nothing without these JARs -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-reporter-brave</artifactId>
         </dependency>
 
         <!-- Testing -->
@@ -338,6 +397,24 @@
                     </executions>
                 </plugin>
 
+                <!-- Maven Surefire — test runner -->
+                <!-- @{argLine} late-binding picks up the JaCoCo agent prepended at prepare-agent -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.4</version>
+                    <configuration>
+                        <argLine>
+                            @{argLine}
+                            -XX:+EnableDynamicAgentLoading
+                            -Dnet.bytebuddy.experimental=true
+                            --add-opens java.base/java.lang=ALL-UNNAMED
+                            --add-opens java.base/java.util=ALL-UNNAMED
+                            --add-opens java.base/java.lang.reflect=ALL-UNNAMED
+                        </argLine>
+                    </configuration>
+                </plugin>
+
                 <!-- SonarQube scanner -->
                 <plugin>
                     <groupId>org.sonarsource.scanner.maven</groupId>
@@ -351,6 +428,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>

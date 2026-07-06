@@ -1,0 +1,134 @@
+syntax = "proto3";
+
+package booking.ticket;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.ticket";
+option java_outer_classname = "TicketServiceProto";
+
+// ============================================================================
+// TICKET SERVICE
+// ============================================================================
+// Handles ticket queries, validation (venue entry), and cancellation.
+//
+// Customer endpoints: GetMyTickets (userId from JWT — never from request)
+// Employee endpoints: GetTicketsByBooking, GetTicketsByUser, GetTicketByNumber,
+//                     ValidateTicket, CancelTicket
+
+service TicketService {
+  // Customer: get own tickets. UserId is extracted from JWT, not from request.
+  rpc GetMyTickets(GetMyTicketsRequest) returns (GetMyTicketsResponse);
+
+  // Employee: get all tickets for a specific booking.
+  rpc GetTicketsByBooking(GetTicketsByBookingRequest) returns (GetTicketsByBookingResponse);
+
+  // Employee: get all tickets for a specific user.
+  rpc GetTicketsByUser(GetTicketsByUserRequest) returns (GetTicketsByUserResponse);
+
+  // Employee: get a single ticket by its human-readable number.
+  rpc GetTicketByNumber(GetTicketByNumberRequest) returns (TicketResponse);
+
+  // Employee: mark a ticket as USED (venue QR scan).
+  rpc ValidateTicket(ValidateTicketRequest) returns (TicketResponse);
+
+  // Employee: mark a ticket as CANCELLED (refund flow).
+  rpc CancelTicket(CancelTicketRequest) returns (TicketResponse);
+}
+
+// ============================================================================
+// GET MY TICKETS (Customer)
+// ============================================================================
+
+message GetMyTicketsRequest {
+  int32 page = 1;       // 0-indexed, default 0
+  int32 page_size = 2;  // Default 20, max 100
+}
+
+message GetMyTicketsResponse {
+  repeated TicketInfo tickets = 1;
+  PaginationInfo pagination = 2;
+}
+
+// ============================================================================
+// GET TICKETS BY BOOKING (Employee)
+// ============================================================================
+
+message GetTicketsByBookingRequest {
+  string booking_id = 1;
+}
+
+message GetTicketsByBookingResponse {
+  repeated TicketInfo tickets = 1;
+}
+
+// ============================================================================
+// GET TICKETS BY USER (Employee)
+// ============================================================================
+
+message GetTicketsByUserRequest {
+  string user_id = 1;
+  int32 page = 2;       // 0-indexed, default 0
+  int32 page_size = 3;  // Default 20, max 100
+}
+
+message GetTicketsByUserResponse {
+  repeated TicketInfo tickets = 1;
+  PaginationInfo pagination = 2;
+}
+
+// ============================================================================
+// GET TICKET BY NUMBER (Employee)
+// ============================================================================
+
+message GetTicketByNumberRequest {
+  string ticket_number = 1;
+}
+
+// ============================================================================
+// VALIDATE TICKET (Employee)
+// ============================================================================
+
+message ValidateTicketRequest {
+  string ticket_number = 1;
+}
+
+// ============================================================================
+// CANCEL TICKET (Employee)
+// ============================================================================
+
+message CancelTicketRequest {
+  string ticket_number = 1;
+}
+
+// ============================================================================
+// SHARED RESPONSE
+// ============================================================================
+
+message TicketResponse {
+  TicketInfo ticket = 1;
+}
+
+// ============================================================================
+// SHARED MESSAGES
+// ============================================================================
+
+message TicketInfo {
+  string id = 1;
+  string booking_id = 2;
+  string event_id = 3;
+  string user_id = 4;
+  string ticket_number = 5;
+  string qr_code_data = 6;
+  string seat_category = 7;
+  string seat_number = 8;       // May be empty — not all events have assigned seating
+  string status = 9;            // VALID, USED, CANCELLED, EXPIRED
+  string event_title = 10;
+  string created_at = 11;       // ISO 8601
+}
+
+message PaginationInfo {
+  int32 total_count = 1;
+  int32 page = 2;        // 0-indexed
+  int32 page_size = 3;
+  int32 total_pages = 4;
+}

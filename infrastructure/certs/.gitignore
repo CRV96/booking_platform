@@ -1,0 +1,9 @@
+# Ignore generated certificates (regenerate with ./generate-certs.sh)
+*.crt
+*.key
+*.csr
+*.pem
+*.srl
+
+# Keep the generation script
+!generate-certs.sh

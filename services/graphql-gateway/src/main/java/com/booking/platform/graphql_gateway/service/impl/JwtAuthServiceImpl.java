@@ -1,0 +1,70 @@
+package com.booking.platform.graphql_gateway.service.impl;
+
+import com.booking.platform.graphql_gateway.constants.GatewayConstants;
+import com.booking.platform.graphql_gateway.exception.ErrorCode;
+import com.booking.platform.graphql_gateway.exception.GraphQLException;
+import com.booking.platform.graphql_gateway.service.AuthService;
+import com.booking.platform.common.logging.ApplicationLogger;
+import com.booking.platform.common.logging.LogErrorCode;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.event.Level;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.stereotype.Service;
+
+import java.util.Collection;
+
+@Service
+@Slf4j
+public class JwtAuthServiceImpl implements AuthService {
+
+    @Override
+    public String getAuthenticatedUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication instanceof JwtAuthenticationToken jwtAuth) {
+            String userId = jwtAuth.getToken().getSubject();
+            if (userId != null) {
+                return userId;
+            }
+
+            ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.AUTH_TOKEN_INVALID,
+                    "JWT token has no 'sub' claim. Claims present: {}",
+                    jwtAuth.getToken().getClaims().keySet());
+            throw new GraphQLException(ErrorCode.UNAUTHENTICATED, "Token missing user identity");
+        }
+
+        throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
+    }
+
+    @Override
+    public boolean isAuthenticated() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        return authentication instanceof JwtAuthenticationToken jwtAuth
+                && jwtAuth.getToken().getSubject() != null;
+    }
+
+    @Override
+    public boolean hasRole(String role) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (!(authentication instanceof JwtAuthenticationToken)) {
+            return false;
+        }
+        String authorityName = GatewayConstants.Security.ROLE_PREFIX + role;
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals(authorityName));
+    }
+
+    @Override
+    public void requireRole(String role) {
+        if (!isAuthenticated()) {
+            throw new GraphQLException(ErrorCode.UNAUTHENTICATED);
+        }
+        if (!hasRole(role)) {
+            ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.AUTH_TOKEN_INVALID,
+                    "Access denied: user does not have required role '{}'", role);
+            throw new GraphQLException(ErrorCode.FORBIDDEN);
+        }
+    }
+}

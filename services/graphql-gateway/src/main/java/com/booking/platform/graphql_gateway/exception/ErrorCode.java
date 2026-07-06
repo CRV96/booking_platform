@@ -27,10 +27,14 @@ public enum ErrorCode {
     VALIDATION_ERROR("VAL_001", "Input validation failed"),
     INVALID_INPUT("VAL_002", "Invalid input provided"),
 
+    // Rate limiting errors
+    RATE_LIMITED("RATE_001", "Too many requests. Please try again later."),
+
     // General errors
     INTERNAL_ERROR("GEN_001", "An unexpected error occurred"),
     SERVICE_UNAVAILABLE("GEN_002", "Service is temporarily unavailable"),
-    NOT_IMPLEMENTED("GEN_003", "This feature is not yet implemented");
+    NOT_IMPLEMENTED("GEN_003", "This feature is not yet implemented"),
+    NOT_FOUND("GEN_004", "The requested resource was not found");
     /**
      * ==============================================
      */

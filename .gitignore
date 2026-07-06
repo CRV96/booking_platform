@@ -1,6 +1,16 @@
-.idea
+.idea/*
+!idea/runConfigurations/**
 .DS_Store
 .claude
 .env
 .postman
 /common/target
+/META-INF/spring-autoconfigure-metadata.properties
+ROADMAP.md
+target
+logs/
+.vscode/
+
+
+# Kubernetes secrets
+infrastructure/k8s/.env.k8s

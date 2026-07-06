@@ -1,12 +1,13 @@
 package com.booking.platform.user_service.exception;
 
-import io.grpc.Status;
+import com.booking.platform.common.exception.ServiceException;
 
 /**
  * Base exception for all user service exceptions.
- * Provides mapping to gRPC status codes.
+ * Extends the common {@link ServiceException} which provides
+ * the gRPC status code mapping used by the shared exception interceptor.
  */
-public abstract class UserServiceException extends RuntimeException {
+public abstract class UserServiceException extends ServiceException {
 
     protected UserServiceException(String message) {
         super(message);
@@ -15,9 +16,4 @@ public abstract class UserServiceException extends RuntimeException {
     protected UserServiceException(String message, Throwable cause) {
         super(message, cause);
     }
-
-    /**
-     * Returns the gRPC status code for this exception.
-     */
-    public abstract Status.Code getGrpcStatusCode();
 }

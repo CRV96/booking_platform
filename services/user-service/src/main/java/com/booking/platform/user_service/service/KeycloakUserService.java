@@ -9,10 +9,10 @@ import java.util.Map;
  * Service for managing users in Keycloak via the Admin API.
  * Extends UserService with Keycloak-specific implementation marker.
  */
-public interface KeycloakUserService extends UserService<UserRepresentation> {
+public interface KeycloakUserService extends UserLookupService<UserRepresentation> {
 
     String createUser(String email, String password, String firstName, String lastName,
-                      Map<String, String> attributes);
+                      String role, Map<String, String> attributes);
 
     UserRepresentation updateUser(String userId, String firstName, String lastName,
                                   String email, Map<String, String> attributes);
@@ -31,5 +31,21 @@ public interface KeycloakUserService extends UserService<UserRepresentation> {
     Map<String, List<String>> getUsersRoles(List<String> userIds);
 
     int getUserCount(String search);
+
+    /**
+     * Triggers Keycloak to send a verification email to the user.
+     * Keycloak generates the token, sends the email via its configured SMTP,
+     * and marks emailVerified=true automatically when the link is clicked.
+     *
+     * @param userId the Keycloak user ID
+     */
+    void sendVerificationEmail(String userId);
+
+    /**
+     * Permanently deletes a user from Keycloak.
+     *
+     * @param userId the Keycloak user ID to delete
+     */
+    void deleteUser(String userId);
 
 }
