@@ -1023,9 +1023,11 @@ public class DataInitializer implements ApplicationRunner {
                                   VenueInfo venue, List<SeatCategoryInfo> seats,
                                   List<String> tags, OrganizerDto organizer) {
         // Use a future placeholder so the validator accepts it, then override after creation.
-        Instant tempFuture = future(30);
+        // endDateTime must be strictly after dateTime, so offset the two placeholders.
+        Instant tempStart = future(30);
+        Instant tempEnd = future(31);
         EventDocument event = eventService.createEvent(
-                buildRequest(title, description, category, tempFuture, tempFuture, venue, seats, tags),
+                buildRequest(title, description, category, tempStart, tempEnd, venue, seats, tags),
                 organizer
         );
         eventService.publishEvent(event.getId());

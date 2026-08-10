@@ -3,7 +3,9 @@ package com.booking.platform.common.scheduling;
 import net.javacrumbs.shedlock.provider.jdbctemplate.JdbcTemplateLockProvider;
 import net.javacrumbs.shedlock.spring.annotation.EnableSchedulerLock;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
@@ -30,8 +32,16 @@ import javax.sql.DataSource;
  *
  * <p>Registered via {@code META-INF/spring/...AutoConfiguration.imports}
  * so services do not need to import or component-scan this class explicitly.
+ *
+ * <p>{@code @AutoConfigureAfter(DataSourceAutoConfiguration.class)} is required:
+ * {@code @ConditionalOnBean(DataSource.class)} only matches if the {@code DataSource}
+ * bean is already registered when this condition is evaluated. Without forcing this
+ * config to run after {@code DataSourceAutoConfiguration}, the condition fails and the
+ * whole config — including {@code @EnableScheduling} — is silently skipped, so no
+ * {@code @Scheduled} task ever runs.
  */
 @AutoConfiguration
+@AutoConfigureAfter(DataSourceAutoConfiguration.class)
 @ConditionalOnClass(JdbcTemplateLockProvider.class)
 @ConditionalOnBean(DataSource.class)
 @EnableScheduling
