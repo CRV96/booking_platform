@@ -9,6 +9,7 @@ Follow these steps after cloning the repository.
 | Java | 21 | Runtime and compilation |
 | Maven | 3.9+ | Build tool (or use included `./mvnw`) |
 | Docker & Docker Compose | Latest | Infrastructure and optional full-stack deployment |
+| OpenSSL | 1.1+ | Generating mTLS certificates for local runs (`infrastructure/certs/generate-certs.sh`) |
 | Git | Latest | Source control |
 
 ## Option A: Local Development (Services on Host)
@@ -44,7 +45,21 @@ docker compose -f infrastructure/docker/docker-compose.startup.yaml ps
 
 This starts: PostgreSQL (3 databases), MongoDB, Redis, Kafka, Keycloak, Zipkin, Prometheus, Grafana, Loki, Promtail, Mongo Express, RedisInsight, MailHog, Kafka UI, and SonarQube.
 
-### 3. Start Services
+### 3. Generate mTLS certificates
+
+Services on the `dev` profile have **mTLS enabled by default** (`GRPC_MTLS_ENABLED=true` in `config/dev`), so their gRPC channels need certificates before they will start. Generate them once — the script creates a CA and per-service certs and copies them into each service's `src/main/resources/certs/`:
+
+```bash
+./infrastructure/certs/generate-certs.sh
+```
+
+The certificates are gitignored, so a fresh clone does **not** have them — this step is required the first time (and again when they expire; they are valid for 365 days). The script is idempotent: existing certs are skipped.
+
+> **Just want plaintext for quick local debugging?** Skip this step and disable mTLS instead by exporting `GRPC_MTLS_ENABLED=false` in your shell (or `.env`) before starting services. Both client and server sides read the same flag, so they stay in sync. See [mTLS Certificates](#mtls-certificates) for details.
+>
+> Docker (Option B) and Kubernetes do **not** need this step — they set `GRPC_MTLS_ENABLED=false` already.
+
+### 4. Start Services
 
 Start in this order (config-service and eureka-service must be first):
 
@@ -373,12 +388,13 @@ nginx is only used in **Option B (Full Docker)**. In **Option A (local dev)**, t
 
 ---
 
-## mTLS Certificates (Optional)
+## mTLS Certificates
 
 mTLS (mutual TLS) secures gRPC communication between services. Both client and server authenticate each other using certificates.
 
-- **Development**: Optional — disabled by default for easier debugging
-- **Production**: Recommended for service-to-service security
+- **Local development (Option A)**: **enabled by default** (`GRPC_MTLS_ENABLED=true` in `config/dev`). You must generate certificates before starting services (see [Option A → step 3](#3-generate-mtls-certificates)), or disable mTLS for plaintext debugging.
+- **Docker (Option B) / Kubernetes**: **disabled by default** (`docker-compose.services.yaml` sets `GRPC_MTLS_ENABLED=false`), so no certificates are required.
+- **Production**: recommended for service-to-service security.
 
 ### Generate Certificates
 
@@ -671,6 +687,13 @@ STRIPE_SECRET_KEY=sk_test_replace_me
 # SonarQube token — only needed when running sonar analysis locally.
 # Generate at: http://localhost:9000 → My Account → Security → Generate Token
 # SONAR_TOKEN=
+
+# ── gRPC mTLS (local development) ─────────────────────────────────────────────
+# Toggles mutual TLS on inter-service gRPC channels. config/dev defaults this to
+# `true`, so local (Option A) runs require certificates first — see "Generate
+# mTLS certificates" (Option A → step 3). Set to `false` to run gRPC in plaintext
+# and skip certificate generation. Docker/K8s already set this to false.
+# GRPC_MTLS_ENABLED=true
 ```
 
 ### How Docker Compose resolves these variables
