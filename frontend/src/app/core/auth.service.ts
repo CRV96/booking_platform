@@ -1,9 +1,13 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { Apollo } from 'apollo-angular';
 import { Router } from '@angular/router';
-import { map, tap } from 'rxjs/operators';
+import { Observable, of, throwError } from 'rxjs';
+import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 import { LOGIN, REGISTER, REFRESH_TOKEN, LOGOUT } from '../shared/graphql/documents';
 import { AuthPayload, User } from '../shared/models/models';
+
+/** Refresh the access token this many ms before it actually expires, to avoid racing expiry. */
+const TOKEN_EXPIRY_SKEW_MS = 30_000;
 
 const ACCESS_TOKEN_KEY = 'bkg_access_token';
 const REFRESH_TOKEN_KEY = 'bkg_refresh_token';
@@ -14,6 +18,9 @@ export class AuthService {
 
   private _user = signal<User | null>(this.loadUser());
   private _token = signal<string | null>(localStorage.getItem(ACCESS_TOKEN_KEY));
+
+  /** In-flight refresh, shared so concurrent requests trigger only one refresh call. */
+  private refresh$: Observable<AuthPayload> | null = null;
 
   readonly user = this._user.asReadonly();
   readonly token = this._token.asReadonly();
@@ -46,16 +53,58 @@ export class AuthService {
     );
   }
 
-  refreshAccessToken() {
+  /**
+   * Returns the current access token, refreshing it first if it is expired (or about
+   * to expire). Concurrent callers share a single in-flight refresh. Emits {@code null}
+   * if no valid session can be produced (e.g. refresh token also expired → logout).
+   */
+  getFreshToken(): Observable<string | null> {
+    const token = this.getToken();
+    if (token && !this.isTokenExpired(token)) {
+      return of(token);
+    }
     const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-    if (!refreshToken) return;
-    this.apollo.mutate<{ refreshToken: AuthPayload }>({
+    if (!refreshToken) {
+      return of(null);
+    }
+    return this.refreshAccessToken().pipe(
+      map(payload => payload.accessToken),
+      catchError(() => of(null)),
+    );
+  }
+
+  /** Refreshes the session via the refresh token. Shared while in flight; logs out on failure. */
+  refreshAccessToken(): Observable<AuthPayload> {
+    if (this.refresh$) return this.refresh$;
+
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+    if (!refreshToken) {
+      this.logout();
+      return throwError(() => new Error('No refresh token available'));
+    }
+
+    this.refresh$ = this.apollo.mutate<{ refreshToken: AuthPayload }>({
       mutation: REFRESH_TOKEN,
       variables: { refreshToken },
-    }).pipe(map(r => r.data!.refreshToken)).subscribe({
-      next: payload => this.storeSession(payload),
-      error: () => this.logout(),
-    });
+    }).pipe(
+      map(r => r.data!.refreshToken),
+      tap(payload => this.storeSession(payload)),
+      catchError(err => { this.logout(); return throwError(() => err); }),
+      finalize(() => { this.refresh$ = null; }),
+      shareReplay(1),
+    );
+    return this.refresh$;
+  }
+
+  /** Decodes the JWT {@code exp} claim and reports whether it is within the skew window. */
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      if (!payload.exp) return true;
+      return payload.exp * 1000 <= Date.now() + TOKEN_EXPIRY_SKEW_MS;
+    } catch {
+      return true;
+    }
   }
 
   logout() {
