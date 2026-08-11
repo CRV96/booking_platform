@@ -158,6 +158,24 @@ class UserGrpcServiceTest {
         verify(responseObserver).onCompleted();
     }
 
+    @Test
+    void updateUser_withEmailAndLastName_passesThemToService() {
+        UserRepresentation updated = makeUser("u-1", "new@x.com");
+        when(attributeMapper.fromUpdateRequest(any())).thenReturn(Map.of());
+        when(keycloakUserService.updateUser(any(UserCommandDTO.class))).thenReturn(updated);
+
+        UpdateUserRequest request = UpdateUserRequest.newBuilder()
+                .setUserId("u-1")
+                .setEmail("new@x.com")
+                .setLastName("Doe")
+                .build();
+        service.updateUser(request, responseObserver);
+
+        verify(keycloakUserService).updateUser(new UserCommandDTO("u-1", "new@x.com", null, null, "Doe", null, Map.of()));
+        verify(responseObserver).onNext(any(UserResponse.class));
+        verify(responseObserver).onCompleted();
+    }
+
     // ── searchUsers ───────────────────────────────────────────────────────────
 
     @Test

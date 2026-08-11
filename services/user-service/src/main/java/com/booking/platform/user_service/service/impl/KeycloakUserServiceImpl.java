@@ -49,6 +49,8 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     private final Keycloak keycloak;
     private final KeycloakProperties keycloakProperties;
 
+    private final static String CUSTOMER = "customer";
+
     @Value("${verification.email.lifespan-seconds:604800}")
     private int verificationEmailLifespanSeconds;
 
@@ -237,7 +239,7 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
         user.setLastName(command.lastName());
         user.setEnabled(true);
         user.setEmailVerified(false);
-        String group = "customer".equalsIgnoreCase(command.role())
+        String group = CUSTOMER.equalsIgnoreCase(command.role())
                 ? CUSTOMERS_GROUP.getValue()
                 : EMPLOYEES_GROUP.getValue();
         user.setGroups(List.of(group));
