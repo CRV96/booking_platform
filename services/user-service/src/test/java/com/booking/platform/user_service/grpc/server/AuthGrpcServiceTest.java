@@ -6,6 +6,7 @@ import com.booking.platform.common.security.TokenBlacklistService;
 import com.booking.platform.user_service.dto.TokenResponseDTO;
 import com.booking.platform.user_service.mapper.AttributeMapper;
 import com.booking.platform.user_service.mapper.UserGrpcMapper;
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import com.booking.platform.user_service.service.AuthService;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.AuthValidator;
@@ -80,7 +81,7 @@ class AuthGrpcServiceTest {
     @Test
     void register_createsUserAndSendsVerificationEmail() {
         when(attributeMapper.fromRegisterRequest(any())).thenReturn(Map.of());
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+        when(keycloakUserService.createUser(any(UserCommandDTO.class)))
                 .thenReturn("new-user");
 
         RegisterRequest request = RegisterRequest.newBuilder()
@@ -93,7 +94,8 @@ class AuthGrpcServiceTest {
 
         verify(authValidator).validateRegisterRequest(request);
         verify(attributeMapper).fromRegisterRequest(request);
-        verify(keycloakUserService).createUser("alice@example.com", "P@ssw0rd", "Alice", "Smith", "customer", Map.of());
+        verify(keycloakUserService).createUser(
+                new UserCommandDTO(null, "alice@example.com", "P@ssw0rd", "Alice", "Smith", "customer", Map.of()));
         verify(keycloakUserService).sendVerificationEmail("new-user");
         verify(authService, never()).login(anyString(), anyString());
         verify(responseObserver).onNext(any(AuthResponse.class));

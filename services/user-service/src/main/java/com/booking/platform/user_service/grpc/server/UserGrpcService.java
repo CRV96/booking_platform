@@ -4,6 +4,7 @@ import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.user_service.mapper.AttributeMapper;
 import com.booking.platform.user_service.mapper.UserGrpcMapper;
 import com.booking.platform.user_service.properties.ValidationProperties;
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.UserValidator;
 import com.booking.platform.common.logging.ApplicationLogger;
@@ -75,13 +76,15 @@ public class UserGrpcService extends UserServiceGrpc.UserServiceImplBase {
 
         Map<String, String> attributes = attributeMapper.fromUpdateRequest(request);
 
-        UserRepresentation user = keycloakUserService.updateUser(
+        UserRepresentation user = keycloakUserService.updateUser(new UserCommandDTO(
                 request.getUserId(),
+                request.hasEmail() ? request.getEmail() : null,
+                null,
                 request.hasFirstName() ? request.getFirstName() : null,
                 request.hasLastName() ? request.getLastName() : null,
-                request.hasEmail() ? request.getEmail() : null,
+                null,
                 attributes
-        );
+        ));
 
         List<String> roles = keycloakUserService.getUserRoles(request.getUserId());
 

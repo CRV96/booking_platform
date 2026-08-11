@@ -1,6 +1,7 @@
 package com.booking.platform.user_service.init;
 
 import com.booking.platform.user_service.properties.KeycloakProperties;
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
@@ -63,7 +64,7 @@ class DataInitializerTest {
 
         initializer.run(args);
 
-        verify(keycloakUserService, never()).createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any());
+        verify(keycloakUserService, never()).createUser(any(UserCommandDTO.class));
         verify(keycloak, never()).realm(anyString());
     }
 
@@ -72,14 +73,14 @@ class DataInitializerTest {
     @Test
     void run_seeds60Users_whenBelowThreshold() throws Exception {
         when(keycloakUserService.getUserCount(null)).thenReturn(2);
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+        when(keycloakUserService.createUser(any(UserCommandDTO.class)))
                 .thenReturn("generated-id");
 
         initializer.run(args);
 
         // 49 customers created via keycloakUserService.createUser
         verify(keycloakUserService, times(49))
-                .createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any());
+                .createUser(any(UserCommandDTO.class));
 
         // 10 employees created via usersResource.create
         verify(usersResource, times(10)).create(any(UserRepresentation.class));
@@ -100,7 +101,7 @@ class DataInitializerTest {
         when(keycloakUserService.getUserCount(null)).thenReturn(2);
 
         // First call throws; subsequent calls succeed
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+        when(keycloakUserService.createUser(any(UserCommandDTO.class)))
                 .thenThrow(new RuntimeException("conflict"))
                 .thenReturn("generated-id");
 
@@ -109,7 +110,7 @@ class DataInitializerTest {
 
         // At least some customers were still created after the first failure
         verify(keycloakUserService, atLeast(2))
-                .createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any());
+                .createUser(any(UserCommandDTO.class));
     }
 
     // ── employee creation ─────────────────────────────────────────────────────
@@ -117,7 +118,7 @@ class DataInitializerTest {
     @Test
     void createEmployee_with201Response_doesNotThrow() throws Exception {
         when(keycloakUserService.getUserCount(null)).thenReturn(2);
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+        when(keycloakUserService.createUser(any(UserCommandDTO.class)))
                 .thenReturn("generated-id");
 
         assertThatCode(() -> initializer.run(args)).doesNotThrowAnyException();
@@ -128,7 +129,7 @@ class DataInitializerTest {
     @Test
     void createEmployee_withNon201Response_completesNormally() throws Exception {
         when(keycloakUserService.getUserCount(null)).thenReturn(2);
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+        when(keycloakUserService.createUser(any(UserCommandDTO.class)))
                 .thenReturn("generated-id");
 
         Response badResponse = mock(Response.class);
@@ -141,7 +142,7 @@ class DataInitializerTest {
     @Test
     void createEmployee_usesCorrectGroup() throws Exception {
         when(keycloakUserService.getUserCount(null)).thenReturn(2);
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+        when(keycloakUserService.createUser(any(UserCommandDTO.class)))
                 .thenReturn("generated-id");
 
         initializer.run(args);
@@ -158,7 +159,7 @@ class DataInitializerTest {
     @Test
     void createEmployee_setsEmailVerifiedTrueAndEnabled() throws Exception {
         when(keycloakUserService.getUserCount(null)).thenReturn(2);
-        when(keycloakUserService.createUser(anyString(), anyString(), anyString(), anyString(), anyString(), any()))
+        when(keycloakUserService.createUser(any(UserCommandDTO.class)))
                 .thenReturn("generated-id");
 
         initializer.run(args);
