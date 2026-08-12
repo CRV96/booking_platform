@@ -2,6 +2,7 @@ package com.booking.platform.user_service.init;
 
 import com.booking.platform.user_service.constants.UserAttributes;
 import com.booking.platform.user_service.properties.KeycloakProperties;
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.common.logging.ApplicationLogger;
 import lombok.RequiredArgsConstructor;
@@ -249,7 +250,7 @@ public class DataInitializer implements ApplicationRunner {
                     UserAttributes.EMAIL_NOTIFICATIONS,   "true",
                     UserAttributes.SMS_NOTIFICATIONS,     "false"
             );
-            keycloakUserService.createUser(email, password, firstName, lastName, "customer", attributes);
+            keycloakUserService.createUser(new UserCommandDTO(null, email, password, firstName, lastName, "customer", attributes));
             ApplicationLogger.logMessage(log, Level.DEBUG, "DataInitializer: customer created — {}", username);
         } catch (Exception e) {
             ApplicationLogger.logMessage(log, Level.WARN, "DataInitializer: skipping customer '{}' — {}", username, e.getMessage());

@@ -1,5 +1,6 @@
 package com.booking.platform.user_service.service;
 
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import com.booking.platform.user_service.exception.InternalException;
 import com.booking.platform.user_service.exception.user.UserAlreadyExistsException;
 import com.booking.platform.user_service.exception.user.UserNotFoundException;
@@ -18,6 +19,7 @@ import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.admin.client.resource.UsersResource;
 import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -25,9 +27,12 @@ import org.mockito.quality.Strictness;
 import org.springframework.http.HttpHeaders;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static com.booking.platform.common.enums.Keycloak.CUSTOMERS_GROUP;
+import static com.booking.platform.common.enums.Keycloak.EMPLOYEES_GROUP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -127,7 +132,7 @@ class KeycloakUserServiceImplTest {
                 .thenReturn("http://keycloak/admin/realms/booking-platform/users/new-user-id");
         when(usersResource.create(any())).thenReturn(response);
 
-        String userId = service.createUser("a@b.com", "Pass1!", "John", "Doe", "customer", Map.of());
+        String userId = service.createUser(new UserCommandDTO(null, "a@b.com", "Pass1!", "John", "Doe", "customer", Map.of()));
 
         assertThat(userId).isEqualTo("new-user-id");
     }
@@ -137,7 +142,7 @@ class KeycloakUserServiceImplTest {
         when(response.getStatus()).thenReturn(409);
         when(usersResource.create(any())).thenReturn(response);
 
-        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", "customer", Map.of()))
+        assertThatThrownBy(() -> service.createUser(new UserCommandDTO(null, "a@b.com", "Pass1!", "John", "Doe", "customer", Map.of())))
                 .isInstanceOf(UserAlreadyExistsException.class)
                 .hasMessageContaining("a@b.com");
     }
@@ -148,7 +153,7 @@ class KeycloakUserServiceImplTest {
         when(response.readEntity(String.class)).thenReturn("Internal Server Error");
         when(usersResource.create(any())).thenReturn(response);
 
-        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", "customer", Map.of()))
+        assertThatThrownBy(() -> service.createUser(new UserCommandDTO(null, "a@b.com", "Pass1!", "John", "Doe", "customer", Map.of())))
                 .isInstanceOf(InternalException.class);
     }
 
@@ -158,7 +163,7 @@ class KeycloakUserServiceImplTest {
         when(response.getHeaderString(HttpHeaders.LOCATION)).thenReturn(null);
         when(usersResource.create(any())).thenReturn(response);
 
-        assertThatThrownBy(() -> service.createUser("a@b.com", "Pass1!", "John", "Doe", "customer", Map.of()))
+        assertThatThrownBy(() -> service.createUser(new UserCommandDTO(null, "a@b.com", "Pass1!", "John", "Doe", "customer", Map.of())))
                 .isInstanceOf(InternalException.class)
                 .hasMessageContaining("user ID");
     }
@@ -263,6 +268,121 @@ class KeycloakUserServiceImplTest {
         when(usersResource.list(0, 10)).thenReturn(List.of(user));
 
         assertThat(service.searchUsers("", 0, 10)).containsExactly(user);
+    }
+
+    @Test
+    void createUser_employeeRoleWithAttributes_buildsRepresentationAndSkipsNullAttribute() {
+        when(response.getStatus()).thenReturn(201);
+        when(response.getHeaderString(HttpHeaders.LOCATION))
+                .thenReturn("http://keycloak/admin/realms/booking-platform/users/emp-1");
+        ArgumentCaptor<UserRepresentation> captor = ArgumentCaptor.forClass(UserRepresentation.class);
+        when(usersResource.create(captor.capture())).thenReturn(response);
+
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("phoneNumber", "555");
+        attributes.put("nickname", null); // null value → skipped by buildUserRepresentation
+
+        String id = service.createUser(new UserCommandDTO(
+                null, "emp@x.com", "Pass1!", "Emp", "Loyee", "employee", attributes));
+
+        assertThat(id).isEqualTo("emp-1");
+        UserRepresentation built = captor.getValue();
+        assertThat(built.getGroups()).containsExactly(EMPLOYEES_GROUP.getValue());
+        assertThat(built.getAttributes()).containsEntry("phoneNumber", List.of("555"));
+        assertThat(built.getAttributes()).doesNotContainKey("nickname");
+    }
+
+    @Test
+    void createUser_customerRole_assignsCustomersGroup() {
+        when(response.getStatus()).thenReturn(201);
+        when(response.getHeaderString(HttpHeaders.LOCATION))
+                .thenReturn("http://keycloak/admin/realms/booking-platform/users/cust-1");
+        ArgumentCaptor<UserRepresentation> captor = ArgumentCaptor.forClass(UserRepresentation.class);
+        when(usersResource.create(captor.capture())).thenReturn(response);
+
+        service.createUser(new UserCommandDTO(null, "c@x.com", "Pass1!", "Cust", "Omer", "customer", Map.of()));
+
+        assertThat(captor.getValue().getGroups()).containsExactly(CUSTOMERS_GROUP.getValue());
+    }
+
+    // ── updateUser ────────────────────────────────────────────────────────────
+
+    @Test
+    void updateUser_allFieldsProvided_updatesAndReturnsRepresentation() {
+        UserRepresentation existing = makeUser("u-1", "old@x.com");
+        when(userResource.toRepresentation()).thenReturn(existing);
+
+        Map<String, String> attributes = Map.of("phoneNumber", "123");
+        UserRepresentation result = service.updateUser(new UserCommandDTO(
+                "u-1", "new@x.com", null, "New", "Name", null, attributes));
+
+        verify(userResource).update(existing);
+        assertThat(existing.getFirstName()).isEqualTo("New");
+        assertThat(existing.getLastName()).isEqualTo("Name");
+        assertThat(existing.getEmail()).isEqualTo("new@x.com");
+        assertThat(existing.getUsername()).isEqualTo("new@x.com");
+        assertThat(existing.getAttributes()).containsEntry("phoneNumber", List.of("123"));
+        assertThat(result).isSameAs(existing);
+    }
+
+    @Test
+    void updateUser_nullFields_leavesExistingValuesUnchanged() {
+        UserRepresentation existing = makeUser("u-1", "old@x.com");
+        existing.setFirstName("Old");
+        existing.setLastName("Name");
+        when(userResource.toRepresentation()).thenReturn(existing);
+
+        service.updateUser(new UserCommandDTO("u-1", null, null, null, null, null, null));
+
+        verify(userResource).update(existing);
+        assertThat(existing.getFirstName()).isEqualTo("Old");
+        assertThat(existing.getLastName()).isEqualTo("Name");
+        assertThat(existing.getEmail()).isEqualTo("old@x.com");
+    }
+
+    @Test
+    void updateUser_attributesMerge_updatesExistingAndRemovesNullValued() {
+        UserRepresentation existing = makeUser("u-1", "a@b.com");
+        Map<String, List<String>> current = new HashMap<>();
+        current.put("phoneNumber", List.of("111"));
+        current.put("country", List.of("US"));
+        existing.setAttributes(current);
+        when(userResource.toRepresentation()).thenReturn(existing);
+
+        Map<String, String> update = new HashMap<>();
+        update.put("phoneNumber", "222"); // overwrite
+        update.put("country", null);       // remove
+
+        service.updateUser(new UserCommandDTO("u-1", null, null, null, null, null, update));
+
+        assertThat(existing.getAttributes()).containsEntry("phoneNumber", List.of("222"));
+        assertThat(existing.getAttributes()).doesNotContainKey("country");
+    }
+
+    // ── getUserCount ──────────────────────────────────────────────────────────
+
+    @Test
+    void getUserCount_withSearch_returnsMatchCount() {
+        when(usersResource.search("john"))
+                .thenReturn(List.of(makeUser("u1", "a@b.com"), makeUser("u2", "b@c.com")));
+
+        assertThat(service.getUserCount("john")).isEqualTo(2);
+    }
+
+    @Test
+    void getUserCount_blankSearch_returnsTotalCount() {
+        when(usersResource.count()).thenReturn(42);
+
+        assertThat(service.getUserCount("")).isEqualTo(42);
+    }
+
+    // ── sendVerificationEmail ───────────────────────────────────────────────────
+
+    @Test
+    void sendVerificationEmail_triggersKeycloakActionsEmail() {
+        service.sendVerificationEmail("u-1");
+
+        verify(userResource).executeActionsEmail(List.of("VERIFY_EMAIL"), 604800);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

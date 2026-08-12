@@ -1,5 +1,6 @@
 package com.booking.platform.user_service.service;
 
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import org.keycloak.representations.idm.UserRepresentation;
 
 import java.util.List;
@@ -11,11 +12,9 @@ import java.util.Map;
  */
 public interface KeycloakUserService extends UserLookupService<UserRepresentation> {
 
-    String createUser(String email, String password, String firstName, String lastName,
-                      String role, Map<String, String> attributes);
+    String createUser(UserCommandDTO command);
 
-    UserRepresentation updateUser(String userId, String firstName, String lastName,
-                                  String email, Map<String, String> attributes);
+    UserRepresentation updateUser(UserCommandDTO command);
 
     List<UserRepresentation> searchUsers(String search, int page, int pageSize);
 

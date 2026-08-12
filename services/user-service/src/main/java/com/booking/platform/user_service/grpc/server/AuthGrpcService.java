@@ -7,6 +7,7 @@ import com.booking.platform.common.security.PublicEndpoint;
 import com.booking.platform.common.security.TokenBlacklistService;
 import com.booking.platform.user_service.mapper.AttributeMapper;
 import com.booking.platform.user_service.mapper.UserGrpcMapper;
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import com.booking.platform.user_service.service.AuthService;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.AuthValidator;
@@ -49,14 +50,15 @@ public class AuthGrpcService extends AuthServiceGrpc.AuthServiceImplBase {
 
         Map<String, String> attributes = attributeMapper.fromRegisterRequest(request);
 
-        String userId = keycloakUserService.createUser(
+        String userId = keycloakUserService.createUser(new UserCommandDTO(
+                null,
                 request.getEmail(),
                 request.getPassword(),
                 request.getFirstName(),
                 request.getLastName(),
                 request.hasRole() ? request.getRole() : "customer",
                 attributes
-        );
+        ));
 
         keycloakUserService.sendVerificationEmail(userId);
 

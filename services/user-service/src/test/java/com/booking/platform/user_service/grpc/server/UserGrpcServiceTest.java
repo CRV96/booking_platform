@@ -4,6 +4,7 @@ import com.booking.platform.common.grpc.user.*;
 import com.booking.platform.user_service.mapper.AttributeMapper;
 import com.booking.platform.user_service.mapper.UserGrpcMapper;
 import com.booking.platform.user_service.properties.ValidationProperties;
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.user_service.validation.UserValidator;
 import io.grpc.stub.StreamObserver;
@@ -122,7 +123,7 @@ class UserGrpcServiceTest {
     void updateUser_withFirstName_passesFirstNameToService() {
         UserRepresentation updated = makeUser("u-1", "a@b.com");
         when(attributeMapper.fromUpdateRequest(any())).thenReturn(Map.of());
-        when(keycloakUserService.updateUser(anyString(), anyString(), any(), any(), any())).thenReturn(updated);
+        when(keycloakUserService.updateUser(any(UserCommandDTO.class))).thenReturn(updated);
 
         UpdateUserRequest request = UpdateUserRequest.newBuilder()
                 .setUserId("u-1")
@@ -132,7 +133,7 @@ class UserGrpcServiceTest {
 
         verify(userValidator).validateUpdateUserRequest(request);
         verify(attributeMapper).fromUpdateRequest(request);
-        verify(keycloakUserService).updateUser(eq("u-1"), eq("John"), isNull(), isNull(), any());
+        verify(keycloakUserService).updateUser(new UserCommandDTO("u-1", null, null, "John", null, null, Map.of()));
         verify(keycloakUserService).getUserRoles("u-1");
         verify(responseObserver).onNext(any(UserResponse.class));
         verify(responseObserver).onCompleted();
@@ -142,7 +143,7 @@ class UserGrpcServiceTest {
     void updateUser_withoutFirstName_passesNullFirstNameToService() {
         UserRepresentation updated = makeUser("u-1", "a@b.com");
         when(attributeMapper.fromUpdateRequest(any())).thenReturn(Map.of());
-        when(keycloakUserService.updateUser(anyString(), isNull(), isNull(), isNull(), any())).thenReturn(updated);
+        when(keycloakUserService.updateUser(any(UserCommandDTO.class))).thenReturn(updated);
 
         UpdateUserRequest request = UpdateUserRequest.newBuilder()
                 .setUserId("u-1")
@@ -152,7 +153,25 @@ class UserGrpcServiceTest {
 
         service.updateUser(request, responseObserver);
 
-        verify(keycloakUserService).updateUser(eq("u-1"), isNull(), isNull(), isNull(), any());
+        verify(keycloakUserService).updateUser(new UserCommandDTO("u-1", null, null, null, null, null, Map.of()));
+        verify(responseObserver).onNext(any(UserResponse.class));
+        verify(responseObserver).onCompleted();
+    }
+
+    @Test
+    void updateUser_withEmailAndLastName_passesThemToService() {
+        UserRepresentation updated = makeUser("u-1", "new@x.com");
+        when(attributeMapper.fromUpdateRequest(any())).thenReturn(Map.of());
+        when(keycloakUserService.updateUser(any(UserCommandDTO.class))).thenReturn(updated);
+
+        UpdateUserRequest request = UpdateUserRequest.newBuilder()
+                .setUserId("u-1")
+                .setEmail("new@x.com")
+                .setLastName("Doe")
+                .build();
+        service.updateUser(request, responseObserver);
+
+        verify(keycloakUserService).updateUser(new UserCommandDTO("u-1", "new@x.com", null, null, "Doe", null, Map.of()));
         verify(responseObserver).onNext(any(UserResponse.class));
         verify(responseObserver).onCompleted();
     }

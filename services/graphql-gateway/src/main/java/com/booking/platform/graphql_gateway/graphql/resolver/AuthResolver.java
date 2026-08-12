@@ -28,7 +28,7 @@ public class AuthResolver {
     @PublicEndpoint
     @MutationMapping
     public AuthPayload register(@Argument("input") RegisterInput input) {
-        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: register for {}", input.email());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL mutation: register for {}", input.email());
 
         return AuthPayload.fromGrpc(authClient.register(
             input.email(),
@@ -45,7 +45,7 @@ public class AuthResolver {
     @PublicEndpoint
     @MutationMapping
     public AuthPayload login(@Argument("input") LoginInput input) {
-        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: login for {}", input.username());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL mutation: login for {}", input.username());
 
         return AuthPayload.fromGrpc(authClient.login(input.username(), input.password()));
     }

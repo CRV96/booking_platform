@@ -5,6 +5,7 @@ import com.booking.platform.user_service.properties.KeycloakProperties;
 import com.booking.platform.user_service.exception.InternalException;
 import com.booking.platform.user_service.exception.user.UserAlreadyExistsException;
 import com.booking.platform.user_service.exception.user.UserNotFoundException;
+import com.booking.platform.user_service.dto.UserCommandDTO;
 import com.booking.platform.user_service.service.KeycloakUserService;
 import com.booking.platform.common.logging.ApplicationLogger;
 import com.booking.platform.common.logging.LogErrorCode;
@@ -48,42 +49,42 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
     private final Keycloak keycloak;
     private final KeycloakProperties keycloakProperties;
 
+    private final static String CUSTOMER = "customer";
+
     @Value("${verification.email.lifespan-seconds:604800}")
     private int verificationEmailLifespanSeconds;
 
     @Override
-    public String createUser(String email, String password, String firstName, String lastName,
-                             String role, Map<String, String> attributes) {
-        ApplicationLogger.logMessage(log, Level.DEBUG, "Creating a new user with email: {}", email);
+    public String createUser(UserCommandDTO command) {
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Creating a new user with email: {}", command.email());
 
         UsersResource usersResource = getUsersResource();
 
-        UserRepresentation user = buildUserRepresentation(email, firstName, lastName, role, attributes);
-        user.setCredentials(createPasswordCredential(password));
+        UserRepresentation user = buildUserRepresentation(command);
+        user.setCredentials(createPasswordCredential(command.password()));
 
         try (Response response = usersResource.create(user)) {
-            return handleCreateUserResponse(response, email);
+            return handleCreateUserResponse(response, command.email());
         }
     }
 
     @Caching(evict = {
-            @CacheEvict(value = CacheConfig.CACHE_USER_BY_ID, key = "#a0"),
+            @CacheEvict(value = CacheConfig.CACHE_USER_BY_ID, key = "#a0.userId()"),
             @CacheEvict(value = CacheConfig.CACHE_USER_BY_EMAIL, key = "#result.email"),
             @CacheEvict(value = CacheConfig.CACHE_USER_BY_USERNAME, key = "#result.username")
     })
     @Override
-    public UserRepresentation updateUser(String userId, String firstName, String lastName,
-                                         String email, Map<String, String> attributes) {
-        ApplicationLogger.logMessage(log, Level.INFO, "Updating user: {}", userId);
+    public UserRepresentation updateUser(UserCommandDTO command) {
+        ApplicationLogger.logMessage(log, Level.INFO, "Updating user: {}", command.userId());
 
-        UserResource userResource = getUsersResource().get(userId);
+        UserResource userResource = getUsersResource().get(command.userId());
         UserRepresentation user = userResource.toRepresentation();
 
-        updateBasicFields(user, firstName, lastName, email);
-        updateAttributes(user, attributes);
+        updateBasicFields(user, command.firstName(), command.lastName(), command.email());
+        updateAttributes(user, command.attributes());
 
         userResource.update(user);
-        ApplicationLogger.logMessage(log, Level.INFO, "User updated successfully: {}", userId);
+        ApplicationLogger.logMessage(log, Level.INFO, "User updated successfully: {}", command.userId());
 
         return userResource.toRepresentation();
     }
@@ -230,20 +231,20 @@ public class KeycloakUserServiceImpl implements KeycloakUserService {
                 .toList();
     }
 
-    private UserRepresentation buildUserRepresentation(String email, String firstName, String lastName,
-                                                       String role, Map<String, String> attributes) {
+    private UserRepresentation buildUserRepresentation(UserCommandDTO command) {
         UserRepresentation user = new UserRepresentation();
-        user.setUsername(email);
-        user.setEmail(email);
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
+        user.setUsername(command.email());
+        user.setEmail(command.email());
+        user.setFirstName(command.firstName());
+        user.setLastName(command.lastName());
         user.setEnabled(true);
         user.setEmailVerified(false);
-        String group = "customer".equalsIgnoreCase(role)
+        String group = CUSTOMER.equalsIgnoreCase(command.role())
                 ? CUSTOMERS_GROUP.getValue()
                 : EMPLOYEES_GROUP.getValue();
         user.setGroups(List.of(group));
 
+        Map<String, String> attributes = command.attributes();
         if (attributes != null && !attributes.isEmpty()) {
             Map<String, List<String>> userAttributes = new HashMap<>();
             attributes.forEach((key, value) -> {
