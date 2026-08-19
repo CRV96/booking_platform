@@ -74,10 +74,10 @@
             <artifactId>mapstruct</artifactId>
         </dependency>
 
-        <!-- Spring AI: OpenAI embeddings (text-embedding-3-small) for semantic search -->
+        <!-- Spring AI: Ollama embeddings (nomic-embed-text, local, no API key) for semantic search -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-model-openai</artifactId>
+            <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
         <!-- Spring AI: MongoDB Atlas vector store ($vectorSearch via atlas-local mongot) -->
         <dependency>

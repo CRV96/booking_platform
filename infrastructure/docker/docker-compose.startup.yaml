@@ -71,6 +71,23 @@ services:
     networks:
       - bkg-network
 
+  # Local embedding model server (Spring AI semantic search) — no API key, no quota.
+  # After first start, pull the model: docker exec bkg-ollama ollama pull nomic-embed-text
+  ollama:
+    image: ollama/ollama:latest
+    container_name: bkg-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bkg-network
+
 # ==================== MESSAGING ====================
   kafka:
     image: apache/kafka:3.9.0
@@ -354,6 +371,8 @@ volumes:
     name: bkg-mongodb-mongot
   mongodb_config:
     name: bkg-mongodb-config
+  ollama_data:
+    name: bkg-ollama-data
   redis_data:
     name: bkg-redis-data
   kafka_data:
