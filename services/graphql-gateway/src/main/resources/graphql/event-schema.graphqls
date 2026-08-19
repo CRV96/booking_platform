@@ -16,6 +16,8 @@ extend type Query {
         page: Int = 0
         pageSize: Int = 20
         organizerId: String
+        """When true, also return semantic 'smart results' (see EventConnection.smartResults)."""
+        aiSearch: Boolean = false
     ): EventConnection!
 }
 
@@ -146,4 +148,6 @@ type EventConnection {
     page: Int!
     pageSize: Int!
     totalPages: Int!
+    """Semantic matches the keyword search did not return. Empty unless aiSearch: true."""
+    smartResults: [Event!]!
 }

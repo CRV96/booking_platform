@@ -69,10 +69,11 @@ public class EventResolver {
             @Argument("dateTo") String dateTo,
             @Argument("page") Integer page,
             @Argument("pageSize") Integer pageSize,
-            @Argument("organizerId") String organizerId) {
+            @Argument("organizerId") String organizerId,
+            @Argument("aiSearch") Boolean aiSearch) {
 
-        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: events(query={}, category={}, city={}, page={}, size={}, organizerId={})",
-                query, category, city, page, pageSize, organizerId);
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: events(query={}, category={}, city={}, page={}, size={}, organizerId={}, aiSearch={})",
+                query, category, city, page, pageSize, organizerId, aiSearch);
 
         var response = eventClient.searchEvents(new EventSearchRequest(
                 query,
@@ -82,10 +83,15 @@ public class EventResolver {
                 dateTo,
                 page != null ? page : 0,
                 pageSize != null ? pageSize : 20,
-                organizerId
+                organizerId,
+                aiSearch != null && aiSearch
         ));
 
         List<Event> events = response.getEventsList().stream()
+                .map(Event::fromGrpc)
+                .toList();
+
+        List<Event> smartResults = response.getSmartResultsList().stream()
                 .map(Event::fromGrpc)
                 .toList();
 
@@ -94,7 +100,8 @@ public class EventResolver {
                 response.getPagination().getTotalCount(),
                 response.getPagination().getPage(),
                 response.getPagination().getPageSize(),
-                response.getPagination().getTotalPages()
+                response.getPagination().getTotalPages(),
+                smartResults
         );
     }
 

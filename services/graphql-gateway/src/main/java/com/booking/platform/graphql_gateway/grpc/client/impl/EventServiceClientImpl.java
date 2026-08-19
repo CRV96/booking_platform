@@ -110,7 +110,8 @@ public class EventServiceClientImpl implements EventClient {
 
         SearchEventsRequest.Builder requestBuilder = SearchEventsRequest.newBuilder()
                 .setPage(request.page())
-                .setPageSize(request.pageSize());
+                .setPageSize(request.pageSize())
+                .setAiSearch(request.aiSearch());
 
         if (request.query() != null) requestBuilder.setQuery(request.query());
         if (request.category() != null) requestBuilder.setCategory(request.category());

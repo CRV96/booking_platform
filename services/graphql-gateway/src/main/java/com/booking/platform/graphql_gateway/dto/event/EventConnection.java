@@ -10,6 +10,7 @@ public record EventConnection(
         int totalCount,
         int page,
         int pageSize,
-        int totalPages
+        int totalPages,
+        List<Event> smartResults
 ) {
 }
