@@ -74,6 +74,17 @@
             <artifactId>mapstruct</artifactId>
         </dependency>
 
+        <!-- Spring AI: OpenAI embeddings (text-embedding-3-small) for semantic search -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
+        <!-- Spring AI: MongoDB Atlas vector store ($vectorSearch via atlas-local mongot) -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-vector-store-mongodb-atlas</artifactId>
+        </dependency>
+
         <!-- Testcontainers — spin up real MongoDB + Redis in tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
