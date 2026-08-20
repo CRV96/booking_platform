@@ -14,7 +14,9 @@ import org.springframework.core.annotation.Order;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * One-time backfill: embeds events that existed before semantic search was enabled and
@@ -38,20 +40,22 @@ public class VectorBackfillRunner implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
-        long existingVectors = mongoTemplate.getCollection(DocumentConst.VectorStore.COLLECTION_NAME)
-                .countDocuments();
-        if (existingVectors > 0) {
-            log.info("Vector backfill skipped — {} vectors already present in '{}'",
-                    existingVectors, DocumentConst.VectorStore.COLLECTION_NAME);
+        Set<String> alreadyIndexed = fetchIndexedEventIds();
+        List<EventDocument> missing = eventRepository.findAll().stream()
+                .filter(event -> !alreadyIndexed.contains(event.getId()))
+                .toList();
+
+        if (missing.isEmpty()) {
+            log.info("Vector backfill skipped — all {} events already indexed", alreadyIndexed.size());
             return;
         }
 
-        List<EventDocument> events = eventRepository.findAll();
-        log.info("Vector backfill starting — embedding {} events via Ollama...", events.size());
+        log.info("Vector backfill starting — {} event(s) not yet indexed ({} already present); embedding via Ollama...",
+                missing.size(), alreadyIndexed.size());
 
         int indexed = 0;
         int failed = 0;
-        for (EventDocument event : events) {
+        for (EventDocument event : missing) {
             try {
                 indexer.index(event.getId());
                 indexed++;
@@ -60,7 +64,22 @@ public class VectorBackfillRunner implements ApplicationRunner {
                 log.error("Backfill failed for event '{}': {}", event.getId(), e.getMessage());
             }
         }
-        log.info("Vector backfill complete — {} indexed, {} failed, {} total events",
-                indexed, failed, events.size());
+        log.info("Vector backfill complete — {} indexed, {} failed, {} already present",
+                indexed, failed, alreadyIndexed.size());
+    }
+
+    /**
+     * Event ids already present in the vector store (its {@code _id} is the prefixed
+     * event id — see {@link DocumentConst.VectorStore#ID_PREFIX}). Lets the backfill index
+     * only what's missing, so it self-heals partial runs instead of skipping wholesale.
+     */
+    private Set<String> fetchIndexedEventIds() {
+        String prefix = DocumentConst.VectorStore.ID_PREFIX;
+        Set<String> eventIds = new HashSet<>();
+        mongoTemplate.getCollection(DocumentConst.VectorStore.COLLECTION_NAME)
+                .distinct("_id", String.class)
+                .forEach(vectorId -> eventIds.add(
+                        vectorId.startsWith(prefix) ? vectorId.substring(prefix.length()) : vectorId));
+        return eventIds;
     }
 }

@@ -42,6 +42,10 @@ const CATEGORIES = [
         <div class="row gap-8">
           <input class="inp" style="width:200px" [(ngModel)]="filters.query" placeholder="Search events…" (keyup.enter)="search()">
           <button class="btn btn-primary btn-sm" (click)="search()">Search</button>
+          <label class="ai-toggle" title="Also surface semantic 'smart' matches found by meaning">
+            <input type="checkbox" [(ngModel)]="aiSearch" (change)="search()">
+            <span>✨ AI Search</span>
+          </label>
         </div>
       </div>
 
@@ -87,6 +91,37 @@ const CATEGORIES = [
           </div>
         }
       }
+
+      <!-- ✨ Smart Results: semantic matches the keyword search didn't surface. -->
+      @if (!loading() && !error() && aiSearch && smartResults().length > 0) {
+        <div class="section-head" style="margin-top:56px">
+          <div class="kicker">✨ Smart results</div>
+          <h2>You might also <em>like</em></h2>
+          <p class="sub">Found by meaning — matches your keyword search didn't surface.</p>
+        </div>
+        <div class="ev-grid">
+          @for (ev of smartResults(); track ev.id) {
+            <a class="ev-card fade-up" [routerLink]="['/events', ev.id]">
+              <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              <div class="ev-card-meta">
+                <span>{{ ev.category }}</span>
+                <span class="dot"></span>
+                <span>{{ ev.venue.city }}</span>
+                <span class="dot"></span>
+                <span>{{ ev.dateTime | date:'d MMM' }}</span>
+              </div>
+              <div class="ev-card-title">{{ ev.title }}</div>
+              <div class="ev-card-foot">
+                <div class="ev-card-price">
+                  @if (minPrice(ev) === 0) { Free }
+                  @else { From €{{ minPrice(ev) }}<small>/ ticket</small> }
+                </div>
+                <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
+              </div>
+            </a>
+          }
+        </div>
+      }
     </div>
   `,
   styles: [`
@@ -94,6 +129,8 @@ const CATEGORIES = [
     .cat-pills { display: flex; gap: 6px; flex-wrap: wrap; }
     .cat-pill { padding: 6px 14px; font-size: 13px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--ink-3); cursor: pointer; transition: all 0.15s; font-family: inherit; }
     .cat-pill:hover, .cat-pill.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+    .ai-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-3); cursor: pointer; user-select: none; white-space: nowrap; }
+    .ai-toggle input { accent-color: var(--ink); cursor: pointer; margin: 0; }
     .ev-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
     @media (max-width: 900px) { .ev-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 600px) { .ev-grid { grid-template-columns: 1fr; } }
@@ -104,7 +141,9 @@ export class EventListComponent implements OnInit {
   private apollo = inject(Apollo);
   categories = CATEGORIES;
   filters = { query: '', category: '' };
+  aiSearch = false;
   events = signal<Event[]>([]);
+  smartResults = signal<Event[]>([]);
   connection = signal<EventConnection | null>(null);
   loading = signal(false);
   error = signal('');
@@ -123,9 +162,14 @@ export class EventListComponent implements OnInit {
     this.error.set('');
     this.apollo.query<{ events: EventConnection }>({
       query: GET_EVENTS,
-      variables: { query: this.filters.query || null, category: this.filters.category || null, page: this.page(), pageSize: 12 }
+      variables: { query: this.filters.query || null, category: this.filters.category || null, page: this.page(), pageSize: 12, aiSearch: this.aiSearch }
     }).subscribe({
-      next: r => { this.loading.set(false); this.connection.set(r.data.events); this.events.set(r.data.events.events); },
+      next: r => {
+        this.loading.set(false);
+        this.connection.set(r.data.events);
+        this.events.set(r.data.events.events);
+        this.smartResults.set(r.data.events.smartResults ?? []);
+      },
       error: err => { this.loading.set(false); this.error.set(err.message || 'Failed to load events'); }
     });
   }

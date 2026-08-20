@@ -59,6 +59,13 @@ public final class DocumentConst {
         public static final String COLLECTION_NAME = "event_vectors";
         public static final String INDEX_NAME = "event_vector_index";
 
+        /**
+         * Prefix for the vector document id. Without it, a 24-hex event id is coerced to a
+         * Mongo {@code ObjectId} on write and fails an {@code ObjectId → String} cast on read.
+         * The prefix makes the id a plain String, avoiding the coercion.
+         */
+        public static final String ID_PREFIX = "evt_";
+
         /** Field holding the embedding vector (matches spring.ai.vectorstore.mongodb.path-name). */
         public static final String PATH = "embedding";
 

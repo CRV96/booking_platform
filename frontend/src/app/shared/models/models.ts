@@ -71,6 +71,7 @@ export interface EventConnection {
   page: number;
   pageSize: number;
   totalPages: number;
+  smartResults: Event[];
 }
 
 export interface Booking {

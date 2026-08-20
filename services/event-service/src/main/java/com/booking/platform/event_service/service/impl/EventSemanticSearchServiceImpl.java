@@ -5,13 +5,13 @@ import com.booking.platform.event_service.document.EventDocument;
 import com.booking.platform.event_service.document.enums.EventStatus;
 import com.booking.platform.event_service.repository.EventRepository;
 import com.booking.platform.event_service.service.EventSemanticSearchService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
 import org.springframework.ai.vectorstore.filter.FilterExpressionBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -30,24 +30,45 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 @ConditionalOnProperty(name = "app.semantic-search.enabled", havingValue = "true")
 public class EventSemanticSearchServiceImpl implements EventSemanticSearchService {
 
     private final VectorStore vectorStore;
     private final EventRepository eventRepository;
 
+    /**
+     * Minimum similarity (MongoDB Atlas cosine score = (1 + cosine) / 2, so 0.5 = unrelated,
+     * 1.0 = identical) for a result to count. Drops loosely-related "noise" so smart results
+     * only appear when genuinely relevant. Tune per the score distribution of your data.
+     */
+    private final double similarityThreshold;
+
+    public EventSemanticSearchServiceImpl(
+            VectorStore vectorStore,
+            EventRepository eventRepository,
+            @Value("${app.semantic-search.similarity-threshold:0.78}") double similarityThreshold) {
+        this.vectorStore = vectorStore;
+        this.eventRepository = eventRepository;
+        this.similarityThreshold = similarityThreshold;
+    }
+
     @Override
     public List<EventDocument> search(String query, int topK, String category, String city) {
         SearchRequest request = SearchRequest.builder()
                 .query(query)
                 .topK(topK)
+                .similarityThreshold(similarityThreshold)
                 .filterExpression(buildFilter(category, city))
                 .build();
 
-        // 1) Vector store returns the nearest Documents, ranked best-first. Each id = eventId.
+        // 1) Nearest Documents, ranked best-first. Belt-and-suspenders: also drop anything
+        //    below the threshold by score in case the store didn't pre-filter. Strip the id
+        //    prefix to recover the eventId (see DocumentConst.VectorStore.ID_PREFIX).
         List<Document> hits = vectorStore.similaritySearch(request);
-        List<String> rankedIds = hits.stream().map(Document::getId).toList();
+        List<String> rankedIds = hits.stream()
+                .filter(hit -> hit.getScore() == null || hit.getScore() >= similarityThreshold)
+                .map(hit -> stripIdPrefix(hit.getId()))
+                .toList();
         if (rankedIds.isEmpty()) {
             return List.of();
         }
@@ -71,6 +92,11 @@ public class EventSemanticSearchServiceImpl implements EventSemanticSearchServic
      * provided. Built programmatically (not string concatenation) so values with quotes
      * or apostrophes (e.g. a city name) can't break the expression.
      */
+    private String stripIdPrefix(String vectorId) {
+        String prefix = DocumentConst.VectorStore.ID_PREFIX;
+        return vectorId.startsWith(prefix) ? vectorId.substring(prefix.length()) : vectorId;
+    }
+
     private Filter.Expression buildFilter(String category, String city) {
         FilterExpressionBuilder b = new FilterExpressionBuilder();
         FilterExpressionBuilder.Op expr = b.eq(DocumentConst.VectorStore.META_STATUS, EventStatus.PUBLISHED.name());

@@ -39,16 +39,21 @@ public class EventVectorIndexerImpl implements EventVectorIndexer {
         }
 
         // Upsert: delete the previous vector (if any) for this id, then add the fresh one.
-        // Using the eventId as the Document id keeps a single entry per event.
-        vectorStore.delete(List.of(eventId));
+        // One entry per event, keyed by the prefixed vector id.
+        vectorStore.delete(List.of(vectorId(eventId)));
         vectorStore.add(List.of(toVectorDocument(event)));
         log.info("Indexed event '{}' into vector store '{}'", eventId, DocumentConst.VectorStore.COLLECTION_NAME);
     }
 
     @Override
     public void remove(String eventId) {
-        vectorStore.delete(List.of(eventId));
+        vectorStore.delete(List.of(vectorId(eventId)));
         log.info("Removed event '{}' from vector store '{}'", eventId, DocumentConst.VectorStore.COLLECTION_NAME);
+    }
+
+    /** The vector-store document id for an event (prefixed to force String storage in Mongo). */
+    private String vectorId(String eventId) {
+        return DocumentConst.VectorStore.ID_PREFIX + eventId;
     }
 
     /**
@@ -68,7 +73,7 @@ public class EventVectorIndexerImpl implements EventVectorIndexer {
         putIfNotNull(metadata, DocumentConst.VectorStore.META_DATE_TIME,
                 event.getDateTime() != null ? event.getDateTime().toEpochMilli() : null);
 
-        return new Document(event.getId(), buildEmbeddingText(event), metadata);
+        return new Document(vectorId(event.getId()), buildEmbeddingText(event), metadata);
     }
 
     /**

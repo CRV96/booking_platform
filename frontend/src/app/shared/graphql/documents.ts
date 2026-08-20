@@ -75,10 +75,13 @@ export const GET_EVENTS = gql`
   query GetEvents(
     $query: String $category: EventCategory $city: String
     $dateFrom: String $dateTo: String $page: Int $pageSize: Int $organizerId: String
+    $aiSearch: Boolean
   ) {
     events(query: $query category: $category city: $city
-           dateFrom: $dateFrom dateTo: $dateTo page: $page pageSize: $pageSize organizerId: $organizerId) {
+           dateFrom: $dateFrom dateTo: $dateTo page: $page pageSize: $pageSize organizerId: $organizerId
+           aiSearch: $aiSearch) {
       events { ${EVENT_FIELDS} }
+      smartResults { ${EVENT_FIELDS} }
       totalCount page pageSize totalPages
     }
   }
