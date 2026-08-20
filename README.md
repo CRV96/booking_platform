@@ -77,7 +77,102 @@ sequenceDiagram
     B->>R: release lock
 ```
 
-When a booking is later cancelled, a `BookingCancelledEvent` triggers Ticket Service to mark all associated tickets as `CANCELLED`.
+### Request Flow Example: Cancelling a Booking (with refund)
+
+Cancellation is the reverse saga. The booking is marked cancelled and seats are restored synchronously; the refund, ticket cancellation, and notification happen asynchronously off `BookingCancelled`. A paid booking follows `CANCELLED → REFUND_PENDING → REFUNDED`.
+
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant GW as GraphQL Gateway
+    participant B as Booking Service
+    participant E as Event Service
+    participant K as Kafka
+    participant P as Payment Service
+    participant T as Ticket Service
+    participant N as Notification Service
+
+    C->>GW: cancelBooking
+    GW->>B: gRPC
+    B->>B: status → CANCELLED<br/>(REFUND_PENDING if already paid)
+    B->>E: gRPC — restore seats (+quantity)
+    B->>K: publish BookingCancelled
+    B-->>GW: Booking (CANCELLED)
+    GW-->>C: Booking
+
+    Note over K: fan-out (async)
+    par refund (only if paid)
+        K->>P: process refund
+        P->>K: publish PaymentRefundCompleted
+        K->>B: status → REFUNDED
+    and cancel tickets
+        K->>T: mark tickets CANCELLED
+    and notify
+        K->>N: cancellation email
+    end
+```
+
+> **Payment failure (unhappy path):** if the payment **fails** during booking, payment-service emits `PaymentFailed`; booking-service marks the booking failed (releasing the reserved seats) and notification-service emails the user. The booking is never confirmed and no ticket is generated.
+
+### Request Flow Example: Creating an Event
+
+An organizer (`employee` role) creates an event. The write path is synchronous and simple — validate, persist as `DRAFT`, publish one event — while the side effects (organizer email, semantic indexing) happen asynchronously off the Kafka event, so the API responds immediately.
+
+```mermaid
+sequenceDiagram
+    participant C as Organizer (employee)
+    participant GW as GraphQL Gateway
+    participant E as Event Service
+    participant K as Kafka
+    participant N as Notification Service
+    participant U as User Service
+    participant O as Ollama
+
+    C->>GW: createEvent (JWT — employee role)
+    GW->>E: gRPC CreateEvent
+    E->>E: validate (dates, seats, venue)
+    E->>E: persist → MongoDB eventdb (status DRAFT)
+    E->>K: publish EVENT_CREATED
+    E-->>GW: Event (DRAFT)
+    GW-->>C: Event
+
+    Note over K: fan-out (async, off the write path)
+    par notify organizer
+        K->>N: onEventCreated
+        N->>U: gRPC getUserEmail(organizerId)
+        N->>N: send "event draft created" email
+    and semantic index (if SEMANTIC_SEARCH_ENABLED)
+        K->>E: VectorIndexConsumer
+        E->>O: embed event text
+        E->>E: upsert → event_vectors
+    end
+```
+
+### Event Lifecycle
+
+An event moves through a small state machine. Only `DRAFT` events can be **published**; only `DRAFT` or `PUBLISHED` events can be **cancelled**. Every transition emits a Kafka event consumed by notification-service (organizer email) and analytics-service, and drives the semantic index in event-service (create/publish → index, cancel → remove).
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT: createEvent
+    DRAFT --> PUBLISHED: publishEvent
+    DRAFT --> CANCELLED: cancelEvent
+    PUBLISHED --> CANCELLED: cancelEvent
+    CANCELLED --> [*]
+    COMPLETED --> [*]
+    note right of PUBLISHED
+        Visible to public + semantic search
+    end note
+    note right of COMPLETED
+        Terminal — past events (seed history);
+        no automatic runtime transition yet
+    end note
+```
+
+- **`DRAFT → PUBLISHED`** (`publishEvent` → `EVENT_PUBLISHED`) — makes the event visible to public and semantic search.
+- **`DRAFT → CANCELLED`** — cancels a draft that was never public (removes its vector if it was indexed).
+- **`PUBLISHED → CANCELLED`** — pulls a live event from search (`EVENT_CANCELLED` → removed from the vector store, organizer notified). Note: this does **not** auto-cancel existing bookings.
+- **`COMPLETED`** — terminal status for past events; currently only produced by seed data (no scheduled job transitions live events to it yet).
 
 ## Services
 
@@ -402,7 +497,12 @@ booking-platform/
 │   ├── dev/                         # Development properties (per service)
 │   └── prod/                        # Production properties
 ├── infrastructure/
-│   ├── docker/                      # Docker Compose files, Dockerfile
+│   ├── docker/                      # Docker Compose + shared Dockerfile
+│   │   ├── docker-compose.yaml            #   Wrapper (infra + services + nginx)
+│   │   ├── docker-compose.startup.yaml    #   Infra (Postgres, Mongo, Redis, Kafka, Ollama, Keycloak, observability)
+│   │   ├── docker-compose.services.yaml   #   Application services
+│   │   ├── Dockerfile.service             #   Shared multi-stage build for all services
+│   │   └── postgres/init-multiple-dbs.sh  #   Creates userdb/bookingdb/paymentdb/eventdb
 │   ├── k8s/                         # Kubernetes manifests
 │   │   ├── run.sh                   #   Single script — starts the entire platform
 │   │   ├── .env.k8s                 #   Secrets (gitignored)
@@ -426,6 +526,18 @@ booking-platform/
 ├── docs/                            # Guides and reference docs
 │   ├── frontend-guide.md            #   Angular app walkthrough
 │   └── error-codes.md               #   Structured error code reference
-├── .github/workflows/ci.yml        # CI pipeline
+├── release/                         # Release tooling
+│   └── scripts/release-manager.sh   #   Version bump, changelog, tagging
+├── .github/workflows/ci.yml         # CI pipeline
+├── run-service.sh                   # Run one service on the host (sources .env)
+├── start-all.sh                     # Start every service (tmux session)
+├── build-service.sh                 # Build a single service image
+├── mvnw / mvnw.cmd                  # Maven wrapper
+├── README.md                        # This file
+├── INSTALLATION.md                  # Detailed setup & operations guide
+├── SECURITY.md                      # Security policy
+├── LICENSE                          # License
+├── .env                             # Local env overrides (gitignored)
+├── .gitignore / .gitattributes / .dockerignore
 └── pom.xml                          # Root Maven POM (multi-module)
 ```
