@@ -12,6 +12,8 @@ import com.booking.platform.event_service.exception.PermissionDeniedException;
 import com.booking.platform.event_service.mapper.EventMapper;
 import com.booking.platform.event_service.properties.EventProperties;
 import com.booking.platform.event_service.service.EventService;
+import com.booking.platform.event_service.service.SmartSearchResult;
+import com.booking.platform.event_service.service.SmartSearchService;
 import io.grpc.Context;
 import io.grpc.stub.StreamObserver;
 import org.junit.jupiter.api.AfterEach;
@@ -38,6 +40,7 @@ import static org.mockito.Mockito.*;
 class EventGrpcServiceTest {
 
     @Mock private EventService eventService;
+    @Mock private SmartSearchService smartSearchService;
     @Mock private EventMapper eventMapper;
     @Mock private EventProperties eventProperties;
     @Mock private StreamObserver<EventResponse> eventObserver;
@@ -103,11 +106,12 @@ class EventGrpcServiceTest {
     // ── searchEvents (public) ─────────────────────────────────────────────────
 
     @Test
-    void searchEvents_returnsResponseWithPagination() {
-        when(eventService.searchEvents(any())).thenReturn(List.of(eventOwnedBy(USER_ID)));
+    void searchEvents_returnsResponseWithClassicAndSmartResults() {
+        when(smartSearchService.search(any(), anyBoolean()))
+                .thenReturn(new SmartSearchResult(List.of(eventOwnedBy(USER_ID)), List.of(eventOwnedBy(USER_ID))));
         when(eventMapper.toProtoList(any())).thenReturn(List.of(EventInfo.getDefaultInstance()));
 
-        grpcService.searchEvents(SearchEventsRequest.newBuilder().build(), searchObserver);
+        grpcService.searchEvents(SearchEventsRequest.newBuilder().setAiSearch(true).build(), searchObserver);
 
         ArgumentCaptor<SearchEventsResponse> captor = ArgumentCaptor.forClass(SearchEventsResponse.class);
         verify(searchObserver).onNext(captor.capture());
@@ -115,12 +119,14 @@ class EventGrpcServiceTest {
 
         SearchEventsResponse response = captor.getValue();
         assertThat(response.getEventsCount()).isEqualTo(1);
+        assertThat(response.getSmartResultsCount()).isEqualTo(1);
         assertThat(response.getPagination().getTotalCount()).isEqualTo(1);
     }
 
     @Test
     void searchEvents_defaultPageSize_usesProperties() {
-        when(eventService.searchEvents(any())).thenReturn(List.of());
+        when(smartSearchService.search(any(), anyBoolean()))
+                .thenReturn(new SmartSearchResult(List.of(), List.of()));
 
         grpcService.searchEvents(SearchEventsRequest.newBuilder().build(), searchObserver);
 
