@@ -155,7 +155,7 @@ class EventServiceClientImplTest {
     @Test
     void searchEvents_withAllOptionals_setsThemOnRequest() {
         EventSearchRequest req = new EventSearchRequest("rock", "CONCERT", "London",
-                "2026-01-01", "2026-12-31", 0, 10, null);
+                "2026-01-01", "2026-12-31", 0, 10, null, false);
         client.searchEvents(req);
 
         ArgumentCaptor<SearchEventsRequest> captor = ArgumentCaptor.forClass(SearchEventsRequest.class);
@@ -170,7 +170,7 @@ class EventServiceClientImplTest {
 
     @Test
     void searchEvents_allOptionalsNull_notSetOnRequest() {
-        EventSearchRequest req = new EventSearchRequest(null, null, null, null, null, 0, 10, null);
+        EventSearchRequest req = new EventSearchRequest(null, null, null, null, null, 0, 10, null, false);
         client.searchEvents(req);
 
         ArgumentCaptor<SearchEventsRequest> captor = ArgumentCaptor.forClass(SearchEventsRequest.class);

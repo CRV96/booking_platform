@@ -38,6 +38,8 @@
         <!-- Spring -->
         <spring-boot.version>3.4.1</spring-boot.version>
         <spring-cloud.version>2024.0.0</spring-cloud.version>
+        <!-- Spring AI 1.0.x aligns with Spring Boot 3.4.x (1.1.x targets 3.5, 2.0.x targets Boot 4) -->
+        <spring-ai.version>1.0.9</spring-ai.version>
 
         <!-- gRPC & Protobuf -->
         <grpc.version>1.80.0</grpc.version>
@@ -69,6 +71,10 @@
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
         <sonar.exclusions>**/target/**</sonar.exclusions>
         <sonar.coverage.exclusions>**/dto/**,**/config/**,**/entity/**,**/model/**,**/*Application.java</sonar.coverage.exclusions>
+        <!-- Config classes (Spring @Configuration, typed Kafka factories, etc.) are framework
+             boilerplate that is unavoidably repetitive across services — exclude from copy/paste
+             detection, consistent with the coverage exclusions above. -->
+        <sonar.cpd.exclusions>**/config/**</sonar.cpd.exclusions>
     </properties>
 
     <!-- ==================== DEPENDENCY MANAGEMENT ==================== -->
@@ -89,6 +95,15 @@
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
                 <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- Spring AI BOM — manages spring-ai-* starter versions -->
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

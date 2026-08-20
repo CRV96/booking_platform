@@ -120,6 +120,9 @@ message SearchEventsRequest {
   optional string date_to = 5;         // ISO 8601 — events starting on or before
   optional string organizer_id = 8;    // Filter by organizer userId (returns all statuses)
 
+  // When true, also return semantic "smart results" alongside the keyword results.
+  bool ai_search = 9;
+
   // Pagination
   int32 page = 6;       // 0-indexed, default 0
   int32 page_size = 7;  // Default 20, max 100
@@ -128,6 +131,8 @@ message SearchEventsRequest {
 message SearchEventsResponse {
   repeated EventInfo events = 1;
   PaginationInfo pagination = 2;
+  // Semantic matches the keyword search did NOT return (empty unless ai_search=true).
+  repeated EventInfo smart_results = 3;
 }
 
 // ============================================================================

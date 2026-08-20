@@ -25,15 +25,28 @@ services:
       - bkg-network
 
   mongodb:
-    image: mongo:7
+    # Atlas-local bundles mongod + mongot (the Atlas Search / Vector Search engine)
+    # and runs as a single-node replica set. Same data API as stock mongo, plus
+    # $vectorSearch. Note: env vars use the MONGODB_ prefix (not MONGO_).
+    image: mongodb/mongodb-atlas-local:7.0.14
     container_name: bkg-mongodb
+    # Stable hostname so the single-node replica set's member address stays valid
+    # across container recreation (default would be the random container ID, which
+    # changes each recreate and breaks the RS config). Resolvable via Docker DNS
+    # for in-network services; host clients use directConnection=true (bypasses
+    # topology discovery, so they never need to resolve this name).
+    hostname: bkg-mongodb
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: admin
+      MONGODB_INITDB_ROOT_USERNAME: admin
+      MONGODB_INITDB_ROOT_PASSWORD: admin
     volumes:
       - mongodb_data:/data/db
+      - mongodb_mongot:/data/mongot
+      # /data/configdb holds the replica-set internal-auth keyfile — MUST be
+      # persisted, or a recreated container loses the keyfile and mongod won't start.
+      - mongodb_config:/data/configdb
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
@@ -52,6 +65,23 @@ services:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bkg-network
+
+  # Local embedding model server (Spring AI semantic search) — no API key, no quota.
+  # After first start, pull the model: docker exec bkg-ollama ollama pull nomic-embed-text
+  ollama:
+    image: ollama/ollama:latest
+    container_name: bkg-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -337,6 +367,12 @@ volumes:
     name: bkg-postgres-data
   mongodb_data:
     name: bkg-mongodb-data
+  mongodb_mongot:
+    name: bkg-mongodb-mongot
+  mongodb_config:
+    name: bkg-mongodb-config
+  ollama_data:
+    name: bkg-ollama-data
   redis_data:
     name: bkg-redis-data
   kafka_data:

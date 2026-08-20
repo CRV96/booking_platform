@@ -10,6 +10,8 @@ import com.booking.platform.event_service.exception.PermissionDeniedException;
 import com.booking.platform.event_service.mapper.EventMapper;
 import com.booking.platform.event_service.properties.EventProperties;
 import com.booking.platform.event_service.service.EventService;
+import com.booking.platform.event_service.service.SmartSearchResult;
+import com.booking.platform.event_service.service.SmartSearchService;
 import io.grpc.stub.StreamObserver;
 import com.booking.platform.common.logging.ApplicationLogger;
 import com.booking.platform.common.logging.LogErrorCode;
@@ -36,6 +38,7 @@ import java.util.List;
 public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
 
     private final EventService eventService;
+    private final SmartSearchService smartSearchService;
     private final EventMapper eventMapper;
     private final EventProperties eventProperties;
 
@@ -56,10 +59,11 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
     @PublicEndpoint
     @Override
     public void searchEvents(SearchEventsRequest request, StreamObserver<SearchEventsResponse> responseObserver) {
-        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC SearchEvents: query='{}', category='{}', city='{}', page={}",
-                request.getQuery(), request.getCategory(), request.getCity(), request.getPage());
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC SearchEvents: query='{}', category='{}', city='{}', page={}, aiSearch={}",
+                request.getQuery(), request.getCategory(), request.getCity(), request.getPage(), request.getAiSearch());
 
-        List<EventDocument> events = eventService.searchEvents(request);
+        SmartSearchResult result = smartSearchService.search(request, request.getAiSearch());
+        List<EventDocument> events = result.results();
 
         int page = Math.max(request.getPage(), 0);
         int pageSize = normalizePageSize(request.getPageSize());
@@ -68,6 +72,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
 
         SearchEventsResponse response = SearchEventsResponse.newBuilder()
                 .addAllEvents(eventMapper.toProtoList(events))
+                .addAllSmartResults(eventMapper.toProtoList(result.smartResults()))
                 .setPagination(PaginationInfo.newBuilder()
                         .setTotalCount(totalCount)
                         .setPage(page)

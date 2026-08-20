@@ -1,73 +1,80 @@
 # Booking Platform
 
-A production-grade event booking platform built with Java 21 and Spring Boot microservices, backed by an Angular frontend. The system handles user registration, event management, seat booking with distributed locking, payment processing, ticket generation with automatic cancellation on booking cancellation, email notifications, and real-time analytics — all connected through gRPC, Kafka, and a GraphQL API gateway.
+A production-grade event booking platform built with Java 21 and Spring Boot microservices, backed by an Angular frontend. The system handles user registration, event management, seat booking with distributed locking, payment processing, ticket generation with automatic cancellation on booking cancellation, email notifications, real-time analytics, and AI-powered **semantic ("smart") event search** — all connected through gRPC, Kafka, and a GraphQL API gateway.
 
 ## Architecture
 
-```
-                                    ┌─────────────────────────────────┐
-                                    │          GraphQL Gateway        │
-                                    │           :8080                 │
-                                    │  (Rate Limiting, JWT Auth,      │
-                                    │   Request Routing)              │
-                                    └───────────┬─────────────────────┘
-                                                │ gRPC
-                 ┌──────────────┬───────────────┼───────────────┬──────────────┬──────────────┐
-                 │              │               │               │              │              │
-          ┌──────▼──────┐ ┌────▼────────┐ ┌────▼────────┐ ┌────▼────────┐ ┌───▼───────┐ ┌───▼─────────┐
-          │   User      │ │   Event     │ │  Booking    │ │  Payment    │ │  Ticket   │ │  Analytics  │
-          │  Service    │ │  Service    │ │  Service    │ │  Service    │ │  Service  │ │  Service    │
-          │   :8081     │ │   :8082     │ │   :8083     │ │   :8084     │ │   :8088   │ │   :8087     │
-          │  gRPC:9091  │ │  gRPC:9093  │ │  gRPC:9094  │ │  gRPC:9095  │ │ gRPC:9096 │ │  gRPC:9097  │
-          └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └─────┬─────┘ └──────┬──────┘
-                 │               │               │               │               │              │
-          ┌──────▼──────┐ ┌──────▼──────┐ ┌──────▼──────┐ ┌──────▼──────┐ ┌─────▼─────┐ ┌──────▼──────┐
-          │ PostgreSQL  │ │  MongoDB    │ │ PostgreSQL  │ │ PostgreSQL  │ │  MongoDB  │ │  MongoDB    │
-          │  (userdb)   │ │  (eventdb)  │ │ (bookingdb) │ │ (paymentdb) │ │ (ticketdb)│ │(analyticsdb)│
-          └─────────────┘ └─────────────┘ └──────┬──────┘ └─────────────┘ └───────────┘ └─────────────┘
-                                                 │
-                                           ┌─────▼───────┐
-                                           │   Redis     │◄── GraphQL Gateway (rate limiting)
-                                           │  (locks,    │
-                                           │ rate-limit) │
-                                           └─────────────┘
+```mermaid
+flowchart TB
+    Client(["Client — Angular SPA"])
+    GW["GraphQL Gateway :8080<br/>JWT · rate limit · routing"]
+    Client -->|GraphQL| GW
 
-                              ┌──────────────────────────────────────┐
-                              │             Apache Kafka             │
-                              │  (booking.*, event.*, payment.*)     │
-                              └────────────┬─────────────────────────┘
-                                           │
-                              ┌─────────────▼──────────────┐
-                              │   Notification Service     │
-                              │          :8086             │
-                              │  (Email via MailHog/SMTP)  │
-                              └────────────────────────────┘
+    GW -->|gRPC| USER["User :8081"]
+    GW -->|gRPC| EVENT["Event :8082"]
+    GW -->|gRPC| BOOK["Booking :8083"]
+    GW -->|gRPC| PAY["Payment :8084"]
+    GW -->|gRPC| TICK["Ticket :8088"]
+    GW -->|gRPC| ANAL["Analytics :8087"]
 
-  ┌───────────────┐    ┌───────────────┐
-  │ Config Server │    │    Eureka     │
-  │    :8888      │    │    :8761      │
-  │ (centralized  │    │  (service     │
-  │  config)      │    │   discovery)  │
-  └───────────────┘    └───────────────┘
+    USER --> UDB[("PostgreSQL<br/>userdb")]
+    EVENT --> EDB[("MongoDB<br/>eventdb")]
+    BOOK --> BDB[("PostgreSQL<br/>bookingdb")]
+    PAY --> PDB[("PostgreSQL<br/>paymentdb")]
+    TICK --> TDB[("MongoDB<br/>ticketdb")]
+    ANAL --> ADB[("MongoDB<br/>analyticsdb")]
+    BOOK --> REDIS[("Redis<br/>locks · rate limit")]
+    GW -.->|rate limit| REDIS
+
+    subgraph SS["Semantic Search — Spring AI"]
+        OLLAMA["Ollama<br/>nomic-embed-text"]
+        VEC[("MongoDB<br/>event_vectors<br/>$vectorSearch")]
+    end
+    EVENT -->|embed| OLLAMA
+    EVENT -->|upsert / search| VEC
+
+    KAFKA{{"Apache Kafka<br/>booking.* · event.* · payment.*"}}
+    BOOK --> KAFKA
+    EVENT --> KAFKA
+    PAY --> KAFKA
+    KAFKA --> NOTIF["Notification :8086<br/>Email via SMTP"]
+    KAFKA -.->|reindex events| EVENT
+
+    CONFIG["Config Server :8888"]
+    EUREKA["Eureka :8761"]
 ```
 
 ### Request Flow Example: Creating a Booking
 
-```
-Client → GraphQL Gateway (JWT validation + rate limiting)
-       → Booking Service (gRPC)
-            → Redis: acquire distributed lock for seat category
-            → Event Service (gRPC): check seat availability
-            → PostgreSQL: persist booking (status: PENDING)
-            → Kafka: publish BookingCreated event
-                → Payment Service: process payment
-                    → Kafka: publish PaymentCompleted event
-                        → Booking Service: update status to CONFIRMED
-                            → Kafka: publish BookingConfirmed event
-                                → Ticket Service: generate tickets (stored in MongoDB)
-                                → Notification Service: send confirmation email
-                                → Analytics Service: record booking metrics
-            → Redis: release distributed lock
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant GW as GraphQL Gateway
+    participant B as Booking Service
+    participant R as Redis
+    participant E as Event Service
+    participant K as Kafka
+    participant P as Payment Service
+    participant T as Ticket Service
+    participant N as Notification Service
+    participant A as Analytics Service
+
+    C->>GW: createBooking (JWT + rate limit)
+    GW->>B: gRPC
+    B->>R: acquire seat lock
+    B->>E: gRPC — check availability
+    B->>B: persist booking (PENDING)
+    B->>K: publish BookingCreated
+    K->>P: process payment
+    P->>K: publish PaymentCompleted
+    K->>B: update status → CONFIRMED
+    B->>K: publish BookingConfirmed
+    par fan-out on BookingConfirmed
+        K->>T: generate tickets
+        K->>N: send confirmation email
+        K->>A: record metrics
+    end
+    B->>R: release lock
 ```
 
 When a booking is later cancelled, a `BookingCancelledEvent` triggers Ticket Service to mark all associated tickets as `CANCELLED`.
@@ -78,7 +85,7 @@ When a booking is later cancelled, a `BookingCancelledEvent` triggers Ticket Ser
 |---------|------|------|----------|-------------|
 | **graphql-gateway** | 8080 | — | Redis | API gateway with GraphQL, JWT authentication, rate limiting |
 | **user-service** | 8081 | 9091 | PostgreSQL | User registration/login via Keycloak, profile management |
-| **event-service** | 8082 | 9093 | MongoDB | Event CRUD, seat categories, publishing workflow |
+| **event-service** | 8082 | 9093 | MongoDB | Event CRUD, seat categories, publishing workflow, semantic "smart" search (Spring AI + Ollama) |
 | **booking-service** | 8083 | 9094 | PostgreSQL + Redis | Seat reservation with distributed locking, idempotency |
 | **payment-service** | 8084 | 9095 | PostgreSQL | Payment processing, refunds, transactional outbox |
 | **notification-service** | 8086 | — | — | Email notifications via Kafka consumers |
@@ -97,6 +104,7 @@ When a booking is later cancelled, a `BookingCancelledEvent` triggers Ticket Ser
 | **Security** | Keycloak (OAuth2/OIDC), JWT, mTLS for gRPC, rate limiting |
 | **Databases** | PostgreSQL, MongoDB, Redis |
 | **Messaging** | Apache Kafka (KRaft mode) |
+| **AI / Semantic Search** | Spring AI, Ollama (`nomic-embed-text`, local embeddings), MongoDB Atlas `$vectorSearch` |
 | **Resilience** | Resilience4j (circuit breaker, retry, bulkhead, time limiter) |
 | **Observability** | Prometheus, Grafana, Loki, Zipkin, Micrometer, structured logging |
 | **Code Quality** | JaCoCo, SonarQube/SonarCloud |
@@ -127,6 +135,36 @@ When a booking is later cancelled, a `BookingCancelledEvent` triggers Ticket Ser
 - **Dead Letter Topics (DLT)** — Failed Kafka messages are routed to dead letter topics for investigation instead of being silently dropped.
 - **Structured logging with correlation IDs** — Every request gets a correlation ID that propagates across all services via gRPC metadata and Kafka headers, enabling end-to-end request tracing in Grafana/Loki.
 - **Email verification** — Delegated entirely to Keycloak, which sends a branded verification email via MailHog/SMTP and tracks `emailVerified` natively. No custom token storage needed.
+- **Semantic search** — event-service returns AI "smart results" matched by *meaning* alongside keyword results, using [Spring AI](https://spring.io/projects/spring-ai) + a local Ollama embedding model. Off by default, resilient (falls back to keyword-only if the model is down). See [Semantic Search](#semantic-search).
+
+## Semantic Search
+
+event-service augments classic keyword search with **semantic "smart results"** — events matched by meaning, not words (searching *"live music show"* also surfaces concerts whose titles never mention those words). It's exposed via `events(... aiSearch: true)` and the frontend's **✨ AI Search** toggle, and is **off by default** (`SEMANTIC_SEARCH_ENABLED`).
+
+- **Embeddings:** [Spring AI](https://spring.io/projects/spring-ai) + **Ollama** running `nomic-embed-text` (local, no API key, no cost).
+- **Storage/search:** MongoDB Atlas-local `$vectorSearch` over an `event_vectors` collection in the same MongoDB.
+- **Additive results:** smart results exclude anything keyword search already returned ("what you'd have missed"), filtered by a tunable similarity threshold.
+- **Resilient:** if Ollama is unavailable, search degrades gracefully to keyword-only. Indexing is decoupled via Kafka with retries → DLT.
+
+```mermaid
+flowchart LR
+    subgraph Index["Indexing — off the write path"]
+        direction LR
+        EV["Event created/updated"] --> KAFKA{{Kafka}}
+        KAFKA --> IDX["VectorIndexConsumer"]
+        IDX -->|embed| OL1["Ollama"]
+        IDX -->|upsert| VS[("event_vectors")]
+    end
+    subgraph Search["Searching"]
+        direction LR
+        Q["Query + AI Search on"] -->|embed| OL2["Ollama"]
+        OL2 --> VSEARCH[("event_vectors<br/>$vectorSearch + threshold")]
+        VSEARCH -->|ranked ids| HY["Hydrate from eventdb"]
+        HY --> SR["Smart results<br/>(minus keyword hits)"]
+    end
+```
+
+See **[INSTALLATION.md → Semantic Search](INSTALLATION.md#semantic-search)** for setup and tuning.
 
 ## GraphQL API
 
@@ -141,7 +179,7 @@ The gateway exposes a GraphQL endpoint at `http://localhost:8080/graphql`. Avail
 
 **Events**
 - `event(id)` — Get event details (public)
-- `events(query, category, city, dateFrom, dateTo, page, pageSize, organizerId)` — Search events (public)
+- `events(query, category, city, dateFrom, dateTo, page, pageSize, organizerId, aiSearch)` — Search events (public). With `aiSearch: true`, the response's `smartResults` also returns semantic matches the keyword search missed (see [Semantic Search](#semantic-search)).
 
 **Bookings**
 - `booking(id)` — Get booking details (own bookings)
@@ -235,7 +273,7 @@ query {
 
 An Angular 17 single-page application lives in `frontend/`. It connects to the GraphQL gateway via Apollo Angular and supports:
 
-- **Public** — Browse and search events by category, city, or keyword
+- **Public** — Browse and search events by category, city, or keyword, with an optional **✨ AI Search** toggle that adds semantic "smart results"
 - **Customers** — Register, login, book seats, view bookings (Upcoming / Past), view tickets with QR codes, cancel bookings, manage profile
 - **Organizers** (`employee` role) — Dashboard with stats, create/edit/publish/cancel events, scan and validate tickets at the door
 
@@ -295,6 +333,7 @@ See **[INSTALLATION.md](INSTALLATION.md)** for detailed instructions including:
 - Keycloak setup and test users
 - mTLS certificate generation
 - Observability stack (Grafana, Prometheus, Zipkin)
+- Semantic search setup and tuning (Spring AI + Ollama)
 - SonarQube code quality analysis
 - Postman collections for API testing
 
@@ -306,6 +345,7 @@ See **[INSTALLATION.md](INSTALLATION.md)** for detailed instructions including:
 | MongoDB | 27017 | Document data (events, tickets, analytics) |
 | Redis | 6379 | Distributed locks, rate limiting cache |
 | Kafka | 9092 | Event streaming between services |
+| Ollama | 11434 | Local embedding model (`nomic-embed-text`) for semantic search |
 | Keycloak | 8180 | OAuth2/OIDC identity provider |
 | nginx | 80 | Reverse proxy (Docker deployment only) |
 | Zipkin | 9411 | Distributed tracing |
@@ -322,8 +362,9 @@ See **[INSTALLATION.md](INSTALLATION.md)** for detailed instructions including:
 
 GitHub Actions runs automatically on every push to `main` and pull request:
 
-```
-Build → Test → Docker Build → SonarQube Analysis
+```mermaid
+flowchart LR
+    Build --> Test --> Docker["Docker Build"] --> Sonar["SonarQube Analysis"]
 ```
 
 - **Build** — Compiles all modules (Java 21, Temurin)

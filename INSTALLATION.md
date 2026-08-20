@@ -43,7 +43,9 @@ Wait for all containers to be healthy (especially Keycloak, which imports the re
 docker compose -f infrastructure/docker/docker-compose.startup.yaml ps
 ```
 
-This starts: PostgreSQL (3 databases), MongoDB, Redis, Kafka, Keycloak, Zipkin, Prometheus, Grafana, Loki, Promtail, Mongo Express, RedisInsight, MailHog, Kafka UI, and SonarQube.
+This starts: PostgreSQL (3 databases), MongoDB (Atlas-local — supports vector search), Redis, Kafka, Ollama (local embedding model server for semantic search), Keycloak, Zipkin, Prometheus, Grafana, Loki, Promtail, Mongo Express, RedisInsight, MailHog, Kafka UI, and SonarQube.
+
+> **Semantic search (optional):** event-service can serve AI "smart results" alongside keyword search, powered by [Spring AI](https://spring.io/projects/spring-ai) + a local Ollama embedding model (no API key, no cost). It is **off by default**. To enable it, see [Semantic Search](#semantic-search) below.
 
 ### 3. Generate mTLS certificates
 
@@ -458,6 +460,43 @@ Three databases are created automatically:
 - `paymentdb` — payment-service
 
 Schema migrations run automatically via Flyway on service startup.
+
+---
+
+## Semantic Search
+
+event-service can return AI **"smart results"** — events matched by *meaning* — alongside the classic keyword search, exposed via the `events(... aiSearch: true)` GraphQL query and the frontend's **✨ AI Search** toggle. It uses [Spring AI](https://spring.io/projects/spring-ai) with:
+
+- **Ollama** (`bkg-ollama` container) running `nomic-embed-text` — a local embedding model, **no API key, no cost**.
+- **MongoDB Atlas-local** `$vectorSearch` — vectors are stored in the `event_vectors` collection in the same MongoDB.
+
+It is **off by default** (`SEMANTIC_SEARCH_ENABLED=false`). To enable it locally:
+
+```bash
+# 1. Pull the embedding model into the Ollama container (once, ~275 MB)
+docker exec bkg-ollama ollama pull nomic-embed-text
+
+# 2. Enable the feature for event-service (in .env or your shell)
+export SEMANTIC_SEARCH_ENABLED=true
+
+# 3. (Re)start event-service — on boot it creates the vector index and backfills
+#    existing events into event_vectors via Ollama.
+./run-service.sh event-service
+```
+
+> **Only one Ollama may own port 11434.** If you also run the native Ollama.app, quit it (`killall Ollama`) so requests reach the Docker container that has the model — otherwise you'll see `model "nomic-embed-text" not found`.
+
+**Relevant settings** (`config/dev/event-service.properties`):
+
+| Property | Default | Purpose |
+| --- | --- | --- |
+| `app.semantic-search.enabled` | `${SEMANTIC_SEARCH_ENABLED:false}` | Master switch. Off → event-service is a pure producer; search returns keyword results only. |
+| `app.semantic-search.similarity-threshold` | `0.78` | Min similarity (Atlas cosine score, `(1+cos)/2`) for a smart result. Raise to reduce noise, lower to surface more. |
+| `app.semantic-search.smart-results-limit` | `10` | Max smart results returned. |
+| `spring.ai.ollama.base-url` | `${OLLAMA_BASE_URL:http://localhost:11434}` | Ollama endpoint. |
+| `spring.ai.ollama.embedding.options.model` | `nomic-embed-text` | Embedding model (768 dims — must match the index). |
+
+If Ollama is unavailable, semantic search **degrades gracefully**: search still returns classic keyword results (empty smart results), and a `event_semantic_search_fallback_total` metric increments (see [Observability](#observability-stack)).
 
 ---
 

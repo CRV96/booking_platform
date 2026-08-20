@@ -12,6 +12,7 @@ public record EventSearchRequest(
         String dateTo,
         int page,
         int pageSize,
-        String organizerId
+        String organizerId,
+        boolean aiSearch
 ) {
 }
