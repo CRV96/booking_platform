@@ -71,6 +71,10 @@
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
         <sonar.exclusions>**/target/**</sonar.exclusions>
         <sonar.coverage.exclusions>**/dto/**,**/config/**,**/entity/**,**/model/**,**/*Application.java</sonar.coverage.exclusions>
+        <!-- Config classes (Spring @Configuration, typed Kafka factories, etc.) are framework
+             boilerplate that is unavoidably repetitive across services — exclude from copy/paste
+             detection, consistent with the coverage exclusions above. -->
+        <sonar.cpd.exclusions>**/config/**</sonar.cpd.exclusions>
     </properties>
 
     <!-- ==================== DEPENDENCY MANAGEMENT ==================== -->
