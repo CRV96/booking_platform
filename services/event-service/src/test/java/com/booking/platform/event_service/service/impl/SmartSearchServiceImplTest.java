@@ -5,6 +5,7 @@ import com.booking.platform.event_service.document.EventDocument;
 import com.booking.platform.event_service.service.EventSemanticSearchService;
 import com.booking.platform.event_service.service.EventService;
 import com.booking.platform.event_service.service.SmartSearchResult;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +38,7 @@ class SmartSearchServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        service = new SmartSearchServiceImpl(eventService, semanticProvider, 10);
+        service = new SmartSearchServiceImpl(eventService, semanticProvider, new SimpleMeterRegistry(), 10);
     }
 
     private EventDocument ev(String id) {
@@ -88,6 +89,20 @@ class SmartSearchServiceImplTest {
     }
 
     @Test
+    void aiSearchOn_semanticFails_fallsBackToClassicOnly() {
+        when(eventService.searchEvents(any())).thenReturn(List.of(ev("1"), ev("2")));
+        when(semanticProvider.getIfAvailable()).thenReturn(semanticSearch);
+        when(semanticSearch.search(any(), anyInt(), any(), any()))
+                .thenThrow(new RuntimeException("ollama unreachable"));
+
+        SmartSearchResult result = service.search(req("q", null, null), true);
+
+        // Search must not blow up — classic results still returned, smart empty.
+        assertThat(result.results()).extracting(EventDocument::getId).containsExactly("1", "2");
+        assertThat(result.smartResults()).isEmpty();
+    }
+
+    @Test
     void aiSearchOn_passesCategoryAndCity_blankBecomesNull() {
         when(eventService.searchEvents(any())).thenReturn(List.of());
         when(semanticProvider.getIfAvailable()).thenReturn(semanticSearch);
@@ -100,7 +115,7 @@ class SmartSearchServiceImplTest {
 
     @Test
     void aiSearchOn_capsSmartResultsAtConfiguredLimit() {
-        service = new SmartSearchServiceImpl(eventService, semanticProvider, 2); // limit 2
+        service = new SmartSearchServiceImpl(eventService, semanticProvider, new SimpleMeterRegistry(), 2); // limit 2
         when(eventService.searchEvents(any())).thenReturn(List.of());
         when(semanticProvider.getIfAvailable()).thenReturn(semanticSearch);
         when(semanticSearch.search(any(), anyInt(), any(), any()))

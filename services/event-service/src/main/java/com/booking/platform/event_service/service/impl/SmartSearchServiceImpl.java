@@ -6,6 +6,8 @@ import com.booking.platform.event_service.service.EventSemanticSearchService;
 import com.booking.platform.event_service.service.EventService;
 import com.booking.platform.event_service.service.SmartSearchResult;
 import com.booking.platform.event_service.service.SmartSearchService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,6 +32,7 @@ public class SmartSearchServiceImpl implements SmartSearchService {
 
     private final EventService eventService;
     private final ObjectProvider<EventSemanticSearchService> semanticSearchProvider;
+    private final MeterRegistry meterRegistry;
 
     /** How many smart results to return after removing overlaps with the keyword results. */
     private final int smartResultsLimit;
@@ -37,9 +40,11 @@ public class SmartSearchServiceImpl implements SmartSearchService {
     public SmartSearchServiceImpl(
             EventService eventService,
             ObjectProvider<EventSemanticSearchService> semanticSearchProvider,
+            MeterRegistry meterRegistry,
             @Value("${app.semantic-search.smart-results-limit:10}") int smartResultsLimit) {
         this.eventService = eventService;
         this.semanticSearchProvider = semanticSearchProvider;
+        this.meterRegistry = meterRegistry;
         this.smartResultsLimit = smartResultsLimit;
     }
 
@@ -54,24 +59,44 @@ public class SmartSearchServiceImpl implements SmartSearchService {
             return new SmartSearchResult(classic, List.of());
         }
 
-        // Additive smart results: semantic matches minus anything the keyword search found.
-        Set<String> classicIds = classic.stream().map(EventDocument::getId).collect(Collectors.toSet());
-        // Over-fetch so that, after dropping overlaps, we can still fill smartResultsLimit.
-        int fetch = smartResultsLimit + classicIds.size();
+        return new SmartSearchResult(classic, smartResults(request, classic, semantic));
+    }
 
-        List<EventDocument> smart = semantic.search(
-                        request.getQuery(),
-                        fetch,
-                        emptyToNull(request.getCategory()),
-                        emptyToNull(request.getCity()))
-                .stream()
-                .filter(event -> !classicIds.contains(event.getId()))
-                .limit(smartResultsLimit)
-                .toList();
+    /**
+     * Additive smart results, guarded. If the embedding provider is down/slow the whole
+     * search must NOT fail — we log, count a fallback, and return empty smart results so
+     * the caller still gets the classic keyword results. Latency/outcome are metered.
+     */
+    private List<EventDocument> smartResults(SearchEventsRequest request,
+                                             List<EventDocument> classic,
+                                             EventSemanticSearchService semantic) {
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            Set<String> classicIds = classic.stream().map(EventDocument::getId).collect(Collectors.toSet());
+            // Over-fetch so that, after dropping overlaps, we can still fill smartResultsLimit.
+            int fetch = smartResultsLimit + classicIds.size();
 
-        log.debug("Smart search '{}' → {} classic, {} smart (additive)",
-                request.getQuery(), classic.size(), smart.size());
-        return new SmartSearchResult(classic, smart);
+            List<EventDocument> smart = semantic.search(
+                            request.getQuery(),
+                            fetch,
+                            emptyToNull(request.getCategory()),
+                            emptyToNull(request.getCity()))
+                    .stream()
+                    .filter(event -> !classicIds.contains(event.getId()))
+                    .limit(smartResultsLimit)
+                    .toList();
+
+            sample.stop(meterRegistry.timer("event.semantic_search", "outcome", "success"));
+            log.debug("Smart search '{}' → {} classic, {} smart (additive)",
+                    request.getQuery(), classic.size(), smart.size());
+            return smart;
+        } catch (Exception e) {
+            sample.stop(meterRegistry.timer("event.semantic_search", "outcome", "error"));
+            meterRegistry.counter("event.semantic_search.fallback").increment();
+            log.warn("Semantic search failed for query '{}' — returning classic results only: {}",
+                    request.getQuery(), e.getMessage());
+            return List.of();
+        }
     }
 
     private String emptyToNull(String value) {
