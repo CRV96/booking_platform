@@ -1,5 +1,6 @@
 package com.booking.platform.payment_service.service;
 
+import com.booking.platform.payment_service.dto.PaymentIntentResult;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 
 import java.math.BigDecimal;
@@ -31,6 +32,30 @@ public interface PaymentService {
      * @throws IllegalArgumentException if amount is null/non-positive or currency is not 3 characters
      */
     PaymentEntity processPayment(String bookingId, String userId, BigDecimal amount, String currency);
+
+    /**
+     * Get-or-create the payment intent for a booking, for client-side confirmation (checkout).
+     *
+     * <p>Unlike {@link #processPayment}, this <b>only creates</b> the intent — it does not confirm
+     * the charge. The customer confirms client-side with their own card.
+     *
+     * <p>Idempotent on {@code bookingId}:
+     * <ul>
+     *   <li>No payment yet → create a PaymentEntity + a gateway PaymentIntent (INITIATED → PROCESSING),
+     *       and return its {@code clientSecret}.</li>
+     *   <li>Payment already exists and still awaiting payment → <b>retrieve</b> the intent from the
+     *       gateway to get a fresh {@code clientSecret} (never persisted). Handles page reloads.</li>
+     *   <li>Payment already resolved (e.g. COMPLETED) → return the status with a {@code null}
+     *       client secret so the caller can route to the confirmation page.</li>
+     * </ul>
+     *
+     * @param bookingId the booking this payment is for (also the idempotency key)
+     * @param userId    Keycloak subject of the user
+     * @param amount    payment amount in standard currency units (must be positive)
+     * @param currency  ISO 4217 currency code (must be exactly 3 characters)
+     * @return the intent result (client secret + status) for the checkout page
+     */
+    PaymentIntentResult getOrCreatePaymentIntent(String bookingId, String userId, BigDecimal amount, String currency);
 
     /**
      * Processes a refund for a completed payment.

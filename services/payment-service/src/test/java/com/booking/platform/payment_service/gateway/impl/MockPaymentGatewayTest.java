@@ -68,6 +68,26 @@ class MockPaymentGatewayTest {
     }
 
     @Test
+    void retrievePaymentIntent_returnsSameIdAndAClientSecret() throws Exception {
+        String externalId = "mock_pi_abc123";
+
+        GatewayPaymentResponse response = gateway.retrievePaymentIntent(externalId).get();
+
+        assertThat(response.externalPaymentId()).isEqualTo(externalId);
+        assertThat(response.clientSecret()).isNotBlank();
+    }
+
+    @Test
+    void retrievePaymentIntent_isDeterministicForSameId() throws Exception {
+        String externalId = "mock_pi_stable";
+
+        String first = gateway.retrievePaymentIntent(externalId).get().clientSecret();
+        String second = gateway.retrievePaymentIntent(externalId).get().clientSecret();
+
+        assertThat(first).isEqualTo(second);
+    }
+
+    @Test
     void createRefund_returnsIdWithMockRePrefix() throws Exception {
         GatewayRefundResponse response = gateway
                 .createRefund("mock_pi_abc", BigDecimal.valueOf(50))

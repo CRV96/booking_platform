@@ -32,6 +32,18 @@ public interface PaymentGateway {
     CompletableFuture<GatewayPaymentResponse> createPaymentIntent(BigDecimal amount, String currency, String idempotencyKey);
 
     /**
+     * Retrieves an existing payment intent from the gateway.
+     *
+     * <p>Used to obtain a fresh {@code clientSecret} (and current status) without creating a
+     * new intent — e.g. when the checkout page is reloaded. The client secret is intentionally
+     * not persisted, so it is re-fetched here on demand.
+     *
+     * @param externalPaymentId the gateway's payment ID (e.g. Stripe PaymentIntent ID)
+     * @return future with gateway response containing the current status and client secret
+     */
+    CompletableFuture<GatewayPaymentResponse> retrievePaymentIntent(String externalPaymentId);
+
+    /**
      * Confirms a previously created payment intent.
      *
      * @param externalPaymentId the gateway's payment ID (e.g. Stripe PaymentIntent ID)

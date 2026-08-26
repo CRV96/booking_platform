@@ -2,6 +2,7 @@ package com.booking.platform.payment_service.service;
 
 import com.booking.platform.payment_service.dto.GatewayPaymentResponse;
 import com.booking.platform.payment_service.dto.GatewayRefundResponse;
+import com.booking.platform.payment_service.dto.PaymentIntentResult;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.exception.PaymentGatewayException;
@@ -52,6 +53,12 @@ class PaymentServiceImplTest {
                 .build();
     }
 
+    private PaymentEntity paymentWithExternalId(UUID id, PaymentStatus status, String externalId) {
+        PaymentEntity payment = payment(id, status);
+        payment.setExternalPaymentId(externalId);
+        return payment;
+    }
+
     // ── processPayment ────────────────────────────────────────────────────────
 
     @Test
@@ -90,6 +97,59 @@ class PaymentServiceImplTest {
 
         assertThat(result.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
         verify(transitions).markCompleted(eq(id), any());
+    }
+
+    // ── getOrCreatePaymentIntent (checkout: create-only, client confirms) ────────
+
+    @Test
+    void getOrCreatePaymentIntent_newBooking_createsIntentAndReturnsClientSecret() {
+        UUID id = UUID.randomUUID();
+        when(paymentRepository.findByIdempotencyKey(BOOKING_ID)).thenReturn(Optional.empty());
+        when(transitions.createPaymentRecord(BOOKING_ID, USER_ID, AMOUNT, CURRENCY))
+                .thenReturn(payment(id, PaymentStatus.INITIATED));
+        when(paymentGateway.createPaymentIntent(AMOUNT, CURRENCY, BOOKING_ID))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new GatewayPaymentResponse("pi_123", "requires_payment_method", "card", "pi_123_secret_abc")));
+        when(transitions.updateToProcessing(eq(id), any()))
+                .thenReturn(paymentWithExternalId(id, PaymentStatus.PROCESSING, "pi_123"));
+
+        PaymentIntentResult result = service.getOrCreatePaymentIntent(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
+
+        assertThat(result.clientSecret()).isEqualTo("pi_123_secret_abc");
+        assertThat(result.status()).isEqualTo("PROCESSING");
+        assertThat(result.externalPaymentId()).isEqualTo("pi_123");
+        // create-only: the charge is confirmed client-side, never here
+        verify(paymentGateway, never()).confirmPayment(any());
+    }
+
+    @Test
+    void getOrCreatePaymentIntent_existingAwaiting_retrievesFreshSecretWithoutCreatingAnother() {
+        UUID id = UUID.randomUUID();
+        when(paymentRepository.findByIdempotencyKey(BOOKING_ID))
+                .thenReturn(Optional.of(paymentWithExternalId(id, PaymentStatus.PROCESSING, "pi_123")));
+        when(paymentGateway.retrievePaymentIntent("pi_123"))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new GatewayPaymentResponse("pi_123", "requires_payment_method", "card", "pi_123_secret_fresh")));
+
+        PaymentIntentResult result = service.getOrCreatePaymentIntent(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
+
+        assertThat(result.clientSecret()).isEqualTo("pi_123_secret_fresh");
+        assertThat(result.status()).isEqualTo("PROCESSING");
+        verify(paymentGateway, never()).createPaymentIntent(any(), anyString(), anyString());
+    }
+
+    @Test
+    void getOrCreatePaymentIntent_alreadyCompleted_returnsStatusWithoutSecretOrGatewayCall() {
+        UUID id = UUID.randomUUID();
+        when(paymentRepository.findByIdempotencyKey(BOOKING_ID))
+                .thenReturn(Optional.of(paymentWithExternalId(id, PaymentStatus.COMPLETED, "pi_123")));
+
+        PaymentIntentResult result = service.getOrCreatePaymentIntent(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
+
+        assertThat(result.status()).isEqualTo("COMPLETED");
+        assertThat(result.clientSecret()).isNull();
+        verify(paymentGateway, never()).retrievePaymentIntent(any());
+        verify(paymentGateway, never()).createPaymentIntent(any(), anyString(), anyString());
     }
 
     @Test

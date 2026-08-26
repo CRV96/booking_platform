@@ -3,6 +3,7 @@ package com.booking.platform.payment_service.service.impl;
 import com.booking.platform.payment_service.constants.BkgConstants;
 import com.booking.platform.payment_service.dto.GatewayPaymentResponse;
 import com.booking.platform.payment_service.dto.GatewayRefundResponse;
+import com.booking.platform.payment_service.dto.PaymentIntentResult;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.exception.PaymentGatewayException;
@@ -107,6 +108,76 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         return payment;
+    }
+
+    @Override
+    public PaymentIntentResult getOrCreatePaymentIntent(String bookingId, String userId, BigDecimal amount, String currency) {
+        paymentValidator.validatePaymentForProcessing(bookingId, userId, amount, currency);
+        final String normalizedCurrency = currency.toUpperCase(Locale.ROOT);
+
+        Optional<PaymentEntity> existing = paymentRepository.findByIdempotencyKey(bookingId);
+        if (existing.isPresent()) {
+            return resolveExistingIntent(existing.get());
+        }
+        return createNewIntent(bookingId, userId, amount, normalizedCurrency);
+    }
+
+    private PaymentIntentResult createNewIntent(String bookingId, String userId, BigDecimal amount, String currency) {
+        PaymentEntity payment = transitions.createPaymentRecord(bookingId, userId, amount, currency);
+
+        // Create the intent only — the customer confirms client-side. No confirmPayment() here.
+        GatewayPaymentResponse createResponse =
+                paymentGateway.createPaymentIntent(amount, currency, bookingId).join();
+        payment = transitions.updateToProcessing(payment.getId(), createResponse);
+
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "Payment intent created for client-side confirmation: id='{}', bookingId='{}', externalId='{}'",
+                payment.getId(), bookingId, createResponse.externalPaymentId());
+        return toResult(payment, createResponse.clientSecret());
+    }
+
+    private PaymentIntentResult resolveExistingIntent(PaymentEntity payment) {
+        // Already resolved (paid or refund lifecycle) — no card entry needed. Don't call the gateway;
+        // return status with no secret so the caller routes to the confirmation page.
+        if (isResolved(payment.getStatus())) {
+            ApplicationLogger.logMessage(log, Level.INFO,
+                    "Payment intent already resolved for bookingId='{}': status={}",
+                    payment.getBookingId(), payment.getStatus());
+            return toResult(payment, null);
+        }
+
+        // Interrupted creation (record exists but no PaymentIntent was recorded) — finish it now.
+        if (payment.getExternalPaymentId() == null) {
+            GatewayPaymentResponse createResponse =
+                    paymentGateway.createPaymentIntent(payment.getAmount(), payment.getCurrency(), payment.getBookingId()).join();
+            payment = transitions.updateToProcessing(payment.getId(), createResponse);
+            return toResult(payment, createResponse.clientSecret());
+        }
+
+        // Still awaiting payment (e.g. page reload) — retrieve a fresh client secret; never stored.
+        GatewayPaymentResponse retrieveResponse =
+                paymentGateway.retrievePaymentIntent(payment.getExternalPaymentId()).join();
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "Payment intent retrieved for bookingId='{}': externalId='{}'",
+                payment.getBookingId(), payment.getExternalPaymentId());
+        return toResult(payment, retrieveResponse.clientSecret());
+    }
+
+    /** Statuses where no further card entry is possible/needed for this payment. */
+    private boolean isResolved(PaymentStatus status) {
+        return status == PaymentStatus.COMPLETED
+                || status == PaymentStatus.FAILED
+                || status == PaymentStatus.REFUND_INITIATED
+                || status == PaymentStatus.REFUNDED;
+    }
+
+    private PaymentIntentResult toResult(PaymentEntity payment, String clientSecret) {
+        return new PaymentIntentResult(
+                payment.getId().toString(),
+                payment.getBookingId(),
+                payment.getExternalPaymentId(),
+                clientSecret,
+                payment.getStatus().name());
     }
 
     @Override

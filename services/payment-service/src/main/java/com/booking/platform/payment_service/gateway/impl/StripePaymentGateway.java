@@ -80,7 +80,7 @@ public class StripePaymentGateway implements PaymentGateway {
                         .setAmount(amountInCents)
                         .setCurrency(currency.toLowerCase())
                         .putMetadata("idempotency_key", idempotencyKey)
-                        .addPaymentMethodType("card")
+                        .addPaymentMethodType(BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD)
                         .build();
 
                 PaymentIntent intent = PaymentIntent.create(params);
@@ -88,12 +88,38 @@ public class StripePaymentGateway implements PaymentGateway {
                 ApplicationLogger.logMessage(log, Level.INFO, "Stripe PaymentIntent created: id='{}', status='{}', amount={} {}",
                         intent.getId(), intent.getStatus(), amount, currency);
 
-                return new GatewayPaymentResponse(intent.getId(), intent.getStatus(), "card");
+                // clientSecret is what the browser needs to confirm this PaymentIntent
+                // client-side (Stripe Elements). The old server-side confirm flow ignores it.
+                return new GatewayPaymentResponse(intent.getId(), intent.getStatus(), BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD, intent.getClientSecret());
 
             } catch (StripeException e) {
                 ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_INTENT_FAILED, "Stripe createPaymentIntent failed: code='{}', message='{}'",
                         e.getCode(), e.getMessage());
                 throw new PaymentGatewayException("Failed to create payment intent: " + e.getMessage(), e);
+            }
+        });
+    }
+
+    @Override
+    @Retry(name = BkgConstants.BkgStripeConstants.STRIPE)
+    @CircuitBreaker(name = BkgConstants.BkgStripeConstants.STRIPE, fallbackMethod = "retrievePaymentIntentFallback")
+    @TimeLimiter(name = BkgConstants.BkgStripeConstants.STRIPE)
+    @Bulkhead(name = BkgConstants.BkgStripeConstants.STRIPE, type = Bulkhead.Type.SEMAPHORE)
+    public CompletableFuture<GatewayPaymentResponse> retrievePaymentIntent(String externalPaymentId) {
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                PaymentIntent intent = PaymentIntent.retrieve(externalPaymentId);
+
+                ApplicationLogger.logMessage(log, Level.INFO, "Stripe PaymentIntent retrieved: id='{}', status='{}'",
+                        intent.getId(), intent.getStatus());
+
+                String paymentMethod = intent.getPaymentMethod() != null ? intent.getPaymentMethod() : BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD;
+                return new GatewayPaymentResponse(intent.getId(), intent.getStatus(), paymentMethod, intent.getClientSecret());
+
+            } catch (StripeException e) {
+                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_INTENT_FAILED, "Stripe retrievePaymentIntent failed: code='{}', message='{}'",
+                        e.getCode(), e.getMessage());
+                throw new PaymentGatewayException("Failed to retrieve payment intent: " + e.getMessage(), e);
             }
         });
     }
@@ -119,7 +145,7 @@ public class StripePaymentGateway implements PaymentGateway {
 
                 String paymentMethod = intent.getPaymentMethod() != null
                         ? intent.getPaymentMethod()
-                        : "card";
+                        : BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD;
 
                 return new GatewayPaymentResponse(intent.getId(), intent.getStatus(), paymentMethod);
 
@@ -174,6 +200,15 @@ public class StripePaymentGateway implements PaymentGateway {
         return CompletableFuture.failedFuture(
                 new PaymentGatewayUnavailableException(
                         "Stripe unavailable for createPaymentIntent: " + t.getMessage(), t));
+    }
+
+    private CompletableFuture<GatewayPaymentResponse> retrievePaymentIntentFallback(
+            String externalPaymentId, Throwable t) {
+        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE, "FALLBACK retrievePaymentIntent: externalId='{}', cause='{}'",
+                externalPaymentId, t.getMessage());
+        return CompletableFuture.failedFuture(
+                new PaymentGatewayUnavailableException(
+                        "Stripe unavailable for retrievePaymentIntent: " + t.getMessage(), t));
     }
 
     private CompletableFuture<GatewayPaymentResponse> confirmPaymentFallback(
