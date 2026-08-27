@@ -6,6 +6,7 @@ import com.booking.platform.payment_service.dto.GatewayRefundResponse;
 import com.booking.platform.payment_service.exception.PaymentGatewayException;
 import com.booking.platform.payment_service.exception.PaymentGatewayUnavailableException;
 import com.booking.platform.payment_service.gateway.PaymentGateway;
+import com.booking.platform.payment_service.util.MoneyUtil;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
@@ -74,7 +75,7 @@ public class StripePaymentGateway implements PaymentGateway {
             BigDecimal amount, String currency, String idempotencyKey) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValueExact();
+                long amountInCents = MoneyUtil.toMinorUnits(amount);
 
                 PaymentIntentCreateParams params = PaymentIntentCreateParams.builder()
                         .setAmount(amountInCents)
@@ -166,7 +167,7 @@ public class StripePaymentGateway implements PaymentGateway {
             String externalPaymentId, BigDecimal amount) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                long amountInCents = amount.multiply(BigDecimal.valueOf(100)).longValueExact();
+                long amountInCents = MoneyUtil.toMinorUnits(amount);
 
                 RefundCreateParams params = RefundCreateParams.builder()
                         .setPaymentIntent(externalPaymentId)

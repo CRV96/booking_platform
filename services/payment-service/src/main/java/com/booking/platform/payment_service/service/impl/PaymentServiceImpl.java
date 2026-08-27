@@ -11,6 +11,7 @@ import com.booking.platform.payment_service.exception.PaymentGatewayUnavailableE
 import com.booking.platform.payment_service.gateway.PaymentGateway;
 import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.service.PaymentService;
+import com.booking.platform.payment_service.util.PaymentStatusUtil;
 import com.booking.platform.payment_service.validation.PaymentValidator;
 import com.booking.platform.common.logging.ApplicationLogger;
 import com.booking.platform.common.logging.LogErrorCode;
@@ -139,7 +140,7 @@ public class PaymentServiceImpl implements PaymentService {
     private PaymentIntentResult resolveExistingIntent(PaymentEntity payment) {
         // Already resolved (paid or refund lifecycle) — no card entry needed. Don't call the gateway;
         // return status with no secret so the caller routes to the confirmation page.
-        if (isResolved(payment.getStatus())) {
+        if (PaymentStatusUtil.isResolved(payment.getStatus())) {
             ApplicationLogger.logMessage(log, Level.INFO,
                     "Payment intent already resolved for bookingId='{}': status={}",
                     payment.getBookingId(), payment.getStatus());
@@ -161,14 +162,6 @@ public class PaymentServiceImpl implements PaymentService {
                 "Payment intent retrieved for bookingId='{}': externalId='{}'",
                 payment.getBookingId(), payment.getExternalPaymentId());
         return toResult(payment, retrieveResponse.clientSecret());
-    }
-
-    /** Statuses where no further card entry is possible/needed for this payment. */
-    private boolean isResolved(PaymentStatus status) {
-        return status == PaymentStatus.COMPLETED
-                || status == PaymentStatus.FAILED
-                || status == PaymentStatus.REFUND_INITIATED
-                || status == PaymentStatus.REFUNDED;
     }
 
     private PaymentIntentResult toResult(PaymentEntity payment, String clientSecret) {
