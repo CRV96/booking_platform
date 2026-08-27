@@ -41,4 +41,18 @@ public class PaymentResolver {
         return PaymentIntentResult.fromGrpc(
                 paymentClient.createPaymentIntent(bookingId, booking.getTotalPrice(), booking.getCurrency()));
     }
+
+    /**
+     * Mock mode only — simulate the payment outcome using a test card number. payment-service
+     * rejects this when running against real Stripe (the outcome must come from the webhook there).
+     */
+    @MutationMapping
+    public PaymentIntentResult confirmMockPayment(@Argument("bookingId") String bookingId,
+                                                  @Argument("cardNumber") String cardNumber) {
+        String userId = authService.getAuthenticatedUserId();
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "GraphQL mutation: confirmMockPayment(booking='{}') for user '{}'", bookingId, userId);
+
+        return PaymentIntentResult.fromGrpc(paymentClient.confirmMockPayment(bookingId, cardNumber));
+    }
 }

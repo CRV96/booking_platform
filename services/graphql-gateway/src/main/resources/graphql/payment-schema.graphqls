@@ -5,6 +5,13 @@ extend type Mutation {
     checkout page reload) returns the same intent rather than creating a new one.
     """
     createPaymentIntent(bookingId: ID!): PaymentIntent!
+
+    """
+    MOCK MODE ONLY. Simulate the payment outcome for a booking using a test card number
+    (see docs/payment-test-cards.md: 4242… succeeds, 4000…0002 declines, etc.). Rejected by
+    the backend when it runs against real Stripe — there the outcome comes from the webhook.
+    """
+    confirmMockPayment(bookingId: ID!, cardNumber: String!): PaymentIntent!
 }
 
 type PaymentIntent {

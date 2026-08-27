@@ -1,5 +1,6 @@
 package com.booking.platform.graphql_gateway.grpc.client.impl;
 
+import com.booking.platform.common.grpc.payment.ConfirmMockPaymentRequest;
 import com.booking.platform.common.grpc.payment.CreatePaymentIntentRequest;
 import com.booking.platform.common.grpc.payment.PaymentIntentResponse;
 import com.booking.platform.common.grpc.payment.PaymentServiceGrpc;
@@ -33,6 +34,18 @@ public class PaymentServiceClientImpl implements PaymentClient {
                         .setBookingId(bookingId)
                         .setAmount(amount)
                         .setCurrency(currency)
+                        .build());
+    }
+
+    @Override
+    public PaymentIntentResponse confirmMockPayment(String bookingId, String cardNumber) {
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "Calling payment-service: ConfirmMockPayment bookingId='{}'", bookingId);
+
+        return paymentServiceStub.confirmMockPayment(
+                ConfirmMockPaymentRequest.newBuilder()
+                        .setBookingId(bookingId)
+                        .setCardNumber(cardNumber)
                         .build());
     }
 }

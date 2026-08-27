@@ -15,4 +15,10 @@ public interface PaymentClient {
      * @param currency  ISO 4217 code
      */
     PaymentIntentResponse createPaymentIntent(String bookingId, String amount, String currency);
+
+    /**
+     * Mock mode only — simulate the payment outcome for a booking using a test card number.
+     * Rejected by payment-service when it runs against real Stripe.
+     */
+    PaymentIntentResponse confirmMockPayment(String bookingId, String cardNumber);
 }

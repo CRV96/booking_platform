@@ -11,6 +11,11 @@ service PaymentService {
   // client-side with their card). Idempotent on booking_id: if an intent already exists it
   // is retrieved (fresh client_secret) rather than a second one being created.
   rpc CreatePaymentIntent(CreatePaymentIntentRequest) returns (PaymentIntentResponse);
+
+  // MOCK-MODE ONLY (payment.gateway.type=mock): simulate the payment outcome without Stripe.
+  // card_number selects the outcome (see docs/payment-test-cards.md). Funnels into the same
+  // PaymentOutcomeService the real Stripe webhook uses. Rejected in stripe mode.
+  rpc ConfirmMockPayment(ConfirmMockPaymentRequest) returns (PaymentIntentResponse);
 }
 
 // ============================================================================
@@ -20,6 +25,11 @@ message CreatePaymentIntentRequest {
   string booking_id = 1;   // the booking being paid for (also the idempotency key)
   string amount = 2;       // decimal as string (e.g. "49.99") — authoritative, taken from the booking
   string currency = 3;     // ISO 4217 (e.g. "USD")
+}
+
+message ConfirmMockPaymentRequest {
+  string booking_id = 1;   // the booking being paid for
+  string card_number = 2;  // test card selecting the outcome (4242… success, 4000…0002 decline, …)
 }
 
 message PaymentIntentResponse {

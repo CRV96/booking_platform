@@ -201,3 +201,12 @@ export const CREATE_PAYMENT_INTENT = gql`
     }
   }
 `;
+
+// Mock mode only — simulate the payment outcome with a test card number.
+export const CONFIRM_MOCK_PAYMENT = gql`
+  mutation ConfirmMockPayment($bookingId: ID!, $cardNumber: String!) {
+    confirmMockPayment(bookingId: $bookingId, cardNumber: $cardNumber) {
+      paymentId bookingId externalPaymentId clientSecret status
+    }
+  }
+`;
