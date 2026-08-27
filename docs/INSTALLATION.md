@@ -621,7 +621,7 @@ cd frontend
 npm run build        # output in frontend/dist/
 ```
 
-See **[docs/frontend-guide.md](docs/frontend-guide.md)** for a complete walkthrough of the Angular app structure, components, and how to make changes.
+See **[docs/frontend-guide.md](frontend-guide.md)** for a complete walkthrough of the Angular app structure, components, and how to make changes.
 
 ---
 
