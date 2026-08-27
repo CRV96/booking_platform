@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package payment.payment;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.payment";
+option java_outer_classname = "PaymentServiceProto";
+
+service PaymentService {
+  // Get-or-create the PaymentIntent for a booking (create-only — the customer confirms
+  // client-side with their card). Idempotent on booking_id: if an intent already exists it
+  // is retrieved (fresh client_secret) rather than a second one being created.
+  rpc CreatePaymentIntent(CreatePaymentIntentRequest) returns (PaymentIntentResponse);
+}
+
+// ============================================================================
+// Messages
+// ============================================================================
+message CreatePaymentIntentRequest {
+  string booking_id = 1;   // the booking being paid for (also the idempotency key)
+  string amount = 2;       // decimal as string (e.g. "49.99") — authoritative, taken from the booking
+  string currency = 3;     // ISO 4217 (e.g. "USD")
+}
+
+message PaymentIntentResponse {
+  string payment_id = 1;           // our internal PaymentEntity id (UUID string)
+  string booking_id = 2;
+  string external_payment_id = 3;  // gateway PaymentIntent id (e.g. "pi_...")
+  string client_secret = 4;        // for client-side confirmation; empty when no card entry is needed
+  string status = 5;               // our PaymentStatus name (e.g. "PROCESSING", "COMPLETED")
+}

@@ -121,3 +121,13 @@ export interface TicketConnection {
   pageSize: number;
   totalPages: number;
 }
+
+// ── Payments ────────────────────────────────────────────────────────────────
+
+export interface PaymentIntent {
+  paymentId: string;
+  bookingId: string;
+  externalPaymentId: string | null;
+  clientSecret: string | null;   // null when no card entry is needed (e.g. already paid)
+  status: string;                // PaymentStatus name (e.g. "PROCESSING", "COMPLETED")
+}

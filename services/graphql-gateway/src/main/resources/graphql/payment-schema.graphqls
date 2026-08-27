@@ -1,0 +1,16 @@
+extend type Mutation {
+    """
+    Start (or resume) payment for a booking. Returns the Stripe client secret the browser
+    uses to confirm the card client-side. Idempotent per booking — a repeat call (e.g. a
+    checkout page reload) returns the same intent rather than creating a new one.
+    """
+    createPaymentIntent(bookingId: ID!): PaymentIntent!
+}
+
+type PaymentIntent {
+    paymentId: ID!
+    bookingId: ID!
+    externalPaymentId: String        # gateway PaymentIntent id (pi_...); null if not applicable
+    clientSecret: String             # null when no card entry is needed (e.g. already paid)
+    status: String!                  # PaymentStatus name (e.g. "PROCESSING", "COMPLETED")
+}

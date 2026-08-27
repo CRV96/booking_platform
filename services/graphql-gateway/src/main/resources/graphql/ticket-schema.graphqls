@@ -1,7 +1,3 @@
-# ============================================================================
-# BOOKING PLATFORM - TICKET GRAPHQL SCHEMA
-# ============================================================================
-
 extend type Query {
     """List the authenticated user's tickets (userId extracted from JWT)"""
     myTickets(
@@ -31,10 +27,6 @@ extend type Mutation {
     cancelTicket(ticketNumber: String!): Ticket!
 }
 
-# ============================================================================
-# TICKET TYPES
-# ============================================================================
-
 type Ticket {
     id: ID!
     bookingId: String!
@@ -49,19 +41,11 @@ type Ticket {
     createdAt: String!
 }
 
-# ============================================================================
-# ENUMS
-# ============================================================================
-
 enum TicketStatus {
     VALID
     USED
     CANCELLED
 }
-
-# ============================================================================
-# PAGINATION
-# ============================================================================
 
 type TicketConnection {
     tickets: [Ticket!]!

@@ -1,7 +1,3 @@
-# ============================================================================
-# BOOKING PLATFORM - USER GRAPHQL SCHEMA
-# ============================================================================
-
 type Query {
     """Get the currently authenticated user"""
     me: User
@@ -14,9 +10,6 @@ type Query {
 }
 
 type Mutation {
-    # -------------------------------------------------------------------------
-    # Authentication
-    # -------------------------------------------------------------------------
 
     """Register a new user account"""
     register(input: RegisterInput!): AuthPayload!
@@ -30,17 +23,9 @@ type Mutation {
     """Logout and invalidate refresh token"""
     logout(refreshToken: String!): LogoutPayload!
 
-    # -------------------------------------------------------------------------
-    # User Profile
-    # -------------------------------------------------------------------------
-
     """Update the current user's profile"""
     updateProfile(input: UpdateProfileInput!): User!
 }
-
-# ============================================================================
-# AUTHENTICATION TYPES
-# ============================================================================
 
 input RegisterInput {
     email: String!
@@ -82,10 +67,6 @@ type LogoutPayload {
     success: Boolean!
 }
 
-# ============================================================================
-# USER TYPES
-# ============================================================================
-
 type User {
     id: ID!
     username: String!
@@ -125,10 +106,6 @@ input UpdateProfileInput {
     emailNotifications: Boolean
     smsNotifications: Boolean
 }
-
-# ============================================================================
-# PAGINATION
-# ============================================================================
 
 type UserConnection {
     users: [User!]!
