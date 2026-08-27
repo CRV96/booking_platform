@@ -21,6 +21,12 @@ public final class BkgConstants {
         public static final String CARD_PAYMENT_METHOD = "card";
         // Test payment method for Stripe sandbox — used in PaymentIntentConfirmParams
         public static final String PAYMENT_METHOD_CARD_VISA = "pm_card_visa";
+
+        // ── Webhook ──────────────────────────────────────────────────────────
+        public static final String WEBHOOK_PATH = "/api/webhooks/stripe";
+        public static final String WEBHOOK_SIGNATURE_HEADER = "Stripe-Signature";
+        public static final String EVENT_PAYMENT_INTENT_SUCCEEDED = "payment_intent.succeeded";
+        public static final String EVENT_PAYMENT_INTENT_PAYMENT_FAILED = "payment_intent.payment_failed";
     }
 
     public static final class BkgOutboxConstants {
