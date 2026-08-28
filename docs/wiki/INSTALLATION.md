@@ -621,7 +621,7 @@ cd frontend
 npm run build        # output in frontend/dist/
 ```
 
-See **[docs/frontend-guide.md](frontend-guide.md)** for a complete walkthrough of the Angular app structure, components, and how to make changes.
+See **[docs/frontend-guide.md](Frontend/frontend-guide.md)** for a complete walkthrough of the Angular app structure, components, and how to make changes.
 
 ---
 
@@ -779,7 +779,7 @@ Or add the export line to your shell profile (`~/.zshrc` / `~/.bashrc`) so it ru
 
 payment-service supports two payment backends, chosen by `payment.gateway.type` in
 `config/dev/payment-service.properties`. Test card numbers for both are in
-[`docs/payment-test-cards.md`](payment-test-cards.md).
+[`docs/payment-test-cards.md`](Payments/payment-test-cards.md).
 
 **Mock — the easy default for local dev (no Stripe account, no keys).**
 1. Set `payment.gateway.type=mock`.

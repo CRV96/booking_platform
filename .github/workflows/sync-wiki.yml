@@ -1,0 +1,59 @@
+name: Publish docs/wiki to Wiki
+
+# Publishes the repo-authored docs in docs/wiki/ TO the GitHub Wiki (its own git repo:
+# <repo>.wiki.git). docs/wiki/ is the source of truth; the wiki is the mirror.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/wiki/**'
+      - '.github/workflows/sync-wiki.yml'
+  workflow_dispatch:      # manual run from the Actions tab
+
+# Only one publish at a time; a newer run supersedes an in-flight one.
+concurrency:
+  group: publish-wiki
+  cancel-in-progress: true
+
+permissions:
+  contents: write         # needed to push to the wiki repo
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+
+      - name: Clone the wiki
+        run: |
+          git clone --depth 1 \
+            "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.wiki.git" \
+            wiki-dst
+
+      - name: Mirror docs/wiki/ into the wiki
+        run: |
+          # --delete propagates deletions/renames; keep the wiki's own git dir, junk files,
+          # and the Home landing page (manage Home directly on the wiki) out of the sync.
+          rsync -a --delete \
+            --exclude='.git' \
+            --exclude='.DS_Store' \
+            --exclude='Home.md' \
+            docs/wiki/ wiki-dst/
+          # A wiki needs a Home page; create a minimal one if it has none yet.
+          if [ ! -f wiki-dst/Home.md ]; then
+            printf '# Booking Platform Wiki\n\nSee the pages in the sidebar. Content is published from `docs/wiki/` in the main repo.\n' > wiki-dst/Home.md
+          fi
+
+      - name: Commit & push to the wiki
+        run: |
+          cd wiki-dst
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain)" ]; then
+            git add -A
+            git commit -m "Sync from docs/wiki @ ${{ github.sha }}"
+            git push
+          else
+            echo "Wiki already up to date with docs/wiki."
+          fi
