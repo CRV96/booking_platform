@@ -166,9 +166,9 @@ export class EventListComponent implements OnInit {
     }).subscribe({
       next: r => {
         this.loading.set(false);
-        this.connection.set(r.data.events);
-        this.events.set(r.data.events.events);
-        this.smartResults.set(r.data.events.smartResults ?? []);
+        this.connection.set(r.data!.events);
+        this.events.set(r.data!.events.events);
+        this.smartResults.set(r.data!.events.smartResults ?? []);
       },
       error: err => { this.loading.set(false); this.error.set(err.message || 'Failed to load events'); }
     });

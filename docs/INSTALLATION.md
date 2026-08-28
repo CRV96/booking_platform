@@ -705,12 +705,22 @@ DB_MONGO_PASSWORD=admin
 USER_SERVICE_KEYCLOAK_CLIENT_SECRET=user-service-secret
 NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET=notification-service-secret
 
-# ── Stripe ────────────────────────────────────────────────────────────────────
-# Stripe secret key used by payment-service to create and confirm payment intents.
-# Get your test key from: https://dashboard.stripe.com/test/apikeys
-# Rotate: generate a new key in the Stripe Dashboard and replace the value here.
-# Never use a live key (sk_live_...) for local development.
+# ── Stripe (payment-service) ──────────────────────────────────────────────────
+# Only needed when payment.gateway.type=stripe (in config/dev/payment-service.properties).
+# For local development you can instead use the MOCK gateway — set payment.gateway.type=mock
+# and leave all three keys below empty. See "Payment gateway modes" below.
+#
+# Get your TEST keys from: https://dashboard.stripe.com/test/apikeys
+# Never use live keys (sk_live_... / pk_live_...) for local development.
+#
+# Secret key — payment-service uses it to create PaymentIntents (server-side).
 STRIPE_SECRET_KEY=sk_test_replace_me
+# Publishable key — handed to the browser so it can mount Stripe Elements (the card form).
+# Safe to expose publicly; it can only create/confirm payments, never read your account.
+STRIPE_PUBLISHABLE_KEY=pk_test_replace_me
+# Webhook signing secret — payment-service verifies inbound Stripe webhooks against it.
+# Comes from `stripe listen` (local) or a Dashboard webhook endpoint (deployed).
+STRIPE_WEBHOOK_SECRET=whsec_replace_me
 
 # ── Paths (local development only) ───────────────────────────────────────────
 # Absolute path to the repo root — used by Promtail to mount service log files.
@@ -762,3 +772,40 @@ Or add the export line to your shell profile (`~/.zshrc` / `~/.bashrc`) so it ru
 | `USER_SERVICE_KEYCLOAK_CLIENT_SECRET` | `.env` | Keycloak Admin → Clients → user-service → Credentials → Regenerate |
 | `NOTIFICATION_SERVICE_KEYCLOAK_CLIENT_SECRET` | `.env` | Keycloak Admin → Clients → notification-service → Credentials → Regenerate |
 | `STRIPE_SECRET_KEY` | `.env` | Stripe Dashboard → Developers → API keys → Roll key |
+| `STRIPE_PUBLISHABLE_KEY` | `.env` | Stripe Dashboard → Developers → API keys |
+| `STRIPE_WEBHOOK_SECRET` | `.env` | `stripe listen` output, or Dashboard → Webhooks → endpoint → Signing secret |
+
+### Payment gateway modes (mock vs real Stripe)
+
+payment-service supports two payment backends, chosen by `payment.gateway.type` in
+`config/dev/payment-service.properties`. Test card numbers for both are in
+[`docs/payment-test-cards.md`](payment-test-cards.md).
+
+**Mock — the easy default for local dev (no Stripe account, no keys).**
+1. Set `payment.gateway.type=mock`.
+2. Leave `STRIPE_SECRET_KEY` / `STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` empty.
+
+The checkout page shows a stand-in card form; the **card number selects the outcome**
+(`4242 4242 4242 4242` succeeds, `4000 0000 0000 0002` declines, …). No real Stripe calls and no
+webhook — the outcome is applied through the same code path the real webhook uses.
+
+**Real Stripe (test mode) — to exercise the actual card flow.**
+1. Set `payment.gateway.type=stripe`.
+2. In `.env`, set `STRIPE_SECRET_KEY` (`sk_test_…`) and `STRIPE_PUBLISHABLE_KEY` (`pk_test_…`) from
+   Stripe Dashboard → Developers → API keys (test mode).
+3. Install and log in to the Stripe CLI (one-time):
+   ```bash
+   brew install stripe/stripe-cli/stripe
+   stripe login
+   ```
+4. Forward webhooks to payment-service and copy the printed `whsec_…` into `STRIPE_WEBHOOK_SECRET`:
+   ```bash
+   stripe listen --forward-to localhost:8084/api/webhooks/stripe
+   ```
+   `./start-all.sh` opens a `stripe` tmux window that runs this automatically (use `--no-stripe`
+   to skip it). Keep it running — it's how Stripe reaches your `localhost`.
+5. Start the stack **after** the `whsec_…` is in `.env` (payment-service reads it at boot). The
+   checkout page now mounts real Stripe Elements; pay with test card `4242 4242 4242 4242`.
+
+> The webhook secret must match whoever signs the events: the CLI's `whsec_…` locally, or a
+> Dashboard endpoint's secret once deployed. A mismatch makes the webhook return **400**.

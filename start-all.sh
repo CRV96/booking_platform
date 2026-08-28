@@ -41,6 +41,9 @@ KILL_EXISTING=false
 DEBUG_MODE=false
 HEALTH_TIMEOUT=180   # seconds to wait per service before giving up
 POLL_INTERVAL=3      # seconds between health checks
+START_STRIPE=true    # open a 'stripe' window running `stripe listen` for local webhooks
+# Where the Stripe CLI forwards test webhook events (payment-service HTTP port + webhook path).
+STRIPE_FORWARD="localhost:8084/api/webhooks/stripe"
 
 # Ordered list of "service-name:health-port". Order matters: config and eureka
 # must come first; graphql-gateway comes last (it depends on the others).
@@ -68,6 +71,7 @@ show_usage() {
     echo "  --kill             Kill an existing session with the same name first"
     echo "  --session <name>   tmux session name (default: bkg)"
     echo "  --timeout <secs>   Health-check timeout per service (default: 180)"
+    echo "  --no-stripe        Do not open a 'stripe' window running 'stripe listen'"
     echo "  --help, -h         Show this help"
     echo ""
     echo "Services are started in this order, each waiting for the previous"
@@ -84,6 +88,7 @@ while [[ $# -gt 0 ]]; do
         --kill)          KILL_EXISTING=true; shift ;;
         --session)       SESSION="$2"; shift 2 ;;
         --timeout)       HEALTH_TIMEOUT="$2"; shift 2 ;;
+        --no-stripe)     START_STRIPE=false; shift ;;
         --help|-h)       show_usage; exit 0 ;;
         *)               echo -e "${RED}Unknown option: $1${NC}"; show_usage; exit 1 ;;
     esac
@@ -164,6 +169,21 @@ for i in "${!SERVICES[@]}"; do
         exit 1
     fi
 done
+
+# ─── Stripe CLI (local webhook forwarding) ───────────────────────────────────
+# Opens a 'stripe' window running `stripe listen`, which tunnels test webhook events to
+# payment-service. Only needed when payment.gateway.type=stripe; harmless otherwise.
+if [ "$START_STRIPE" = true ]; then
+    if command -v stripe >/dev/null 2>&1; then
+        echo -e "${YELLOW}▶ Opening 'stripe' window: forwarding webhooks to ${STRIPE_FORWARD}...${NC}"
+        tmux new-window -t "$SESSION" -n "stripe" -c "$SCRIPT_DIR"
+        tmux send-keys -t "$SESSION:stripe" "stripe listen --forward-to ${STRIPE_FORWARD}" C-m
+    else
+        echo -e "${YELLOW}⚠ Stripe CLI not found — skipping the 'stripe' window.${NC}"
+        echo -e "  Install it (${CYAN}brew install stripe/stripe-cli/stripe${NC}), then run:"
+        echo -e "  ${CYAN}stripe listen --forward-to ${STRIPE_FORWARD}${NC}"
+    fi
+fi
 
 echo ""
 echo -e "${GREEN}All services started in tmux session '${SESSION}'.${NC}"

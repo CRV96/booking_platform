@@ -124,14 +124,14 @@ export class MyBookingsComponent implements OnInit {
     }).subscribe({
       next: r => {
         this.loading.set(false);
-        const all = r.data.myBookings.bookings;
+        const all = r.data!.myBookings.bookings;
         const isUpcoming = this.activeTab() === 'upcoming';
-        this.bookings.set(all.filter(b =>
+        this.bookings.set(all.filter((b: Booking) =>
           isUpcoming
             ? MyBookingsComponent.UPCOMING_STATUSES.has(b.status)
             : !MyBookingsComponent.UPCOMING_STATUSES.has(b.status)
         ));
-        this.connection.set(r.data.myBookings);
+        this.connection.set(r.data!.myBookings);
       },
       error: err => { this.loading.set(false); this.error.set(err.message || 'Failed to load'); }
     });

@@ -3,7 +3,7 @@ import { FormBuilder, FormArray, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Apollo } from 'apollo-angular';
 import { GET_EVENT, CREATE_EVENT, UPDATE_EVENT } from '../../shared/graphql/documents';
-import { Event } from '../../shared/models/models';
+import { Event, SeatCategory } from '../../shared/models/models';
 
 const CATEGORIES = ['CONCERT', 'SPORTS', 'THEATRE', 'CONFERENCE', 'FESTIVAL', 'OTHER'];
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD'];
@@ -205,13 +205,13 @@ export class EventFormComponent implements OnInit {
       .subscribe({
         next: r => {
           this.loading.set(false);
-          const ev = r.data.event;
+          const ev = r.data!.event;
           const dt = ev.dateTime ? ev.dateTime.substring(0, 16) : '';
           this.form.patchValue({
             title: ev.title, description: ev.description ?? '', category: ev.category, dateTime: dt,
             venue: { name: ev.venue.name, address: ev.venue.address ?? '', city: ev.venue.city, country: ev.venue.country, capacity: ev.venue.capacity ?? null },
           });
-          ev.seatCategories.forEach(sc => {
+          ev.seatCategories.forEach((sc: SeatCategory) => {
             this.seats.push(this.fb.group({
               name: [sc.name], price: [parseFloat(sc.price)], currency: [sc.currency], totalSeats: [sc.totalSeats],
             }));

@@ -197,7 +197,7 @@ export const CANCEL_TICKET = gql`
 export const CREATE_PAYMENT_INTENT = gql`
   mutation CreatePaymentIntent($bookingId: ID!) {
     createPaymentIntent(bookingId: $bookingId) {
-      paymentId bookingId externalPaymentId clientSecret status
+      paymentId bookingId externalPaymentId clientSecret status provider publishableKey
     }
   }
 `;

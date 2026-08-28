@@ -165,7 +165,7 @@ export class ProfileComponent implements OnInit {
     this.apollo.query<{ me: User }>({ query: ME }).subscribe({
       next: r => {
         this.loading.set(false);
-        const u = r.data.me;
+        const u = r.data!.me;
         this.user.set(u);
         this.form.patchValue({
           firstName: u.firstName ?? '', lastName: u.lastName ?? '',

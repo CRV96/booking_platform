@@ -1,6 +1,7 @@
 package com.booking.platform.payment_service.grpc.service;
 
 import com.booking.platform.common.grpc.context.GrpcUserContext;
+import com.booking.platform.payment_service.constants.BkgConstants;
 import com.booking.platform.common.grpc.payment.ConfirmMockPaymentRequest;
 import com.booking.platform.common.grpc.payment.CreatePaymentIntentRequest;
 import com.booking.platform.common.grpc.payment.PaymentIntentResponse;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.slf4j.event.Level;
 
 import java.math.BigDecimal;
@@ -36,6 +38,12 @@ public class PaymentGrpcService extends PaymentServiceGrpc.PaymentServiceImplBas
 
     // Present only in mock mode (gated bean). null in stripe mode → ConfirmMockPayment is rejected.
     private final ObjectProvider<MockPaymentConfirmationService> mockConfirmationProvider;
+
+    @Value("${payment.gateway.type:mock}")
+    private String gatewayType;
+
+    @Value("${stripe.publishable-key:}")
+    private String stripePublishableKey;
 
     @Override
     public void createPaymentIntent(CreatePaymentIntentRequest request,
@@ -83,6 +91,8 @@ public class PaymentGrpcService extends PaymentServiceGrpc.PaymentServiceImplBas
                 .setExternalPaymentId(nullSafe(payment.getExternalPaymentId()))
                 .setClientSecret("")
                 .setStatus(payment.getStatus().name())
+                .setProvider(gatewayType)
+                .setPublishableKey("")
                 .build();
     }
 
@@ -94,7 +104,14 @@ public class PaymentGrpcService extends PaymentServiceGrpc.PaymentServiceImplBas
                 .setExternalPaymentId(nullSafe(result.externalPaymentId()))
                 .setClientSecret(nullSafe(result.clientSecret()))
                 .setStatus(nullSafe(result.status()))
+                .setProvider(gatewayType)
+                .setPublishableKey(publishableKeyForBrowser())
                 .build();
+    }
+
+    /** Only the real Stripe flow needs a publishable key in the browser; mock mode gets none. */
+    private String publishableKeyForBrowser() {
+        return BkgConstants.BkgStripeConstants.STRIPE.equals(gatewayType) ? stripePublishableKey : "";
     }
 
     private String requireUserId() {

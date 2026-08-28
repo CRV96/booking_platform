@@ -20,4 +20,6 @@ type PaymentIntent {
     externalPaymentId: String        # gateway PaymentIntent id (pi_...); null if not applicable
     clientSecret: String             # null when no card entry is needed (e.g. already paid)
     status: String!                  # PaymentStatus name (e.g. "PROCESSING", "COMPLETED")
+    provider: String!                # "stripe" or "mock" — which card form the frontend renders
+    publishableKey: String           # Stripe publishable key for the browser; null in mock mode
 }

@@ -130,4 +130,6 @@ export interface PaymentIntent {
   externalPaymentId: string | null;
   clientSecret: string | null;   // null when no card entry is needed (e.g. already paid)
   status: string;                // PaymentStatus name (e.g. "PROCESSING", "COMPLETED")
+  provider: string;              // 'stripe' | 'mock' — which card form to render
+  publishableKey: string | null; // Stripe publishable key for the browser; null in mock mode
 }

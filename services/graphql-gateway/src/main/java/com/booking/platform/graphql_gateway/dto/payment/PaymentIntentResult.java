@@ -15,7 +15,9 @@ public record PaymentIntentResult(
         String bookingId,
         String externalPaymentId,
         String clientSecret,
-        String status
+        String status,
+        String provider,          // "stripe" or "mock" — which card form the frontend renders
+        String publishableKey     // Stripe publishable key for the browser; null in mock mode
 ) {
     public static PaymentIntentResult fromGrpc(PaymentIntentResponse response) {
         return new PaymentIntentResult(
@@ -23,7 +25,9 @@ public record PaymentIntentResult(
                 response.getBookingId(),
                 emptyToNull(response.getExternalPaymentId()),
                 emptyToNull(response.getClientSecret()),
-                response.getStatus());
+                response.getStatus(),
+                response.getProvider(),
+                emptyToNull(response.getPublishableKey()));
     }
 
     private static String emptyToNull(String value) {
