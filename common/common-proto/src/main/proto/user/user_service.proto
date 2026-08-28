@@ -8,11 +8,6 @@ option java_multiple_files = true;
 option java_package = "com.booking.platform.common.grpc.user";
 option java_outer_classname = "UserServiceProto";
 
-// ============================================================================
-// USER SERVICE
-// ============================================================================
-// Handles user profile operations including retrieval, updates, and search.
-
 service UserService {
   // Get a user by their ID.
   rpc GetUser(GetUserRequest) returns (UserResponse);
@@ -34,10 +29,6 @@ service UserService {
 
   rpc GetUsersEmails(GetUsersEmailsRequest) returns (GetUsersEmailsResponse);
 }
-
-// ============================================================================
-// USER MESSAGES
-// ============================================================================
 
 message GetUserRequest {
   string user_id = 1;
@@ -71,10 +62,6 @@ message GetUsersEmailsResponse {
   repeated string user_emails = 1;
 }
 
-// ============================================================================
-// UPDATE USER MESSAGES
-// ============================================================================
-
 message UpdateUserRequest {
   string user_id = 1;
 
@@ -91,10 +78,6 @@ message UpdateUserRequest {
   optional bool email_notifications = 11;
   optional bool sms_notifications = 12;
 }
-
-// ============================================================================
-// SEARCH MESSAGES
-// ============================================================================
 
 message SearchUsersRequest {
   // Search term (matches username, email, first_name, last_name)

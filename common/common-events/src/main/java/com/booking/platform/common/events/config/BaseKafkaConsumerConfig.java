@@ -38,24 +38,6 @@ import java.util.Map;
  *
  * <p>Services extend this class, annotate with {@code @Configuration}, and add
  * only their event-specific typed consumer factories. Example:
- * <pre>
- * {@code @Configuration}
- * public class KafkaConsumerConfig extends BaseKafkaConsumerConfig {
- *
- *     {@code @Bean}
- *     public ConsumerFactory<String, PaymentCompletedEvent> paymentCompletedConsumerFactory() {
- *         Map<String, Object> config = baseConfig();
- *         config.put(ProtobufDeserializer.PARSER_CONFIG_KEY, PaymentCompletedEvent.parser());
- *         return new DefaultKafkaConsumerFactory<>(config);
- *     }
- *
- *     {@code @Bean}
- *     public ConcurrentKafkaListenerContainerFactory<String, PaymentCompletedEvent>
- *             paymentCompletedListenerFactory(CommonErrorHandler errorHandler) {
- *         return buildFactory(paymentCompletedConsumerFactory(), errorHandler);
- *     }
- * }
- * </pre>
  */
 @EnableKafka
 public abstract class BaseKafkaConsumerConfig {
