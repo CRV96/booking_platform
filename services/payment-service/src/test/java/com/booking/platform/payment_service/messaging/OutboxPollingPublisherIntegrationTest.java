@@ -9,7 +9,9 @@ import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.gateway.PaymentGateway;
 import com.booking.platform.payment_service.messaging.publisher.OutboxPollingPublisher;
 import com.booking.platform.payment_service.repository.OutboxEventRepository;
+import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.service.PaymentService;
+import com.booking.platform.payment_service.service.PaymentOutcomeService;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -33,41 +35,32 @@ import static org.mockito.Mockito.when;
 /**
  * Integration tests for {@link OutboxPollingPublisher}.
  *
- * <p>Verifies that outbox events written by PaymentServiceImpl are:
- * <ol>
- *   <li>Picked up by the poller</li>
- *   <li>Published to the correct Kafka topic</li>
- *   <li>Marked as published in the database</li>
- * </ol>
+ * <p>Verifies that outbox events written by the payment flow (create order intent + apply the
+ * outcome) are picked up by the poller, published to the correct Kafka topic, and marked published.
  *
- * <p>Uses a raw Kafka consumer (byte[] deserializer) to read from the topic,
- * since we only need to verify that a message was published, not its exact proto content.
+ * <p>Uses a raw Kafka consumer (byte[] deserializer) — we only verify a message was published on
+ * the right topic with the right key, not its exact proto content.
  */
 class OutboxPollingPublisherIntegrationTest extends BaseIntegrationTest {
 
-    @Autowired
-    private PaymentService paymentService;
+    @Autowired private PaymentService paymentService;
+    @Autowired private PaymentOutcomeService paymentOutcomeService;
+    @Autowired private OutboxPollingPublisher outboxPollingPublisher;
+    @Autowired private OutboxEventRepository outboxEventRepository;
+    @Autowired private PaymentRepository paymentRepository;
 
-    @Autowired
-    private OutboxPollingPublisher outboxPollingPublisher;
-
-    @Autowired
-    private OutboxEventRepository outboxEventRepository;
-
-    @MockBean
-    private PaymentGateway paymentGateway;
+    @MockBean private PaymentGateway paymentGateway;
 
     private KafkaConsumer<String, byte[]> kafkaConsumer;
 
     @BeforeEach
     void setupGateway() {
+        // Return a PaymentIntent id derived from the idempotency key (3rd arg = orderId) so each
+        // payment gets a unique external id — the outcome lookup (findByExternalPaymentId) needs it.
         when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
-                .thenReturn(CompletableFuture.completedFuture(
-                        new GatewayPaymentResponse("pi_outbox_test", "requires_confirmation", "card")));
-
-        when(paymentGateway.confirmPayment(anyString()))
-                .thenReturn(CompletableFuture.completedFuture(
-                        new GatewayPaymentResponse("pi_outbox_test", "succeeded", "card")));
+                .thenAnswer(inv -> CompletableFuture.completedFuture(
+                        new GatewayPaymentResponse("pi_" + inv.getArgument(2), "requires_payment_method",
+                                "card", "secret_" + inv.getArgument(2))));
 
         when(paymentGateway.createRefund(anyString(), any()))
                 .thenReturn(CompletableFuture.completedFuture(
@@ -97,34 +90,38 @@ class OutboxPollingPublisherIntegrationTest extends BaseIntegrationTest {
         }
     }
 
+    /** Creates a PROCESSING order payment and returns its record (external id = "pi_" + orderId). */
+    private PaymentEntity createOrderPayment(String orderId) {
+        paymentService.getOrCreateOrderPaymentIntent(
+                orderId, "user-1", List.of("booking-" + orderId), new BigDecimal("50.00"), "USD");
+        return paymentRepository.findByIdempotencyKey(orderId).orElseThrow();
+    }
+
     @Test
     void pollAndPublish_completedPayment_publishesToKafkaAndMarksPublished() {
-        String bookingId = "booking-outbox-completed-" + UUID.randomUUID();
-        PaymentEntity payment = paymentService.processPayment(bookingId, "user-1", new BigDecimal("50.00"), "USD");
-        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+        String orderId = "order-outbox-completed-" + UUID.randomUUID();
+        PaymentEntity payment = createOrderPayment(orderId);
+        paymentOutcomeService.markSucceeded("pi_" + orderId);
+        assertThat(paymentRepository.findById(payment.getId()).orElseThrow().getStatus())
+                .isEqualTo(PaymentStatus.COMPLETED);
 
-        // Verify outbox row exists and is unpublished
         Long unpublished = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM outbox_events WHERE published_at IS NULL", Long.class);
         assertThat(unpublished).isGreaterThanOrEqualTo(1);
 
-        // Trigger the poller manually (instead of waiting for @Scheduled)
         outboxPollingPublisher.pollAndPublish();
 
-        // Verify outbox row is now marked as published
         Long stillUnpublished = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM outbox_events WHERE aggregate_id = ? AND published_at IS NULL",
                 Long.class, payment.getId().toString());
         assertThat(stillUnpublished).isEqualTo(0);
 
-        // Verify message arrived on the Kafka topic
         ConsumerRecords<String, byte[]> records = kafkaConsumer.poll(Duration.ofSeconds(10));
         assertThat(records.count()).isGreaterThanOrEqualTo(1);
 
         boolean foundOnCorrectTopic = false;
         for (var record : records) {
-            if (record.topic().equals(KafkaTopics.PAYMENT_COMPLETED)
-                    && bookingId.equals(record.key())) {
+            if (record.topic().equals(KafkaTopics.PAYMENT_COMPLETED) && orderId.equals(record.key())) {
                 foundOnCorrectTopic = true;
                 assertThat(record.value()).isNotNull();
                 assertThat(record.value().length).isGreaterThan(0);
@@ -137,13 +134,9 @@ class OutboxPollingPublisherIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void pollAndPublish_failedPayment_publishesToFailedTopic() {
-        when(paymentGateway.confirmPayment(anyString()))
-                .thenReturn(CompletableFuture.completedFuture(
-                        new GatewayPaymentResponse("pi_fail_test", "failed", "card")));
-
-        String bookingId = "booking-outbox-failed-" + UUID.randomUUID();
-        PaymentEntity payment = paymentService.processPayment(bookingId, "user-1", new BigDecimal("50.00"), "USD");
-        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+        String orderId = "order-outbox-failed-" + UUID.randomUUID();
+        createOrderPayment(orderId);
+        paymentOutcomeService.markFailed("pi_" + orderId, "card_declined");
 
         outboxPollingPublisher.pollAndPublish();
 
@@ -151,8 +144,7 @@ class OutboxPollingPublisherIntegrationTest extends BaseIntegrationTest {
 
         boolean foundOnFailedTopic = false;
         for (var record : records) {
-            if (record.topic().equals(KafkaTopics.PAYMENT_FAILED)
-                    && bookingId.equals(record.key())) {
+            if (record.topic().equals(KafkaTopics.PAYMENT_FAILED) && orderId.equals(record.key())) {
                 foundOnFailedTopic = true;
             }
         }
@@ -163,26 +155,22 @@ class OutboxPollingPublisherIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void pollAndPublish_refundCompleted_publishesToRefundTopic() {
-        // First create a completed payment
-        String bookingId = "booking-outbox-refund-" + UUID.randomUUID();
-        PaymentEntity payment = paymentService.processPayment(bookingId, "user-1", new BigDecimal("75.00"), "USD");
-        assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+        String orderId = "order-outbox-refund-" + UUID.randomUUID();
+        createOrderPayment(orderId);
+        paymentOutcomeService.markSucceeded("pi_" + orderId);
 
         // Publish the completed event first so it doesn't interfere
         outboxPollingPublisher.pollAndPublish();
 
-        // Now process the refund
-        paymentService.processRefund(bookingId);
-
-        // Trigger the poller for the refund event
+        // processRefund looks the payment up by bookingId — for an order that's the orderId
+        paymentService.processRefund(orderId);
         outboxPollingPublisher.pollAndPublish();
 
         ConsumerRecords<String, byte[]> records = kafkaConsumer.poll(Duration.ofSeconds(10));
 
         boolean foundOnRefundTopic = false;
         for (var record : records) {
-            if (record.topic().equals(KafkaTopics.PAYMENT_REFUND_COMPLETED)
-                    && bookingId.equals(record.key())) {
+            if (record.topic().equals(KafkaTopics.PAYMENT_REFUND_COMPLETED) && orderId.equals(record.key())) {
                 foundOnRefundTopic = true;
             }
         }
@@ -193,8 +181,9 @@ class OutboxPollingPublisherIntegrationTest extends BaseIntegrationTest {
 
     @Test
     void pollAndPublish_usesBookingIdAsKafkaKey() {
-        String bookingId = "booking-key-test-" + UUID.randomUUID();
-        paymentService.processPayment(bookingId, "user-1", new BigDecimal("10.00"), "USD");
+        String orderId = "order-key-test-" + UUID.randomUUID();
+        createOrderPayment(orderId);
+        paymentOutcomeService.markSucceeded("pi_" + orderId);
 
         outboxPollingPublisher.pollAndPublish();
 
@@ -202,12 +191,12 @@ class OutboxPollingPublisherIntegrationTest extends BaseIntegrationTest {
 
         boolean foundWithCorrectKey = false;
         for (var record : records) {
-            if (bookingId.equals(record.key())) {
+            if (orderId.equals(record.key())) {
                 foundWithCorrectKey = true;
             }
         }
         assertThat(foundWithCorrectKey)
-                .as("Kafka message key should be the bookingId for partition affinity")
+                .as("Kafka message key should be the payment's aggregate id for partition affinity")
                 .isTrue();
     }
 }

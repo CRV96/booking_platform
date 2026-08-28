@@ -50,6 +50,12 @@
             <artifactId>spring-cloud-starter-config</artifactId>
         </dependency>
 
+        <!-- Web (Stripe webhook endpoint) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
         <!-- Database (JPA + PostgreSQL) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

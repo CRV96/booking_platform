@@ -157,8 +157,8 @@ export class MyTicketsComponent implements OnInit {
     }).subscribe({
       next: r => {
         this.loading.set(false);
-        this.connection.set(r.data.myTickets);
-        this.tickets.set(r.data.myTickets.tickets);
+        this.connection.set(r.data!.myTickets);
+        this.tickets.set(r.data!.myTickets.tickets);
       },
       error: err => { this.loading.set(false); this.error.set(err.message || 'Failed to load'); }
     });

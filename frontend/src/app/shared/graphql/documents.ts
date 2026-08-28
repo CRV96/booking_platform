@@ -191,3 +191,23 @@ export const CANCEL_TICKET = gql`
     cancelTicket(ticketNumber: $ticketNumber) { id ticketNumber status }
   }
 `;
+
+// ── Payments ──────────────────────────────────────────────────────────────────
+
+// One payment intent for an order covering several bookings.
+export const CREATE_ORDER_PAYMENT_INTENT = gql`
+  mutation CreateOrderPaymentIntent($orderId: ID!, $bookingIds: [ID!]!) {
+    createOrderPaymentIntent(orderId: $orderId, bookingIds: $bookingIds) {
+      paymentId bookingId externalPaymentId clientSecret status provider publishableKey
+    }
+  }
+`;
+
+// Mock mode only — simulate the payment outcome with a test card number.
+export const CONFIRM_MOCK_PAYMENT = gql`
+  mutation ConfirmMockPayment($bookingId: ID!, $cardNumber: String!) {
+    confirmMockPayment(bookingId: $bookingId, cardNumber: $cardNumber) {
+      paymentId bookingId externalPaymentId clientSecret status
+    }
+  }
+`;

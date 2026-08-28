@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package payment.payment;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.payment";
+option java_outer_classname = "PaymentServiceProto";
+
+service PaymentService {
+  // Get-or-create ONE PaymentIntent for an order covering several bookings (the summed amount).
+  // Idempotent on order_id. On success the payment's events confirm every booking in the order.
+  rpc CreateOrderPaymentIntent(CreateOrderPaymentIntentRequest) returns (PaymentIntentResponse);
+
+  // MOCK-MODE ONLY (payment.gateway.type=mock): simulate the payment outcome without Stripe.
+  // card_number selects the outcome (see docs/payment-test-cards.md). Funnels into the same
+  // PaymentOutcomeService the real Stripe webhook uses. Rejected in stripe mode.
+  rpc ConfirmMockPayment(ConfirmMockPaymentRequest) returns (PaymentIntentResponse);
+}
+
+// ============================================================================
+// Messages
+// ============================================================================
+message CreateOrderPaymentIntentRequest {
+  string order_id = 1;              // client-generated order id (idempotency key)
+  repeated string booking_ids = 2;  // the bookings this order pays for
+  string amount = 3;                // order total as decimal string — authoritative, summed from the bookings
+  string currency = 4;              // ISO 4217
+}
+
+message ConfirmMockPaymentRequest {
+  string booking_id = 1;   // the booking being paid for
+  string card_number = 2;  // test card selecting the outcome (4242… success, 4000…0002 decline, …)
+}
+
+message PaymentIntentResponse {
+  string payment_id = 1;           // our internal PaymentEntity id (UUID string)
+  string booking_id = 2;
+  string external_payment_id = 3;  // gateway PaymentIntent id (e.g. "pi_...")
+  string client_secret = 4;        // for client-side confirmation; empty when no card entry is needed
+  string status = 5;               // our PaymentStatus name (e.g. "PROCESSING", "COMPLETED")
+  string provider = 6;             // "stripe" or "mock" — tells the frontend which card form to render
+  string publishable_key = 7;      // Stripe publishable key for the browser; empty in mock mode
+}

@@ -6,15 +6,6 @@ option java_multiple_files = true;
 option java_package = "com.booking.platform.common.grpc.ticket";
 option java_outer_classname = "TicketServiceProto";
 
-// ============================================================================
-// TICKET SERVICE
-// ============================================================================
-// Handles ticket queries, validation (venue entry), and cancellation.
-//
-// Customer endpoints: GetMyTickets (userId from JWT — never from request)
-// Employee endpoints: GetTicketsByBooking, GetTicketsByUser, GetTicketByNumber,
-//                     ValidateTicket, CancelTicket
-
 service TicketService {
   // Customer: get own tickets. UserId is extracted from JWT, not from request.
   rpc GetMyTickets(GetMyTicketsRequest) returns (GetMyTicketsResponse);
@@ -35,10 +26,6 @@ service TicketService {
   rpc CancelTicket(CancelTicketRequest) returns (TicketResponse);
 }
 
-// ============================================================================
-// GET MY TICKETS (Customer)
-// ============================================================================
-
 message GetMyTicketsRequest {
   int32 page = 1;       // 0-indexed, default 0
   int32 page_size = 2;  // Default 20, max 100
@@ -49,10 +36,6 @@ message GetMyTicketsResponse {
   PaginationInfo pagination = 2;
 }
 
-// ============================================================================
-// GET TICKETS BY BOOKING (Employee)
-// ============================================================================
-
 message GetTicketsByBookingRequest {
   string booking_id = 1;
 }
@@ -60,10 +43,6 @@ message GetTicketsByBookingRequest {
 message GetTicketsByBookingResponse {
   repeated TicketInfo tickets = 1;
 }
-
-// ============================================================================
-// GET TICKETS BY USER (Employee)
-// ============================================================================
 
 message GetTicketsByUserRequest {
   string user_id = 1;
@@ -76,41 +55,21 @@ message GetTicketsByUserResponse {
   PaginationInfo pagination = 2;
 }
 
-// ============================================================================
-// GET TICKET BY NUMBER (Employee)
-// ============================================================================
-
 message GetTicketByNumberRequest {
   string ticket_number = 1;
 }
-
-// ============================================================================
-// VALIDATE TICKET (Employee)
-// ============================================================================
 
 message ValidateTicketRequest {
   string ticket_number = 1;
 }
 
-// ============================================================================
-// CANCEL TICKET (Employee)
-// ============================================================================
-
 message CancelTicketRequest {
   string ticket_number = 1;
 }
 
-// ============================================================================
-// SHARED RESPONSE
-// ============================================================================
-
 message TicketResponse {
   TicketInfo ticket = 1;
 }
-
-// ============================================================================
-// SHARED MESSAGES
-// ============================================================================
 
 message TicketInfo {
   string id = 1;

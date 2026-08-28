@@ -162,7 +162,7 @@ export class TicketScannerComponent {
     this.apollo.query<{ ticket: Ticket }>({
       query: GET_TICKET, variables: { ticketNumber: this.ticketNumber.trim() }
     }).subscribe({
-      next: r => { this.looking.set(false); this.ticket.set(r.data.ticket); },
+      next: r => { this.looking.set(false); this.ticket.set(r.data!.ticket); },
       error: err => { this.looking.set(false); this.lookupError.set(err.message || 'Ticket not found'); }
     });
   }

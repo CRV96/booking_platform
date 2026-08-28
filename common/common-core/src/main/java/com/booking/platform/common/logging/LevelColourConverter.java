@@ -30,7 +30,7 @@ public class LevelColourConverter extends ForegroundCompositeConverterBase<ILogg
     private static final String BOLD_RED = "1;31";
     private static final String YELLOW   = "33";
     private static final String GREEN    = "32";
-    private static final String WHITE    = "97";  // bright white — visible on dark and light themes
+    private static final String WHITE    = "97";
     private static final String BLUE     = "34";
 
     @Override
@@ -40,6 +40,6 @@ public class LevelColourConverter extends ForegroundCompositeConverterBase<ILogg
         if (level >= Level.WARN_INTEGER)  return YELLOW;
         if (level >= Level.INFO_INTEGER)  return GREEN;
         if (level >= Level.DEBUG_INTEGER) return WHITE;
-        return BLUE; // TRACE
+        return BLUE;
     }
 }

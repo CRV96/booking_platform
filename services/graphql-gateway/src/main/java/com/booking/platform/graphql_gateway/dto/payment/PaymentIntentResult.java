@@ -1,0 +1,36 @@
+package com.booking.platform.graphql_gateway.dto.payment;
+
+import com.booking.platform.common.grpc.payment.PaymentIntentResponse;
+
+/**
+ * GraphQL DTO for the result of starting a payment.
+ * Maps from the gRPC {@link PaymentIntentResponse} message.
+ *
+ * <p>{@code clientSecret} is what the browser uses to confirm the card client-side; it is
+ * {@code null} when no further card entry is needed (e.g. the payment already completed),
+ * in which case the frontend routes to the confirmation page instead of showing the card form.
+ */
+public record PaymentIntentResult(
+        String paymentId,
+        String bookingId,
+        String externalPaymentId,
+        String clientSecret,
+        String status,
+        String provider,          // "stripe" or "mock" — which card form the frontend renders
+        String publishableKey     // Stripe publishable key for the browser; null in mock mode
+) {
+    public static PaymentIntentResult fromGrpc(PaymentIntentResponse response) {
+        return new PaymentIntentResult(
+                response.getPaymentId(),
+                response.getBookingId(),
+                emptyToNull(response.getExternalPaymentId()),
+                emptyToNull(response.getClientSecret()),
+                response.getStatus(),
+                response.getProvider(),
+                emptyToNull(response.getPublishableKey()));
+    }
+
+    private static String emptyToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
+    }
+}

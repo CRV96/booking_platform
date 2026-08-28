@@ -3,9 +3,10 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { Apollo } from 'apollo-angular';
-import { GET_EVENT, CREATE_BOOKING } from '../../shared/graphql/documents';
+import { GET_EVENT } from '../../shared/graphql/documents';
 import { Event, SeatCategory } from '../../shared/models/models';
 import { AuthService } from '../../core/auth.service';
+import { CartService } from '../../core/cart.service';
 import { EventArtComponent } from '../../shared/event-art.component';
 
 @Component({
@@ -75,13 +76,6 @@ import { EventArtComponent } from '../../shared/event-art.component';
               <div class="booking-card">
                 <div class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px">Reserve your seat</div>
 
-                @if (bookingSuccess()) {
-                  <div class="alert alert-success">Booking created! Check <a routerLink="/bookings" style="text-decoration:underline">My Bookings</a>.</div>
-                }
-                @if (bookingError()) {
-                  <div class="alert alert-error">{{ bookingError() }}</div>
-                }
-
                 @if (!auth.isAuthenticated()) {
                   <p style="font-size:13px;color:var(--ink-3);margin-bottom:16px">
                     Please <a routerLink="/auth/login" style="color:var(--ink);text-decoration:underline">sign in</a> to book tickets.
@@ -114,8 +108,8 @@ import { EventArtComponent } from '../../shared/event-art.component';
                       <span class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.08em">Total</span>
                       <span style="font-family:var(--serif);font-size:24px">{{ selectedCategory()!.currency }} {{ total() }}</span>
                     </div>
-                    <button class="btn btn-primary btn-lg btn-block" style="margin-top:16px" (click)="book()" [disabled]="booking()">
-                      @if (booking()) { <span class="spinner"></span> } Book now
+                    <button class="btn btn-primary btn-lg btn-block" style="margin-top:16px" (click)="addToCart()">
+                      Add to cart
                     </button>
                   }
                 }
@@ -171,6 +165,7 @@ export class EventDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private apollo = inject(Apollo);
   auth = inject(AuthService);
+  private cart = inject(CartService);
   private router = inject(Router);
 
   event = signal<Event | null>(null);
@@ -178,16 +173,13 @@ export class EventDetailComponent implements OnInit {
   error = signal('');
   selectedCategory = signal<SeatCategory | null>(null);
   quantity = 1;
-  booking = signal(false);
-  bookingError = signal('');
-  bookingSuccess = signal(false);
 
   ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.loading.set(true);
     this.apollo.query<{ event: Event }>({ query: GET_EVENT, variables: { id } })
       .subscribe({
-        next: r => { this.loading.set(false); this.event.set(r.data.event); },
+        next: r => { this.loading.set(false); this.event.set(r.data!.event); },
         error: err => { this.loading.set(false); this.error.set(err.message || 'Event not found'); }
       });
   }
@@ -206,31 +198,20 @@ export class EventDetailComponent implements OnInit {
     return ev.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 100;
   }
 
-  book() {
-    this.booking.set(true);
-    this.bookingError.set('');
-    this.bookingSuccess.set(false);
-    this.apollo.mutate<{ createBooking: { id: string } }>({
-      mutation: CREATE_BOOKING,
-      variables: {
-        input: {
-          eventId: this.event()!.id,
-          seatCategory: this.selectedCategory()!.name,
-          quantity: Number(this.quantity),
-          idempotencyKey: crypto.randomUUID(),
-        }
-      }
-    }).subscribe({
-      next: () => {
-        this.booking.set(false);
-        this.bookingSuccess.set(true);
-        this.selectedCategory.set(null);
-      },
-      error: err => {
-        this.booking.set(false);
-        this.bookingError.set(err.message?.replace('ApolloError: ', '') || 'Booking failed');
-      }
+  addToCart() {
+    const ev = this.event()!;
+    const cat = this.selectedCategory()!;
+    // Add to the cart (same event+category replaces its line). No seats are reserved yet —
+    // the bookings (and seat holds) are created at checkout.
+    this.cart.add({
+      eventId: ev.id,
+      eventTitle: ev.title,
+      seatCategory: cat.name,
+      unitPrice: cat.price,
+      currency: cat.currency,
+      quantity: Number(this.quantity),
     });
+    this.router.navigate(['/cart']);
   }
 
   statusBadge(status: string) {

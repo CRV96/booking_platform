@@ -1,0 +1,24 @@
+extend type Mutation {
+    """
+    Start (or resume) payment for an order covering several bookings — one PaymentIntent for the
+    summed total. Idempotent per orderId. On success every booking in the order is confirmed.
+    """
+    createOrderPaymentIntent(orderId: ID!, bookingIds: [ID!]!): PaymentIntent!
+
+    """
+    MOCK MODE ONLY. Simulate the payment outcome for a booking using a test card number
+    (see docs/payment-test-cards.md: 4242… succeeds, 4000…0002 declines, etc.). Rejected by
+    the backend when it runs against real Stripe — there the outcome comes from the webhook.
+    """
+    confirmMockPayment(bookingId: ID!, cardNumber: String!): PaymentIntent!
+}
+
+type PaymentIntent {
+    paymentId: ID!
+    bookingId: ID!
+    externalPaymentId: String        # gateway PaymentIntent id (pi_...); null if not applicable
+    clientSecret: String             # null when no card entry is needed (e.g. already paid)
+    status: String!                  # PaymentStatus name (e.g. "PROCESSING", "COMPLETED")
+    provider: String!                # "stripe" or "mock" — which card form the frontend renders
+    publishableKey: String           # Stripe publishable key for the browser; null in mock mode
+}

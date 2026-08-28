@@ -28,6 +28,20 @@ export const routes: Routes = [
   },
 
   {
+    path: 'cart',
+    loadComponent: () => import('./features/cart/cart.component').then(m => m.CartComponent),
+  },
+
+  {
+    path: 'checkout',
+    canActivate: [authGuard],
+    children: [
+      { path: '', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent) },
+      { path: 'confirmation', loadComponent: () => import('./features/checkout/confirmation.component').then(m => m.ConfirmationComponent) },
+    ]
+  },
+
+  {
     path: 'bookings',
     canActivate: [authGuard],
     loadComponent: () => import('./features/bookings/my-bookings.component').then(m => m.MyBookingsComponent),

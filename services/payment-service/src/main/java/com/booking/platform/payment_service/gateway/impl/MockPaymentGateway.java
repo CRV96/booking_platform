@@ -42,23 +42,26 @@ public class MockPaymentGateway implements PaymentGateway {
                     amount, currency, idempotencyKey);
             simulateDelay();
             String mockId = "mock_pi_" + UUID.randomUUID();
+            // Mirror Stripe's client-secret shape ("<pi-id>_secret_<random>") so the
+            // frontend can treat mock and real responses identically.
+            String mockClientSecret = mockId + "_secret_" + UUID.randomUUID();
 
             ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Payment intent created: id='{}'", mockId);
 
             return new GatewayPaymentResponse(mockId, "requires_confirmation",
-                    BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD);
+                    BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD, mockClientSecret);
         });
     }
 
     @Override
-    public CompletableFuture<GatewayPaymentResponse> confirmPayment(String externalPaymentId) {
+    public CompletableFuture<GatewayPaymentResponse> retrievePaymentIntent(String externalPaymentId) {
         return CompletableFuture.supplyAsync(() -> {
-            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Confirming payment: id='{}'", externalPaymentId);
-            simulateDelay();
-            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Payment confirmed: id='{}'", externalPaymentId);
-
-            return new GatewayPaymentResponse(externalPaymentId, BkgConstants.BkgStripeConstants.RESPONSE_SUCCEEDED,
-                    BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD);
+            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Retrieving payment intent: id='{}'", externalPaymentId);
+            // The mock stores nothing, so it derives a stable secret from the id. The mock
+            // frontend doesn't use Stripe.js, so the exact value only needs to be consistent.
+            String mockClientSecret = externalPaymentId + "_secret_mock";
+            return new GatewayPaymentResponse(externalPaymentId, "requires_confirmation",
+                    BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD, mockClientSecret);
         });
     }
 

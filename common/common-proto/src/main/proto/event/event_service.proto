@@ -8,12 +8,6 @@ option java_multiple_files = true;
 option java_package = "com.booking.platform.common.grpc.event";
 option java_outer_classname = "EventServiceProto";
 
-// ============================================================================
-// EVENT SERVICE
-// ============================================================================
-// Handles event lifecycle: creation, publishing, updating, searching,
-// and seat availability management for the booking flow.
-
 service EventService {
   // Create a new event in DRAFT status. Requires employee role.
   rpc CreateEvent(CreateEventRequest) returns (EventResponse);
@@ -38,10 +32,6 @@ service EventService {
   rpc UpdateSeatAvailability(UpdateSeatAvailabilityRequest) returns (UpdateSeatAvailabilityResponse);
 }
 
-// ============================================================================
-// CREATE EVENT
-// ============================================================================
-
 message CreateEventRequest {
   string title = 1;
   string description = 2;
@@ -59,17 +49,9 @@ message CreateEventRequest {
   repeated string tags = 10;
 }
 
-// ============================================================================
-// GET EVENT
-// ============================================================================
-
 message GetEventRequest {
   string event_id = 1;
 }
-
-// ============================================================================
-// UPDATE EVENT
-// ============================================================================
 
 message UpdateEventRequest {
   string event_id = 1;
@@ -90,26 +72,14 @@ message UpdateEventRequest {
   repeated string tags = 11;                       // Replaces entire list if provided
 }
 
-// ============================================================================
-// PUBLISH EVENT
-// ============================================================================
-
 message PublishEventRequest {
   string event_id = 1;
 }
-
-// ============================================================================
-// CANCEL EVENT
-// ============================================================================
 
 message CancelEventRequest {
   string event_id = 1;
   optional string reason = 2;
 }
-
-// ============================================================================
-// SEARCH EVENTS
-// ============================================================================
 
 message SearchEventsRequest {
   // Filters (all optional — omitting returns all PUBLISHED events)
@@ -135,17 +105,9 @@ message SearchEventsResponse {
   repeated EventInfo smart_results = 3;
 }
 
-// ============================================================================
-// SHARED RESPONSE
-// ============================================================================
-
 message EventResponse {
   EventInfo event = 1;
 }
-
-// ============================================================================
-// SEAT AVAILABILITY
-// ============================================================================
 
 message UpdateSeatAvailabilityRequest {
   string event_id = 1;

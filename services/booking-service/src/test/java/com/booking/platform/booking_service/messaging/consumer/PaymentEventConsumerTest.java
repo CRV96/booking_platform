@@ -43,6 +43,22 @@ class PaymentEventConsumerTest {
     }
 
     @Test
+    void onPaymentCompleted_orderWithMultipleBookings_confirmsEach() {
+        UUID b1 = UUID.randomUUID();
+        UUID b2 = UUID.randomUUID();
+        PaymentCompletedEvent event = PaymentCompletedEvent.newBuilder()
+                .setPaymentId(PAYMENT_ID)
+                .setBookingId("order-1")   // order id — ignored when booking_ids is present
+                .addAllBookingIds(java.util.List.of(b1.toString(), b2.toString()))
+                .build();
+
+        consumer.onPaymentCompleted(record("payment.completed", "order-1", event));
+
+        verify(bookingService).confirmBooking(b1);
+        verify(bookingService).confirmBooking(b2);
+    }
+
+    @Test
     void onPaymentCompleted_invalidBookingId_throwsIllegalArgument() {
         PaymentCompletedEvent event = PaymentCompletedEvent.newBuilder()
                 .setPaymentId(PAYMENT_ID)
@@ -69,6 +85,23 @@ class PaymentEventConsumerTest {
         consumer.onPaymentFailed(record("payment.failed", BOOKING_ID.toString(), event));
 
         verify(bookingService).cancelBookingOnPaymentFailure(BOOKING_ID, "card declined");
+    }
+
+    @Test
+    void onPaymentFailed_orderWithMultipleBookings_cancelsEach() {
+        UUID b1 = UUID.randomUUID();
+        UUID b2 = UUID.randomUUID();
+        PaymentFailedEvent event = PaymentFailedEvent.newBuilder()
+                .setPaymentId(PAYMENT_ID)
+                .setBookingId("order-1")
+                .setReason("declined")
+                .addAllBookingIds(java.util.List.of(b1.toString(), b2.toString()))
+                .build();
+
+        consumer.onPaymentFailed(record("payment.failed", "order-1", event));
+
+        verify(bookingService).cancelBookingOnPaymentFailure(b1, "declined");
+        verify(bookingService).cancelBookingOnPaymentFailure(b2, "declined");
     }
 
     @Test

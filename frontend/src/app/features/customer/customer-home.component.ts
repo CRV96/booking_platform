@@ -1,6 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
 import { Apollo } from 'apollo-angular';
 import { GET_MY_BOOKINGS, GET_MY_TICKETS } from '../../shared/graphql/documents';
 import { Booking, BookingConnection, Ticket, TicketConnection } from '../../shared/models/models';
@@ -17,7 +16,7 @@ function timeOfDay(): string {
 @Component({
   selector: 'app-customer-home',
   standalone: true,
-  imports: [RouterLink, DatePipe, EventArtComponent],
+  imports: [RouterLink, EventArtComponent],
   template: `
     <div class="container page">
       <!-- Greeting -->
@@ -165,8 +164,8 @@ export class CustomerHomeComponent implements OnInit {
     }).subscribe({
       next: r => {
         this.bookingsLoading.set(false);
-        this.bookings.set(r.data.myBookings.bookings);
-        this.totalBookings.set(r.data.myBookings.totalCount);
+        this.bookings.set(r.data!.myBookings.bookings);
+        this.totalBookings.set(r.data!.myBookings.totalCount);
       },
       error: () => this.bookingsLoading.set(false)
     });
@@ -180,8 +179,8 @@ export class CustomerHomeComponent implements OnInit {
     }).subscribe({
       next: r => {
         this.ticketsLoading.set(false);
-        this.tickets.set(r.data.myTickets.tickets);
-        this.totalTickets.set(r.data.myTickets.totalCount);
+        this.tickets.set(r.data!.myTickets.tickets);
+        this.totalTickets.set(r.data!.myTickets.totalCount);
       },
       error: () => this.ticketsLoading.set(false)
     });

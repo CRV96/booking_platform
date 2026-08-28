@@ -1,5 +1,6 @@
 package com.booking.platform.payment_service.messaging.publisher;
 
+import com.booking.platform.common.events.PaymentCompletedEvent;
 import com.booking.platform.payment_service.entity.OutboxEventEntity;
 import com.booking.platform.payment_service.repository.OutboxEventRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -105,6 +106,26 @@ class OutboxPollingPublisherTest {
         publisher.pollAndPublish();
 
         verify(kafkaTemplate).send(eq("events.payment.completed"), anyString(), any());
+    }
+
+    @Test
+    void pollAndPublish_completedEvent_mapsBookingIdsOntoProto() throws Exception {
+        UUID paymentId = UUID.randomUUID();
+        String payload = String.format(
+                "{\"payment_id\":\"%s\",\"booking_id\":\"order-1\",\"amount\":\"99.99\",\"currency\":\"USD\","
+                        + "\"timestamp\":\"2024-01-01T00:00:00Z\",\"booking_ids\":[\"b1\",\"b2\"]}",
+                paymentId);
+        OutboxEventEntity event = outboxEvent("PaymentCompleted", payload);
+        when(outboxEventRepository.findByPublishedAtIsNullOrderByCreatedAtAsc(any(Pageable.class)))
+                .thenReturn(List.of(event));
+        when(kafkaTemplate.send(anyString(), anyString(), any())).thenReturn(successFuture());
+
+        publisher.pollAndPublish();
+
+        ArgumentCaptor<MessageLite> captor = ArgumentCaptor.forClass(MessageLite.class);
+        verify(kafkaTemplate).send(eq("events.payment.completed"), anyString(), captor.capture());
+        PaymentCompletedEvent proto = (PaymentCompletedEvent) captor.getValue();
+        assertThat(proto.getBookingIdsList()).containsExactly("b1", "b2");
     }
 
     @Test

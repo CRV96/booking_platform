@@ -1,12 +1,9 @@
 package com.booking.platform.payment_service.repository;
 
 import com.booking.platform.payment_service.entity.PaymentEntity;
-import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,11 +33,4 @@ public interface PaymentRepository extends JpaRepository<PaymentEntity, UUID> {
      * Prepared for P4-02 (Stripe integration).
      */
     Optional<PaymentEntity> findByExternalPaymentId(String externalPaymentId);
-
-    /**
-     * Returns all PENDING_RETRY payments whose next retry time has passed.
-     * Called by {@link com.booking.platform.payment_service.scheduler.PaymentRetryScheduler}
-     * on each scheduler tick to find payments due for a retry attempt.
-     */
-    List<PaymentEntity> findByStatusAndNextRetryAtBefore(PaymentStatus status, Instant cutoff);
 }

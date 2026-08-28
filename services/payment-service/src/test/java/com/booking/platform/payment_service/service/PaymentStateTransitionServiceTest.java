@@ -11,6 +11,7 @@ import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.service.impl.PaymentStateTransitionService;
 import com.booking.platform.payment_service.validation.PaymentValidator;
 import com.fasterxml.jackson.databind.JsonNode;
+import java.util.List;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -52,8 +53,6 @@ class PaymentStateTransitionServiceTest {
     void setUp() {
         ReflectionTestUtils.setField(service, "objectMapper", objectMapper);
         ReflectionTestUtils.setField(service, "maxRetries", 3);
-        ReflectionTestUtils.setField(service, "backoffBaseSeconds", 60L);
-        ReflectionTestUtils.setField(service, "backoffMultiplier", 2.0);
         ReflectionTestUtils.setField(service, "clock", Clock.fixed(FIXED_NOW, ZoneOffset.UTC));
     }
 
@@ -70,23 +69,6 @@ class PaymentStateTransitionServiceTest {
                 .retryCount(0)
                 .maxRetries(3)
                 .build();
-    }
-
-    // ── createPaymentRecord ───────────────────────────────────────────────────
-
-    @Test
-    void createPaymentRecord_savesEntityWithInitiatedStatus() {
-        when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        PaymentEntity result = service.createPaymentRecord("booking-1", "user-1", new BigDecimal("50.00"), "USD");
-
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.INITIATED);
-        assertThat(result.getBookingId()).isEqualTo("booking-1");
-        assertThat(result.getUserId()).isEqualTo("user-1");
-        assertThat(result.getAmount()).isEqualByComparingTo("50.00");
-        assertThat(result.getCurrency()).isEqualTo("USD");
-        assertThat(result.getIdempotencyKey()).isEqualTo("booking-1");
-        assertThat(result.getMaxRetries()).isEqualTo(3);
     }
 
     // ── updateToProcessing ────────────────────────────────────────────────────
@@ -106,24 +88,39 @@ class PaymentStateTransitionServiceTest {
         verify(paymentValidator).assertValidTransition(any(), eq(PaymentStatus.PROCESSING));
     }
 
-    // ── incrementRetryCount ───────────────────────────────────────────────────
+    // ── createOrderPaymentRecord ──────────────────────────────────────────────
 
     @Test
-    void incrementRetryCount_incrementsCountAndClearsNextRetryAt() {
-        UUID id = id();
-        PaymentEntity p = PaymentEntity.builder()
-                .id(id).bookingId("b").userId("u").amount(BigDecimal.TEN).currency("USD")
-                .status(PaymentStatus.PENDING_RETRY).retryCount(1).maxRetries(3)
-                .nextRetryAt(FIXED_NOW.plusSeconds(60))
-                .build();
-        when(paymentRepository.findById(id)).thenReturn(Optional.of(p));
+    void createOrderPaymentRecord_savesWithOrderIdAndBookingIds() {
         when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        PaymentEntity result = service.incrementRetryCount(id);
+        PaymentEntity result = service.createOrderPaymentRecord(
+                "order-1", "user-1", List.of("b1", "b2"), new BigDecimal("100.00"), "USD");
 
-        assertThat(result.getRetryCount()).isEqualTo(2);
-        assertThat(result.getNextRetryAt()).isNull();
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.PROCESSING);
+        assertThat(result.getStatus()).isEqualTo(PaymentStatus.INITIATED);
+        assertThat(result.getBookingId()).isEqualTo("order-1");
+        assertThat(result.getBookingIds()).isEqualTo("b1,b2");
+        assertThat(result.getIdempotencyKey()).isEqualTo("order-1");
+    }
+
+    @Test
+    void markCompleted_orderPayment_outboxPayloadContainsAllBookingIds() throws Exception {
+        UUID id = id();
+        PaymentEntity orderPayment = PaymentEntity.builder()
+                .id(id).bookingId("order-1").bookingIds("b1,b2").userId("u")
+                .amount(BigDecimal.TEN).currency("USD").status(PaymentStatus.PROCESSING).build();
+        when(paymentRepository.findById(id)).thenReturn(Optional.of(orderPayment));
+        when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(outboxEventRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.markCompleted(id, new GatewayPaymentResponse("pi", "succeeded", "card"));
+
+        ArgumentCaptor<OutboxEventEntity> captor = ArgumentCaptor.forClass(OutboxEventEntity.class);
+        verify(outboxEventRepository).save(captor.capture());
+        JsonNode payload = objectMapper.readTree(captor.getValue().getPayload());
+        assertThat(payload.get("booking_ids")).hasSize(2);
+        assertThat(payload.get("booking_ids").get(0).asText()).isEqualTo("b1");
+        assertThat(payload.get("booking_ids").get(1).asText()).isEqualTo("b2");
     }
 
     // ── markCompleted ─────────────────────────────────────────────────────────
@@ -214,54 +211,6 @@ class PaymentStateTransitionServiceTest {
         verify(outboxEventRepository).save(captor.capture());
         JsonNode payload = objectMapper.readTree(captor.getValue().getPayload());
         assertThat(payload.get("reason").asText()).isEqualTo("Unknown");
-    }
-
-    // ── markPendingRetry ──────────────────────────────────────────────────────
-
-    @Test
-    void markPendingRetry_setsStatusAndReasonAndNextRetryAt() {
-        UUID id = id();
-        when(paymentRepository.findById(id)).thenReturn(Optional.of(payment(id, PaymentStatus.INITIATED)));
-        when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        PaymentEntity result = service.markPendingRetry(id, "Circuit breaker open");
-
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.PENDING_RETRY);
-        assertThat(result.getFailureReason()).isEqualTo("Circuit breaker open");
-        // nextRetryAt = now + 60s (base) for retryCount=0
-        assertThat(result.getNextRetryAt()).isEqualTo(FIXED_NOW.plusSeconds(60));
-        verify(outboxEventRepository, never()).save(any());
-    }
-
-    @Test
-    void markPendingRetry_exponentialBackoff_increasesWithRetryCount() {
-        UUID id = id();
-        PaymentEntity p = PaymentEntity.builder()
-                .id(id).bookingId("b").userId("u").amount(BigDecimal.TEN).currency("USD")
-                .status(PaymentStatus.PENDING_RETRY).retryCount(2).maxRetries(3)
-                .build();
-        when(paymentRepository.findById(id)).thenReturn(Optional.of(p));
-        when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        PaymentEntity result = service.markPendingRetry(id, "still down");
-
-        // base=60, multiplier=2, retryCount=2 → 60 * 2^2 = 240s
-        assertThat(result.getNextRetryAt()).isEqualTo(FIXED_NOW.plusSeconds(240));
-    }
-
-    @Test
-    void markPendingRetry_backoffCappedAt3600Seconds() {
-        UUID id = id();
-        PaymentEntity p = PaymentEntity.builder()
-                .id(id).bookingId("b").userId("u").amount(BigDecimal.TEN).currency("USD")
-                .status(PaymentStatus.PENDING_RETRY).retryCount(100).maxRetries(200)
-                .build();
-        when(paymentRepository.findById(id)).thenReturn(Optional.of(p));
-        when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        PaymentEntity result = service.markPendingRetry(id, "down");
-
-        assertThat(result.getNextRetryAt()).isEqualTo(FIXED_NOW.plusSeconds(3600));
     }
 
     // ── markRefundInitiated ───────────────────────────────────────────────────

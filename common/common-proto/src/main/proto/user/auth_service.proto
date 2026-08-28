@@ -8,12 +8,6 @@ option java_multiple_files = true;
 option java_package = "com.booking.platform.common.grpc.user";
 option java_outer_classname = "AuthServiceProto";
 
-// ============================================================================
-// AUTH SERVICE
-// ============================================================================
-// Handles authentication operations via Keycloak including registration,
-// login, token refresh, and logout.
-
 service AuthService {
   // Register a new user. Creates user in Keycloak and returns tokens.
   rpc Register(RegisterRequest) returns (AuthResponse);
@@ -27,10 +21,6 @@ service AuthService {
   // Logout - invalidates the refresh token in Keycloak.
   rpc Logout(LogoutRequest) returns (LogoutResponse);
 }
-
-// ============================================================================
-// AUTHENTICATION MESSAGES
-// ============================================================================
 
 message RegisterRequest {
   string email = 1;

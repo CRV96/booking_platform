@@ -259,7 +259,7 @@ flowchart LR
     end
 ```
 
-See **[INSTALLATION.md → Semantic Search](INSTALLATION.md#semantic-search)** for setup and tuning.
+See **[INSTALLATION.md → Semantic Search](docs/INSTALLATION.md#semantic-search)** for setup and tuning.
 
 ## GraphQL API
 
@@ -418,7 +418,7 @@ cd frontend && npm start   # proxies /graphql → localhost:8080
 
 ### Full Setup
 
-See **[INSTALLATION.md](INSTALLATION.md)** for detailed instructions including:
+See **[INSTALLATION.md](docs/INSTALLATION.md)** for detailed instructions including:
 - Local development setup (services on host with hot-reload)
 - Local development setup (services on host with hot-reload)
 - Full Docker deployment

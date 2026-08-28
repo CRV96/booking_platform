@@ -6,9 +6,6 @@ option java_multiple_files = true;
 option java_package = "com.booking.platform.common.grpc.booking";
 option java_outer_classname = "BookingServiceProto";
 
-// ============================================================================
-// BOOKING SERVICE
-// ============================================================================
 service BookingService {
   // Initiate a booking: reserves seats, creates a PENDING record, starts the hold timer.
   // Idempotent — repeated requests with the same idempotencyKey return the existing booking.
@@ -27,9 +24,6 @@ service BookingService {
   rpc GetBookingAttendees(GetBookingAttendeesRequest) returns (GetBookingAttendeesResponse);
 }
 
-// ============================================================================
-// Messages
-// ============================================================================
 message CreateBookingRequest {
   string event_id = 1;            // MongoDB ObjectId from event-service
   string seat_category = 2;       // Matches SeatCategoryInfo.name in event-service

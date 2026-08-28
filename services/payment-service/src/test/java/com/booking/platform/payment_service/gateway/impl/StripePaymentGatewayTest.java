@@ -48,23 +48,23 @@ class StripePaymentGatewayTest {
     }
 
     @Test
-    void confirmPaymentFallback_returnsFailedFuture() throws Exception {
+    void retrievePaymentIntentFallback_returnsFailedFuture() throws Exception {
         StripePaymentGateway gateway = new StripePaymentGateway();
         ReflectionTestUtils.setField(gateway, "apiKey", "sk_test_key");
 
         Method fallback = StripePaymentGateway.class.getDeclaredMethod(
-                "confirmPaymentFallback", String.class, Throwable.class);
+                "retrievePaymentIntentFallback", String.class, Throwable.class);
         fallback.setAccessible(true);
 
-        RuntimeException cause = new RuntimeException("broker timeout");
+        RuntimeException cause = new RuntimeException("timeout");
         @SuppressWarnings("unchecked")
         CompletableFuture<GatewayPaymentResponse> future = (CompletableFuture<GatewayPaymentResponse>)
-                fallback.invoke(gateway, "pi_test_123", cause);
+                fallback.invoke(gateway, "pi_123", cause);
 
         assertThat(future.isCompletedExceptionally()).isTrue();
         ExecutionException ex = assertThrows(ExecutionException.class, future::get);
         assertThat(ex.getCause()).isInstanceOf(PaymentGatewayUnavailableException.class);
-        assertThat(ex.getCause().getMessage()).contains("broker timeout");
+        assertThat(ex.getCause().getMessage()).contains("timeout");
     }
 
     @Test

@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../core/auth.service';
+import { CartService } from '../core/cart.service';
 
 @Component({
   selector: 'app-navbar',
@@ -30,6 +31,10 @@ import { AuthService } from '../core/auth.service';
       </nav>
 
       <div class="hdr-right">
+        <a routerLink="/cart" routerLinkActive="hdr-nav-active" class="hdr-cart" style="text-decoration:none">
+          Cart
+          @if (cart.count() > 0) { <span class="hdr-cart-badge">{{ cart.count() }}</span> }
+        </a>
         @if (auth.isAuthenticated()) {
           <a routerLink="/profile" class="hdr-user" style="text-decoration:none;color:inherit">
             <span class="hdr-avatar">{{ initials() }}</span>
@@ -77,10 +82,25 @@ import { AuthService } from '../core/auth.service';
       font-size: 11px; font-weight: 600;
     }
     .hdr-user-name { font-size: 13px; font-weight: 500; color: #14130f; }
+
+    .hdr-cart {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 12px; font-size: 13px; color: #6b6a62;
+      border-radius: 4px; transition: color 0.15s, background 0.15s;
+    }
+    .hdr-cart:hover { color: #14130f; }
+    .hdr-cart.hdr-nav-active { color: #14130f; background: #f2f1ec; }
+    .hdr-cart-badge {
+      min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+      background: #14130f; color: #fafaf8;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 600;
+    }
   `]
 })
 export class NavbarComponent {
   auth = inject(AuthService);
+  cart = inject(CartService);
   initials() {
     const u = this.auth.user();
     if (!u) return '?';

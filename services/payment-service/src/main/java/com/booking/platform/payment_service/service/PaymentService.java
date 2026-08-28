@@ -1,36 +1,37 @@
 package com.booking.platform.payment_service.service;
 
-import com.booking.platform.payment_service.entity.PaymentEntity;
+import com.booking.platform.payment_service.dto.PaymentIntentResult;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
- * Core payment processing service.
- *
- * <p>Orchestrates the full payment lifecycle:
- * <ol>
- *   <li>Persist a payment record (idempotent — returns existing if duplicate)</li>
- *   <li>Call the payment gateway to create and confirm the charge</li>
- *   <li>Update the payment record with the result</li>
- *   <li>Publish the appropriate Kafka event (completed or failed)</li>
- * </ol>
+ * Core payment service — creating payment intents for checkout (client-side confirmation) and
+ * processing refunds. The actual charge is confirmed client-side (Stripe Elements) or by the
+ * mock confirm endpoint; the outcome arrives via the Stripe webhook / mock and is applied by
+ * {@link com.booking.platform.payment_service.service.impl.PaymentOutcomeService}.
  */
 public interface PaymentService {
 
     /**
-     * Processes a payment for a booking.
+     * Get-or-create the payment intent for an <b>order</b> covering one or more bookings, for
+     * client-side confirmation (checkout).
      *
-     * <p>Idempotent: if a payment with the same {@code bookingId} as idempotency key
-     * already exists, returns the existing record without reprocessing.
+     * <p><b>Create-only</b> — it does not confirm the charge; the customer confirms client-side with
+     * their own card. Idempotent on {@code orderId}: one PaymentIntent covers the whole order
+     * (summed amount), and the payment records all booking IDs so the completion/failure events
+     * confirm/cancel every booking. A repeat call (e.g. a checkout reload) retrieves the existing
+     * intent's fresh {@code clientSecret}; an already-resolved order returns its status with a
+     * {@code null} client secret so the caller can route to the confirmation page.
      *
-     * @param bookingId the booking this payment is for (also used as idempotency key)
-     * @param userId    Keycloak subject of the user
-     * @param amount    payment amount in standard currency units (must be positive)
-     * @param currency  ISO 4217 currency code (must be exactly 3 characters)
-     * @return the persisted payment entity
-     * @throws IllegalArgumentException if amount is null/non-positive or currency is not 3 characters
+     * @param orderId    client-generated order id (idempotency key)
+     * @param userId     Keycloak subject of the user
+     * @param bookingIds the bookings this order pays for
+     * @param amount     the order total (must be positive)
+     * @param currency   ISO 4217 currency code
      */
-    PaymentEntity processPayment(String bookingId, String userId, BigDecimal amount, String currency);
+    PaymentIntentResult getOrCreateOrderPaymentIntent(String orderId, String userId, List<String> bookingIds,
+                                                      BigDecimal amount, String currency);
 
     /**
      * Processes a refund for a completed payment.
@@ -47,16 +48,4 @@ public interface PaymentService {
      * @param bookingId the booking whose payment should be refunded
      */
     void processRefund(String bookingId);
-
-    /**
-     * Retries a payment currently in {@code PENDING_RETRY} status.
-     *
-     * <p>Called by {@code PaymentRetryScheduler} for payments whose backoff window has elapsed.
-     * Increments the retry counter, re-attempts the gateway call, and transitions to
-     * {@code COMPLETED}, {@code PENDING_RETRY} (with next backoff), or {@code FAILED}
-     * (when max retries is reached).
-     *
-     * @param payment the payment entity snapshot returned by the scheduler query
-     */
-    void retryPayment(PaymentEntity payment);
 }

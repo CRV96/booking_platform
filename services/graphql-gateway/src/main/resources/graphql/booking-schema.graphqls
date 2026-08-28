@@ -1,7 +1,3 @@
-# ============================================================================
-# BOOKING PLATFORM - BOOKING GRAPHQL SCHEMA
-# ============================================================================
-
 extend type Query {
     """Get a booking by ID (authenticated user's own bookings only)"""
     booking(id: ID!): Booking
@@ -22,10 +18,6 @@ extend type Mutation {
     cancelBooking(id: ID!, reason: String): Booking!
 }
 
-# ============================================================================
-# BOOKING TYPES
-# ============================================================================
-
 type Booking {
     id: ID!
     userId: String!
@@ -44,10 +36,6 @@ type Booking {
     updatedAt: String!           # ISO 8601
 }
 
-# ============================================================================
-# ENUMS
-# ============================================================================
-
 enum BookingStatus {
     PENDING
     PAYMENT_PROCESSING
@@ -57,20 +45,12 @@ enum BookingStatus {
     REFUNDED
 }
 
-# ============================================================================
-# INPUTS
-# ============================================================================
-
 input CreateBookingInput {
     eventId: String!
     seatCategory: String!
     quantity: Int!
     idempotencyKey: String!      # Client-generated UUID — prevents duplicate submissions
 }
-
-# ============================================================================
-# PAGINATION
-# ============================================================================
 
 type BookingConnection {
     bookings: [Booking!]!

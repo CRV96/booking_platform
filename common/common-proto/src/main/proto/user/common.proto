@@ -6,10 +6,6 @@ option java_multiple_files = true;
 option java_package = "com.booking.platform.common.grpc.user";
 option java_outer_classname = "UserCommonProto";
 
-// ============================================================================
-// SHARED USER MESSAGES
-// ============================================================================
-
 message UserInfo {
   string id = 1;
   string username = 2;

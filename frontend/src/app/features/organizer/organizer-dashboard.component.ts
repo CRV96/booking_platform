@@ -225,12 +225,12 @@ export class OrganizerDashboardComponent implements OnInit {
     }).subscribe({
       next: r => {
         this.loading.set(false);
-        const evs = r.data.events.events;
+        const evs = r.data!.events.events;
         this.events.set(evs);
         this.totalEvents.set(evs.length);
-        this.publishedCount.set(evs.filter(e => e.status === 'PUBLISHED').length);
-        this.draftCount.set(evs.filter(e => e.status === 'DRAFT').length);
-        this.cancelledCount.set(evs.filter(e => e.status === 'CANCELLED').length);
+        this.publishedCount.set(evs.filter((e: Event) => e.status === 'PUBLISHED').length);
+        this.draftCount.set(evs.filter((e: Event) => e.status === 'DRAFT').length);
+        this.cancelledCount.set(evs.filter((e: Event) => e.status === 'CANCELLED').length);
       },
       error: err => { this.loading.set(false); this.error.set(err.message || 'Failed to load'); }
     });

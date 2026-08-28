@@ -1,0 +1,54 @@
+package com.booking.platform.graphql_gateway.grpc.client.impl;
+
+import com.booking.platform.common.grpc.payment.ConfirmMockPaymentRequest;
+import com.booking.platform.common.grpc.payment.CreateOrderPaymentIntentRequest;
+import com.booking.platform.common.grpc.payment.PaymentIntentResponse;
+import com.booking.platform.common.grpc.payment.PaymentServiceGrpc;
+import com.booking.platform.graphql_gateway.constants.PaymentServiceConst;
+import com.booking.platform.graphql_gateway.grpc.client.PaymentClient;
+import com.booking.platform.common.logging.ApplicationLogger;
+import lombok.extern.slf4j.Slf4j;
+import net.devh.boot.grpc.client.inject.GrpcClient;
+import org.slf4j.event.Level;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * gRPC client implementation for calling payment-service.
+ * JWT is forwarded automatically by {@code JwtForwardingClientInterceptor}.
+ */
+@Service
+@Slf4j
+public class PaymentServiceClientImpl implements PaymentClient {
+
+    @GrpcClient(PaymentServiceConst.GRPC_CLIENT)
+    private PaymentServiceGrpc.PaymentServiceBlockingStub paymentServiceStub;
+
+    @Override
+    public PaymentIntentResponse createOrderPaymentIntent(String orderId, List<String> bookingIds, String amount, String currency) {
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "Calling payment-service: CreateOrderPaymentIntent orderId='{}', bookings={}, amount={} {}",
+                orderId, bookingIds, amount, currency);
+
+        return paymentServiceStub.createOrderPaymentIntent(
+                CreateOrderPaymentIntentRequest.newBuilder()
+                        .setOrderId(orderId)
+                        .addAllBookingIds(bookingIds)
+                        .setAmount(amount)
+                        .setCurrency(currency)
+                        .build());
+    }
+
+    @Override
+    public PaymentIntentResponse confirmMockPayment(String bookingId, String cardNumber) {
+        ApplicationLogger.logMessage(log, Level.DEBUG,
+                "Calling payment-service: ConfirmMockPayment bookingId='{}'", bookingId);
+
+        return paymentServiceStub.confirmMockPayment(
+                ConfirmMockPaymentRequest.newBuilder()
+                        .setBookingId(bookingId)
+                        .setCardNumber(cardNumber)
+                        .build());
+    }
+}

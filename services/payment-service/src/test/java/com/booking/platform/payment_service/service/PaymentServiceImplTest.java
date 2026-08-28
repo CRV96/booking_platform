@@ -2,6 +2,7 @@ package com.booking.platform.payment_service.service;
 
 import com.booking.platform.payment_service.dto.GatewayPaymentResponse;
 import com.booking.platform.payment_service.dto.GatewayRefundResponse;
+import com.booking.platform.payment_service.dto.PaymentIntentResult;
 import com.booking.platform.payment_service.entity.PaymentEntity;
 import com.booking.platform.payment_service.entity.enums.PaymentStatus;
 import com.booking.platform.payment_service.exception.PaymentGatewayException;
@@ -20,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -52,130 +54,82 @@ class PaymentServiceImplTest {
                 .build();
     }
 
-    // ── processPayment ────────────────────────────────────────────────────────
-
-    @Test
-    void processPayment_existingPayment_returnsIdempotently() {
-        UUID id = UUID.randomUUID();
-        PaymentEntity existing = payment(id, PaymentStatus.COMPLETED);
-        when(paymentRepository.findByIdempotencyKey(BOOKING_ID)).thenReturn(Optional.of(existing));
-
-        PaymentEntity result = service.processPayment(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
-
-        assertThat(result).isSameAs(existing);
-        verify(transitions, never()).createPaymentRecord(any(), any(), any(), any());
-        verify(paymentGateway, never()).createPaymentIntent(any(), any(), any());
+    private PaymentEntity paymentWithExternalId(UUID id, PaymentStatus status, String externalId) {
+        PaymentEntity payment = payment(id, status);
+        payment.setExternalPaymentId(externalId);
+        return payment;
     }
 
+    // ── getOrCreateOrderPaymentIntent (checkout: create-only, one payment for N bookings) ──
+
+    private static final String ORDER_ID = "order-1";
+    private static final List<String> BOOKING_IDS = List.of("booking-1", "booking-2");
+
     @Test
-    void processPayment_success_callsGatewayAndMarksCompleted() {
+    void getOrCreateOrderPaymentIntent_new_createsIntentAndReturnsClientSecret() {
         UUID id = UUID.randomUUID();
-        when(paymentRepository.findByIdempotencyKey(BOOKING_ID)).thenReturn(Optional.empty());
-        when(transitions.createPaymentRecord(BOOKING_ID, USER_ID, AMOUNT, CURRENCY))
+        when(paymentRepository.findByIdempotencyKey(ORDER_ID)).thenReturn(Optional.empty());
+        when(transitions.createOrderPaymentRecord(ORDER_ID, USER_ID, BOOKING_IDS, AMOUNT, CURRENCY))
                 .thenReturn(payment(id, PaymentStatus.INITIATED));
+        when(paymentGateway.createPaymentIntent(AMOUNT, CURRENCY, ORDER_ID))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new GatewayPaymentResponse("pi_o", "requires_payment_method", "card", "pi_o_secret")));
         when(transitions.updateToProcessing(eq(id), any()))
-                .thenReturn(payment(id, PaymentStatus.PROCESSING));
+                .thenReturn(paymentWithExternalId(id, PaymentStatus.PROCESSING, "pi_o"));
 
-        GatewayPaymentResponse createResp = new GatewayPaymentResponse("pi_123", "requires_confirmation", "card");
-        GatewayPaymentResponse confirmResp = new GatewayPaymentResponse("pi_123", "succeeded", "card");
-        when(paymentGateway.createPaymentIntent(AMOUNT, CURRENCY, BOOKING_ID))
-                .thenReturn(CompletableFuture.completedFuture(createResp));
-        when(paymentGateway.confirmPayment("pi_123"))
-                .thenReturn(CompletableFuture.completedFuture(confirmResp));
+        PaymentIntentResult result = service.getOrCreateOrderPaymentIntent(ORDER_ID, USER_ID, BOOKING_IDS, AMOUNT, CURRENCY);
 
-        PaymentEntity completed = payment(id, PaymentStatus.COMPLETED);
-        when(transitions.markCompleted(eq(id), any())).thenReturn(completed);
-
-        PaymentEntity result = service.processPayment(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
-
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
-        verify(transitions).markCompleted(eq(id), any());
+        assertThat(result.clientSecret()).isEqualTo("pi_o_secret");
+        assertThat(result.status()).isEqualTo("PROCESSING");
+        verify(paymentGateway, never()).retrievePaymentIntent(any());
     }
 
     @Test
-    void processPayment_normalizesLowercaseCurrency() {
+    void getOrCreateOrderPaymentIntent_existingAwaiting_retrievesFreshSecret() {
         UUID id = UUID.randomUUID();
-        when(paymentRepository.findByIdempotencyKey(BOOKING_ID)).thenReturn(Optional.empty());
-        when(transitions.createPaymentRecord(eq(BOOKING_ID), eq(USER_ID), eq(AMOUNT), eq("USD")))
-                .thenReturn(payment(id, PaymentStatus.INITIATED));
-        when(transitions.updateToProcessing(any(), any())).thenReturn(payment(id, PaymentStatus.PROCESSING));
-        when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
-                .thenReturn(CompletableFuture.completedFuture(new GatewayPaymentResponse("pi", "req", "card")));
-        when(paymentGateway.confirmPayment(any()))
-                .thenReturn(CompletableFuture.completedFuture(new GatewayPaymentResponse("pi", "succeeded", "card")));
-        when(transitions.markCompleted(any(), any())).thenReturn(payment(id, PaymentStatus.COMPLETED));
+        when(paymentRepository.findByIdempotencyKey(ORDER_ID))
+                .thenReturn(Optional.of(paymentWithExternalId(id, PaymentStatus.PROCESSING, "pi_o")));
+        when(paymentGateway.retrievePaymentIntent("pi_o"))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new GatewayPaymentResponse("pi_o", "requires_payment_method", "card", "fresh_secret")));
 
-        service.processPayment(BOOKING_ID, USER_ID, AMOUNT, "usd");
+        PaymentIntentResult result = service.getOrCreateOrderPaymentIntent(ORDER_ID, USER_ID, BOOKING_IDS, AMOUNT, CURRENCY);
 
-        verify(transitions).createPaymentRecord(BOOKING_ID, USER_ID, AMOUNT, "USD");
+        assertThat(result.clientSecret()).isEqualTo("fresh_secret");
+        verify(paymentGateway, never()).createPaymentIntent(any(), anyString(), anyString());
     }
 
     @Test
-    void processPayment_gatewayBusinessError_marksPaymentFailed() {
+    void getOrCreateOrderPaymentIntent_alreadyResolved_returnsStatusWithoutGatewayCall() {
         UUID id = UUID.randomUUID();
-        when(paymentRepository.findByIdempotencyKey(BOOKING_ID)).thenReturn(Optional.empty());
-        when(transitions.createPaymentRecord(any(), any(), any(), any()))
-                .thenReturn(payment(id, PaymentStatus.INITIATED));
-        when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
-                .thenReturn(CompletableFuture.failedFuture(new PaymentGatewayException("Card declined", null)));
-        PaymentEntity failed = payment(id, PaymentStatus.FAILED);
-        when(transitions.markFailed(eq(id), any())).thenReturn(failed);
+        when(paymentRepository.findByIdempotencyKey(ORDER_ID))
+                .thenReturn(Optional.of(paymentWithExternalId(id, PaymentStatus.COMPLETED, "pi_o")));
 
-        PaymentEntity result = service.processPayment(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
+        PaymentIntentResult result = service.getOrCreateOrderPaymentIntent(ORDER_ID, USER_ID, BOOKING_IDS, AMOUNT, CURRENCY);
 
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.FAILED);
-        verify(transitions).markFailed(eq(id), eq("Card declined"));
+        assertThat(result.status()).isEqualTo("COMPLETED");
+        assertThat(result.clientSecret()).isNull();
+        verify(paymentGateway, never()).retrievePaymentIntent(any());
+        verify(paymentGateway, never()).createPaymentIntent(any(), anyString(), anyString());
     }
 
     @Test
-    void processPayment_gatewayUnavailable_marksPaymentPendingRetry() {
+    void getOrCreateOrderPaymentIntent_interruptedCreate_finishesCreate() {
         UUID id = UUID.randomUUID();
-        when(paymentRepository.findByIdempotencyKey(BOOKING_ID)).thenReturn(Optional.empty());
-        when(transitions.createPaymentRecord(any(), any(), any(), any()))
-                .thenReturn(payment(id, PaymentStatus.INITIATED));
-        when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
-                .thenReturn(CompletableFuture.failedFuture(
-                        new PaymentGatewayUnavailableException("Circuit open")));
-        PaymentEntity pending = payment(id, PaymentStatus.PENDING_RETRY);
-        when(transitions.markPendingRetry(eq(id), any())).thenReturn(pending);
+        // Record exists but has no PaymentIntent yet (creation was interrupted). resolveExistingIntent
+        // re-creates the intent using the payment's own bookingId as the idempotency key.
+        when(paymentRepository.findByIdempotencyKey(ORDER_ID))
+                .thenReturn(Optional.of(payment(id, PaymentStatus.INITIATED)));
+        when(paymentGateway.createPaymentIntent(eq(AMOUNT), eq(CURRENCY), anyString()))
+                .thenReturn(CompletableFuture.completedFuture(
+                        new GatewayPaymentResponse("pi_o", "requires_payment_method", "card", "pi_o_secret")));
+        when(transitions.updateToProcessing(eq(id), any()))
+                .thenReturn(paymentWithExternalId(id, PaymentStatus.PROCESSING, "pi_o"));
 
-        PaymentEntity result = service.processPayment(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
+        PaymentIntentResult result = service.getOrCreateOrderPaymentIntent(ORDER_ID, USER_ID, BOOKING_IDS, AMOUNT, CURRENCY);
 
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.PENDING_RETRY);
-        verify(transitions).markPendingRetry(eq(id), eq("Circuit open"));
-    }
-
-    @Test
-    void processPayment_confirmUnexpectedStatus_marksPaymentFailed() {
-        UUID id = UUID.randomUUID();
-        when(paymentRepository.findByIdempotencyKey(BOOKING_ID)).thenReturn(Optional.empty());
-        when(transitions.createPaymentRecord(any(), any(), any(), any()))
-                .thenReturn(payment(id, PaymentStatus.INITIATED));
-        when(transitions.updateToProcessing(any(), any())).thenReturn(payment(id, PaymentStatus.PROCESSING));
-        when(paymentGateway.createPaymentIntent(any(), anyString(), anyString()))
-                .thenReturn(CompletableFuture.completedFuture(new GatewayPaymentResponse("pi", "req", "card")));
-        when(paymentGateway.confirmPayment(any()))
-                .thenReturn(CompletableFuture.completedFuture(new GatewayPaymentResponse("pi", "failed", "card")));
-        when(transitions.markFailed(any(), any())).thenReturn(payment(id, PaymentStatus.FAILED));
-
-        PaymentEntity result = service.processPayment(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
-
-        assertThat(result.getStatus()).isEqualTo(PaymentStatus.FAILED);
-        verify(transitions).markFailed(eq(id), contains("failed"));
-    }
-
-    @Test
-    void processPayment_callsValidation() {
-        when(paymentRepository.findByIdempotencyKey(any())).thenReturn(Optional.empty());
-        when(transitions.createPaymentRecord(any(), any(), any(), any()))
-                .thenReturn(payment(UUID.randomUUID(), PaymentStatus.INITIATED));
-        when(paymentGateway.createPaymentIntent(any(), any(), any()))
-                .thenReturn(CompletableFuture.failedFuture(new PaymentGatewayException("err", null)));
-        when(transitions.markFailed(any(), any())).thenReturn(payment(UUID.randomUUID(), PaymentStatus.FAILED));
-
-        service.processPayment(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
-
-        verify(paymentValidator).validatePaymentForProcessing(BOOKING_ID, USER_ID, AMOUNT, CURRENCY);
+        assertThat(result.clientSecret()).isEqualTo("pi_o_secret");
+        verify(paymentGateway).createPaymentIntent(eq(AMOUNT), eq(CURRENCY), anyString());
     }
 
     // ── processRefund ─────────────────────────────────────────────────────────
@@ -273,85 +227,4 @@ class PaymentServiceImplTest {
         verify(paymentValidator).validateBookingId(BOOKING_ID);
     }
 
-    // ── retryPayment ──────────────────────────────────────────────────────────
-
-    @Test
-    void retryPayment_noExternalId_callsCreateAndConfirm() {
-        UUID id = UUID.randomUUID();
-        PaymentEntity processing = payment(id, PaymentStatus.PROCESSING);
-        when(transitions.incrementRetryCount(id)).thenReturn(processing);
-
-        GatewayPaymentResponse createResp = new GatewayPaymentResponse("pi_new", "req", "card");
-        GatewayPaymentResponse confirmResp = new GatewayPaymentResponse("pi_new", "succeeded", "card");
-        when(paymentGateway.createPaymentIntent(AMOUNT, CURRENCY, BOOKING_ID))
-                .thenReturn(CompletableFuture.completedFuture(createResp));
-        when(paymentGateway.confirmPayment("pi_new"))
-                .thenReturn(CompletableFuture.completedFuture(confirmResp));
-        when(transitions.markCompleted(eq(id), any())).thenReturn(payment(id, PaymentStatus.COMPLETED));
-        when(transitions.updateToProcessing(any(), any())).thenReturn(processing);
-
-        service.retryPayment(payment(id, PaymentStatus.PENDING_RETRY));
-
-        verify(paymentGateway).createPaymentIntent(AMOUNT, CURRENCY, BOOKING_ID);
-        verify(paymentGateway).confirmPayment("pi_new");
-        verify(transitions).markCompleted(eq(id), any());
-    }
-
-    @Test
-    void retryPayment_withExternalId_skipsCreateAndOnlyConfirms() {
-        UUID id = UUID.randomUUID();
-        PaymentEntity processing = PaymentEntity.builder()
-                .id(id).bookingId(BOOKING_ID).userId(USER_ID)
-                .amount(AMOUNT).currency(CURRENCY)
-                .status(PaymentStatus.PROCESSING).externalPaymentId("pi_existing")
-                .retryCount(1).maxRetries(3)
-                .build();
-        when(transitions.incrementRetryCount(id)).thenReturn(processing);
-
-        GatewayPaymentResponse confirmResp = new GatewayPaymentResponse("pi_existing", "succeeded", "card");
-        when(paymentGateway.confirmPayment("pi_existing"))
-                .thenReturn(CompletableFuture.completedFuture(confirmResp));
-        when(transitions.markCompleted(eq(id), any())).thenReturn(payment(id, PaymentStatus.COMPLETED));
-
-        service.retryPayment(payment(id, PaymentStatus.PENDING_RETRY));
-
-        verify(paymentGateway, never()).createPaymentIntent(any(), any(), any());
-        verify(paymentGateway).confirmPayment("pi_existing");
-    }
-
-    @Test
-    void retryPayment_gatewayStillDown_belowMaxRetries_remainsPendingRetry() {
-        UUID id = UUID.randomUUID();
-        PaymentEntity processing = PaymentEntity.builder()
-                .id(id).bookingId(BOOKING_ID).userId(USER_ID).amount(AMOUNT).currency(CURRENCY)
-                .status(PaymentStatus.PROCESSING).retryCount(1).maxRetries(3).build();
-        when(transitions.incrementRetryCount(id)).thenReturn(processing);
-        when(paymentGateway.createPaymentIntent(any(), any(), any()))
-                .thenReturn(CompletableFuture.failedFuture(
-                        new PaymentGatewayUnavailableException("Still down")));
-        when(transitions.markPendingRetry(any(), any())).thenReturn(payment(id, PaymentStatus.PENDING_RETRY));
-
-        service.retryPayment(payment(id, PaymentStatus.PENDING_RETRY));
-
-        verify(transitions).markPendingRetry(eq(id), any());
-        verify(transitions, never()).markFailed(any(), any());
-    }
-
-    @Test
-    void retryPayment_gatewayDown_maxRetriesExhausted_marksAsFailed() {
-        UUID id = UUID.randomUUID();
-        PaymentEntity processing = PaymentEntity.builder()
-                .id(id).bookingId(BOOKING_ID).userId(USER_ID).amount(AMOUNT).currency(CURRENCY)
-                .status(PaymentStatus.PROCESSING).retryCount(3).maxRetries(3).build();
-        when(transitions.incrementRetryCount(id)).thenReturn(processing);
-        when(paymentGateway.createPaymentIntent(any(), any(), any()))
-                .thenReturn(CompletableFuture.failedFuture(
-                        new PaymentGatewayUnavailableException("Gateway down")));
-        when(transitions.markFailed(any(), any())).thenReturn(payment(id, PaymentStatus.FAILED));
-
-        service.retryPayment(payment(id, PaymentStatus.PENDING_RETRY));
-
-        verify(transitions).markFailed(eq(id), contains("Max retries exhausted"));
-        verify(transitions, never()).markPendingRetry(any(), any());
-    }
 }
