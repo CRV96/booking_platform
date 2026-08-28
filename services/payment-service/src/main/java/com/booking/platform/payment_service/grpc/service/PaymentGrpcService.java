@@ -3,7 +3,7 @@ package com.booking.platform.payment_service.grpc.service;
 import com.booking.platform.common.grpc.context.GrpcUserContext;
 import com.booking.platform.payment_service.constants.BkgConstants;
 import com.booking.platform.common.grpc.payment.ConfirmMockPaymentRequest;
-import com.booking.platform.common.grpc.payment.CreatePaymentIntentRequest;
+import com.booking.platform.common.grpc.payment.CreateOrderPaymentIntentRequest;
 import com.booking.platform.common.grpc.payment.PaymentIntentResponse;
 import com.booking.platform.common.grpc.payment.PaymentServiceGrpc;
 import com.booking.platform.payment_service.dto.PaymentIntentResult;
@@ -46,17 +46,18 @@ public class PaymentGrpcService extends PaymentServiceGrpc.PaymentServiceImplBas
     private String stripePublishableKey;
 
     @Override
-    public void createPaymentIntent(CreatePaymentIntentRequest request,
-                                    StreamObserver<PaymentIntentResponse> responseObserver) {
+    public void createOrderPaymentIntent(CreateOrderPaymentIntentRequest request,
+                                         StreamObserver<PaymentIntentResponse> responseObserver) {
         String userId = requireUserId();
 
         ApplicationLogger.logMessage(log, Level.INFO,
-                "gRPC CreatePaymentIntent: user='{}', bookingId='{}', amount={} {}",
-                userId, request.getBookingId(), request.getAmount(), request.getCurrency());
+                "gRPC CreateOrderPaymentIntent: user='{}', orderId='{}', bookings={}, amount={} {}",
+                userId, request.getOrderId(), request.getBookingIdsList(), request.getAmount(), request.getCurrency());
 
-        PaymentIntentResult result = paymentService.getOrCreatePaymentIntent(
-                request.getBookingId(),
+        PaymentIntentResult result = paymentService.getOrCreateOrderPaymentIntent(
+                request.getOrderId(),
                 userId,
+                request.getBookingIdsList(),
                 new BigDecimal(request.getAmount()),
                 request.getCurrency());
 

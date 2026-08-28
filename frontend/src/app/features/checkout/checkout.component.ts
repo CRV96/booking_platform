@@ -2,8 +2,9 @@ import { Component, ElementRef, inject, signal, effect, viewChild, OnInit } from
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Apollo } from 'apollo-angular';
+import { forkJoin } from 'rxjs';
 import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
-import { CREATE_BOOKING, CREATE_PAYMENT_INTENT, CONFIRM_MOCK_PAYMENT } from '../../shared/graphql/documents';
+import { CREATE_BOOKING, CREATE_ORDER_PAYMENT_INTENT, CONFIRM_MOCK_PAYMENT } from '../../shared/graphql/documents';
 import { Booking, PaymentIntent } from '../../shared/models/models';
 import { CartService } from '../../core/cart.service';
 
@@ -23,7 +24,7 @@ import { CartService } from '../../core/cart.service';
       } @else if (error()) {
         <div class="alert alert-error">{{ error() }}</div>
         <a routerLink="/cart" class="btn btn-ghost btn-sm" style="margin-top:16px;text-decoration:none">← Back to cart</a>
-      } @else if (item()) {
+      } @else if (cart.hasItems()) {
         <div class="checkout-layout">
           <!-- Payment form -->
           <div class="checkout-main">
@@ -35,13 +36,11 @@ import { CartService } from '../../core/cart.service';
               }
 
               @if (provider() === 'stripe') {
-                <!-- Real Stripe Elements mount here (Stripe-hosted iframe; card never touches our servers) -->
                 <div #cardEl class="stripe-card"></div>
                 @if (!stripeReady()) {
                   <div class="mono xs muted" style="margin-top:10px"><span class="spinner"></span> Loading secure card field…</div>
                 }
               } @else {
-                <!-- Mock stand-in form -->
                 <div class="field" style="margin-bottom:16px">
                   <label>Card number</label>
                   <input class="inp" [(ngModel)]="cardNumber" placeholder="4242 4242 4242 4242" inputmode="numeric" autocomplete="off" />
@@ -59,7 +58,7 @@ import { CartService } from '../../core/cart.service';
               }
 
               <button class="btn btn-primary btn-lg btn-block" style="margin-top:20px" (click)="pay()" [disabled]="!canPay()">
-                @if (paying()) { <span class="spinner"></span> } Pay {{ item()!.currency }} {{ cart.total() }}
+                @if (paying()) { <span class="spinner"></span> } Pay {{ cart.currency() }} {{ cart.total() }}
               </button>
             </div>
           </div>
@@ -68,11 +67,18 @@ import { CartService } from '../../core/cart.service';
           <div class="checkout-summary">
             <div class="booking-card">
               <div class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px">Order summary</div>
-              <div style="font-family:var(--serif);font-size:18px;margin-bottom:4px">{{ item()!.eventTitle }}</div>
-              <div class="mono xs muted">{{ item()!.seatCategory }} · {{ item()!.quantity }} ticket{{ item()!.quantity > 1 ? 's' : '' }}</div>
+              @for (item of cart.items(); track item.eventId + '|' + item.seatCategory) {
+                <div class="order-item">
+                  <div>
+                    <div style="font-size:14px">{{ item.eventTitle }}</div>
+                    <div class="mono xs muted">{{ item.seatCategory }} · {{ item.quantity }}×</div>
+                  </div>
+                  <div style="font-size:14px">{{ item.currency }} {{ lineTotal(item) }}</div>
+                </div>
+              }
               <div class="summary-total">
                 <span class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.08em">Total</span>
-                <span style="font-family:var(--serif);font-size:24px">{{ item()!.currency }} {{ cart.total() }}</span>
+                <span style="font-family:var(--serif);font-size:24px">{{ cart.currency() }} {{ cart.total() }}</span>
               </div>
             </div>
           </div>
@@ -90,7 +96,8 @@ import { CartService } from '../../core/cart.service';
       border-radius: var(--radius-lg); padding: 20px;
     }
     .stripe-card { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); }
-    .summary-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 16px; margin-top: 16px; border-top: 1px solid var(--line); }
+    .order-item { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+    .summary-total { display: flex; justify-content: space-between; align-items: baseline; padding-top: 16px; margin-top: 12px; border-top: 1px solid var(--line); }
     .mock-hint { margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--line); }
     .muted-2 { color: var(--ink-4); line-height: 1.6; }
     .loading-center { display: flex; flex-direction: column; align-items: center; padding: 80px 0; }
@@ -101,17 +108,16 @@ export class CheckoutComponent implements OnInit {
   private router = inject(Router);
   cart = inject(CartService);
 
-  item = this.cart.item;
-
   loading = signal(true);
   error = signal('');
   paying = signal(false);
   payError = signal('');
-  bookingId = signal<string | null>(null);
   provider = signal<string>('');
   stripeReady = signal(false);
   cardNumber = '';
 
+  private orderId = '';
+  private bookingIds: string[] = [];
   private clientSecret: string | null = null;
   private stripe: Stripe | null = null;
   private card: StripeCardElement | null = null;
@@ -120,8 +126,6 @@ export class CheckoutComponent implements OnInit {
   private cardEl = viewChild<ElementRef<HTMLDivElement>>('cardEl');
 
   constructor() {
-    // Mount the Stripe card field once BOTH the DOM container exists and the card is created.
-    // (loadStripe is async and the container only renders after the intent resolves.)
     effect(() => {
       const el = this.cardEl();
       if (el && this.stripeReady() && this.card && !this.mounted) {
@@ -132,49 +136,57 @@ export class CheckoutComponent implements OnInit {
   }
 
   ngOnInit() {
-    const item = this.cart.item();
-    if (!item) {
+    const items = this.cart.items();
+    if (items.length === 0) {
       this.router.navigate(['/cart']);
       return;
     }
-    // 1. Create the booking (reserve + hold). Idempotent on the cart's key → a reload reuses it.
-    this.apollo.mutate<{ createBooking: Booking }>({
-      mutation: CREATE_BOOKING,
-      variables: {
-        input: {
-          eventId: item.eventId,
-          seatCategory: item.seatCategory,
-          quantity: item.quantity,
-          idempotencyKey: item.idempotencyKey,
+    this.orderId = this.cart.orderId();
+
+    // 1. Create a booking per cart item (reserve + hold). Each is idempotent on its own key,
+    //    so a checkout reload reuses the same bookings.
+    const requests = items.map(item =>
+      this.apollo.mutate<{ createBooking: Booking }>({
+        mutation: CREATE_BOOKING,
+        variables: {
+          input: {
+            eventId: item.eventId,
+            seatCategory: item.seatCategory,
+            quantity: item.quantity,
+            idempotencyKey: item.idempotencyKey,
+          }
         }
-      }
-    }).subscribe({
-      next: r => this.startPayment(r.data!.createBooking.id),
+      })
+    );
+
+    forkJoin(requests).subscribe({
+      next: results => {
+        this.bookingIds = results.map(r => r.data!.createBooking.id);
+        this.startPayment();
+      },
       error: err => { this.loading.set(false); this.error.set(this.clean(err)); }
     });
   }
 
-  // 2. Create (or resume) the payment intent, then branch on provider.
-  private startPayment(bookingId: string) {
-    this.bookingId.set(bookingId);
-    this.apollo.mutate<{ createPaymentIntent: PaymentIntent }>({
-      mutation: CREATE_PAYMENT_INTENT,
-      variables: { bookingId }
+  // 2. One payment intent for the whole order.
+  private startPayment() {
+    this.apollo.mutate<{ createOrderPaymentIntent: PaymentIntent }>({
+      mutation: CREATE_ORDER_PAYMENT_INTENT,
+      variables: { orderId: this.orderId, bookingIds: this.bookingIds }
     }).subscribe({
       next: r => {
-        const pi = r.data!.createPaymentIntent;
+        const pi = r.data!.createOrderPaymentIntent;
         this.loading.set(false);
         this.provider.set(pi.provider);
         this.clientSecret = pi.clientSecret;
 
-        if (pi.status === 'COMPLETED') { this.goToConfirmation(bookingId); return; }
+        if (pi.status === 'COMPLETED') { this.goToConfirmation(); return; }
         if (pi.provider === 'stripe') { this.initStripe(pi.publishableKey, pi.clientSecret); }
       },
       error: err => { this.loading.set(false); this.error.set(this.clean(err)); }
     });
   }
 
-  // Load Stripe.js and build the card element; the effect mounts it once the container renders.
   private async initStripe(publishableKey: string | null, clientSecret: string | null) {
     if (!publishableKey || !clientSecret) {
       this.error.set('Payment is misconfigured (missing Stripe key). Please try again later.');
@@ -199,12 +211,8 @@ export class CheckoutComponent implements OnInit {
     else this.payWithMock();
   }
 
-  // Real path: confirm the card client-side. Stripe handles 3-D Secure automatically.
   private async payWithStripe() {
     if (!this.stripe || !this.card || !this.clientSecret) return;
-    const bookingId = this.bookingId();
-    if (!bookingId) return;
-
     this.paying.set(true);
     this.payError.set('');
     const result = await this.stripe.confirmCardPayment(this.clientSecret, {
@@ -217,26 +225,24 @@ export class CheckoutComponent implements OnInit {
       return;
     }
     if (result.paymentIntent?.status === 'succeeded') {
-      this.goToConfirmation(bookingId);
+      this.goToConfirmation();
     } else {
       this.payError.set('Payment could not be completed. Please try again.');
     }
   }
 
-  // Mock path: the card number selects the outcome.
+  // Mock mode: confirm the order payment by its orderId (the payment's primary handle).
   private payWithMock() {
-    const bookingId = this.bookingId();
-    if (!bookingId) return;
     this.paying.set(true);
     this.payError.set('');
     this.apollo.mutate<{ confirmMockPayment: PaymentIntent }>({
       mutation: CONFIRM_MOCK_PAYMENT,
-      variables: { bookingId, cardNumber: this.cardNumber }
+      variables: { bookingId: this.orderId, cardNumber: this.cardNumber }
     }).subscribe({
       next: r => {
         this.paying.set(false);
         if (r.data!.confirmMockPayment.status === 'COMPLETED') {
-          this.goToConfirmation(bookingId);
+          this.goToConfirmation();
         } else {
           this.payError.set('Payment was declined. Try a different card.');
         }
@@ -245,9 +251,14 @@ export class CheckoutComponent implements OnInit {
     });
   }
 
-  private goToConfirmation(bookingId: string) {
+  private goToConfirmation() {
+    const bookings = this.bookingIds.join(',');
     this.cart.clear();
-    this.router.navigate(['/checkout/confirmation', bookingId]);
+    this.router.navigate(['/checkout/confirmation'], { queryParams: { bookings } });
+  }
+
+  lineTotal(item: { unitPrice: string; quantity: number }): string {
+    return (parseFloat(item.unitPrice) * item.quantity).toFixed(2);
   }
 
   private clean(err: { message?: string }): string {

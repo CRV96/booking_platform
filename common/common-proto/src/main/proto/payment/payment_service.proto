@@ -7,11 +7,6 @@ option java_package = "com.booking.platform.common.grpc.payment";
 option java_outer_classname = "PaymentServiceProto";
 
 service PaymentService {
-  // Get-or-create the PaymentIntent for a booking (create-only — the customer confirms
-  // client-side with their card). Idempotent on booking_id: if an intent already exists it
-  // is retrieved (fresh client_secret) rather than a second one being created.
-  rpc CreatePaymentIntent(CreatePaymentIntentRequest) returns (PaymentIntentResponse);
-
   // Get-or-create ONE PaymentIntent for an order covering several bookings (the summed amount).
   // Idempotent on order_id. On success the payment's events confirm every booking in the order.
   rpc CreateOrderPaymentIntent(CreateOrderPaymentIntentRequest) returns (PaymentIntentResponse);
@@ -25,12 +20,6 @@ service PaymentService {
 // ============================================================================
 // Messages
 // ============================================================================
-message CreatePaymentIntentRequest {
-  string booking_id = 1;   // the booking being paid for (also the idempotency key)
-  string amount = 2;       // decimal as string (e.g. "49.99") — authoritative, taken from the booking
-  string currency = 3;     // ISO 4217 (e.g. "USD")
-}
-
 message CreateOrderPaymentIntentRequest {
   string order_id = 1;              // client-generated order id (idempotency key)
   repeated string booking_ids = 2;  // the bookings this order pays for

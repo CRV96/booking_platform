@@ -10,6 +10,7 @@ import com.booking.platform.payment_service.exception.PaymentNotFoundException;
 import com.booking.platform.payment_service.repository.OutboxEventRepository;
 import com.booking.platform.payment_service.repository.PaymentRepository;
 import com.booking.platform.payment_service.validation.PaymentValidator;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.booking.platform.common.logging.ApplicationLogger;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -53,28 +55,29 @@ public class PaymentStateTransitionService {
     @Value("${payment.retry.max-attempts:3}")
     private int maxRetries;
 
-    @Value("${payment.retry.backoff-base-seconds:60}")
-    private long backoffBaseSeconds;
-
-    @Value("${payment.retry.backoff-multiplier:2}")
-    private double backoffMultiplier;
-
     // ── Payment creation ──────────────────────────────────────────────────────
 
+    /**
+     * Creates the payment record for an <b>order</b> covering one or more bookings. The
+     * idempotency key is the client-generated order id; {@code bookingId} stores that order id
+     * (the payment's primary handle), and {@code bookingIds} holds the covered bookings.
+     */
     @Transactional
-    public PaymentEntity createPaymentRecord(String bookingId, String userId, BigDecimal amount, String currency) {
+    public PaymentEntity createOrderPaymentRecord(String orderId, String userId, List<String> bookingIds,
+                                                  BigDecimal amount, String currency) {
         PaymentEntity payment = PaymentEntity.builder()
-                .bookingId(bookingId)
+                .bookingId(orderId)
+                .bookingIds(String.join(",", bookingIds))
                 .userId(userId)
                 .amount(amount)
                 .currency(currency)
                 .status(PaymentStatus.INITIATED)
-                .idempotencyKey(bookingId)
+                .idempotencyKey(orderId)
                 .maxRetries(maxRetries)
                 .build();
         ApplicationLogger.logMessage(log, Level.DEBUG,
-                "Creating payment record for bookingId='{}', userId='{}', amount={}, currency='{}'",
-                bookingId, userId, amount, currency);
+                "Creating order payment record: orderId='{}', userId='{}', bookings={}, amount={}, currency='{}'",
+                orderId, userId, bookingIds, amount, currency);
         return paymentRepository.save(payment);
     }
 
@@ -90,25 +93,6 @@ public class PaymentStateTransitionService {
         ApplicationLogger.logMessage(log, Level.DEBUG,
                 "Payment id='{}' moved to PROCESSING with externalPaymentId='{}'",
                 paymentId, response.externalPaymentId());
-        return paymentRepository.save(payment);
-    }
-
-    /**
-     * Atomically increments the retry counter, clears the next-retry timestamp,
-     * and moves the payment to PROCESSING.
-     *
-     * @return the updated payment entity with the new retryCount
-     */
-    @Transactional
-    public PaymentEntity incrementRetryCount(UUID paymentId) {
-        PaymentEntity payment = findOrThrow(paymentId);
-        paymentValidator.assertValidTransition(payment, PaymentStatus.PROCESSING);
-        payment.setRetryCount(payment.getRetryCount() + 1);
-        payment.setNextRetryAt(null);
-        payment.setStatus(PaymentStatus.PROCESSING);
-        ApplicationLogger.logMessage(log, Level.DEBUG,
-                "Incremented retry count for payment id='{}' to {}, moving back to PROCESSING",
-                paymentId, payment.getRetryCount());
         return paymentRepository.save(payment);
     }
 
@@ -136,19 +120,6 @@ public class PaymentStateTransitionService {
         saveOutboxEvent(payment, BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT,
                 buildPayload(payment, null, BkgConstants.BkgOutboxConstants.PAYMENT_FAILED_EVENT));
         return payment;
-    }
-
-    @Transactional
-    public PaymentEntity markPendingRetry(UUID paymentId, String reason) {
-        PaymentEntity payment = findOrThrow(paymentId);
-        paymentValidator.assertValidTransition(payment, PaymentStatus.PENDING_RETRY);
-        payment.setStatus(PaymentStatus.PENDING_RETRY);
-        payment.setFailureReason(reason);
-        payment.setNextRetryAt(Instant.now(clock).plusSeconds(computeBackoffSeconds(payment.getRetryCount())));
-        ApplicationLogger.logMessage(log, Level.DEBUG,
-                "Payment id='{}' marked as PENDING_RETRY with reason='{}', next retry at {}",
-                paymentId, reason, payment.getNextRetryAt());
-        return paymentRepository.save(payment);
     }
 
     // ── Refund transitions ────────────────────────────────────────────────────
@@ -230,11 +201,18 @@ public class PaymentStateTransitionService {
         // Common fields present in every event
         node.put(BkgConstants.BkgOutboxConstants.PAYMENT_ID, payment.getId().toString());
         node.put(BkgConstants.BkgOutboxConstants.BOOKING_ID, payment.getBookingId());
+        // booking_ids: all bookings this payment covers (an order). Falls back to the single
+        // booking so single-booking payments still emit a one-element list.
+        ArrayNode bookingIds = node.putArray(BkgConstants.BkgOutboxConstants.BOOKING_IDS);
+        if (payment.getBookingIds() != null && !payment.getBookingIds().isBlank()) {
+            for (String id : payment.getBookingIds().split(",")) {
+                bookingIds.add(id);
+            }
+        } else {
+            bookingIds.add(payment.getBookingId());
+        }
         node.put(BkgConstants.BkgOutboxConstants.TIMESTAMP, Instant.now(clock).toString());
         return node.toString();
     }
 
-    private long computeBackoffSeconds(int retryCount) {
-        return Math.min((long) (backoffBaseSeconds * Math.pow(backoffMultiplier, retryCount)), 3600);
-    }
 }

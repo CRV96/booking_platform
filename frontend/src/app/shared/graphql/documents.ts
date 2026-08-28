@@ -194,9 +194,10 @@ export const CANCEL_TICKET = gql`
 
 // ── Payments ──────────────────────────────────────────────────────────────────
 
-export const CREATE_PAYMENT_INTENT = gql`
-  mutation CreatePaymentIntent($bookingId: ID!) {
-    createPaymentIntent(bookingId: $bookingId) {
+// One payment intent for an order covering several bookings.
+export const CREATE_ORDER_PAYMENT_INTENT = gql`
+  mutation CreateOrderPaymentIntent($orderId: ID!, $bookingIds: [ID!]!) {
+    createOrderPaymentIntent(orderId: $orderId, bookingIds: $bookingIds) {
       paymentId bookingId externalPaymentId clientSecret status provider publishableKey
     }
   }

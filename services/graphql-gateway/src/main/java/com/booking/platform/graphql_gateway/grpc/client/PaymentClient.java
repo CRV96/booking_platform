@@ -2,19 +2,22 @@ package com.booking.platform.graphql_gateway.grpc.client;
 
 import com.booking.platform.common.grpc.payment.PaymentIntentResponse;
 
+import java.util.List;
+
 /**
  * gRPC client for calling payment-service.
  */
 public interface PaymentClient {
 
     /**
-     * Get-or-create the PaymentIntent for a booking.
+     * Get-or-create one PaymentIntent for an order covering several bookings.
      *
-     * @param bookingId the booking being paid for
-     * @param amount    decimal as string, taken from the authoritative booking (not the client)
-     * @param currency  ISO 4217 code
+     * @param orderId    client-generated order id (idempotency key)
+     * @param bookingIds the bookings this order pays for
+     * @param amount     order total as decimal string, summed from the authoritative bookings
+     * @param currency   ISO 4217 code
      */
-    PaymentIntentResponse createPaymentIntent(String bookingId, String amount, String currency);
+    PaymentIntentResponse createOrderPaymentIntent(String orderId, List<String> bookingIds, String amount, String currency);
 
     /**
      * Mock mode only — simulate the payment outcome for a booking using a test card number.

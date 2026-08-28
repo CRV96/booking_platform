@@ -14,6 +14,7 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -48,10 +49,13 @@ public class PaymentEventConsumer {
                 event.getPaymentId(), event.getBookingId(), event.getAmount(), event.getCurrency(),
                 record.partition(), record.offset());
 
-        UUID bookingId = parseBookingId(event.getBookingId(), "PAYMENT_COMPLETED");
-        bookingService.confirmBooking(bookingId);
-
-        ApplicationLogger.logMessage(log, Level.INFO, "Booking confirmed: bookingId='{}'", event.getBookingId());
+        // An order can cover several bookings — confirm every one. confirmBooking is idempotent,
+        // so a redelivery (or one booking already confirmed) is a safe no-op.
+        for (String rawBookingId : bookingIdsOf(event.getBookingIdsList(), event.getBookingId())) {
+            UUID bookingId = parseBookingId(rawBookingId, "PAYMENT_COMPLETED");
+            bookingService.confirmBooking(bookingId);
+            ApplicationLogger.logMessage(log, Level.INFO, "Booking confirmed: bookingId='{}'", rawBookingId);
+        }
     }
 
     /**
@@ -69,10 +73,12 @@ public class PaymentEventConsumer {
                 event.getPaymentId(), event.getBookingId(), event.getReason(),
                 record.partition(), record.offset());
 
-        UUID bookingId = parseBookingId(event.getBookingId(), "PAYMENT_FAILED");
-        bookingService.cancelBookingOnPaymentFailure(bookingId, event.getReason());
-
-        ApplicationLogger.logMessage(log, Level.INFO, "Booking cancelled due to payment failure: bookingId='{}'", event.getBookingId());
+        // Cancel every booking the failed payment covered (releases their seats).
+        for (String rawBookingId : bookingIdsOf(event.getBookingIdsList(), event.getBookingId())) {
+            UUID bookingId = parseBookingId(rawBookingId, "PAYMENT_FAILED");
+            bookingService.cancelBookingOnPaymentFailure(bookingId, event.getReason());
+            ApplicationLogger.logMessage(log, Level.INFO, "Booking cancelled due to payment failure: bookingId='{}'", rawBookingId);
+        }
     }
 
     /**
@@ -93,6 +99,11 @@ public class PaymentEventConsumer {
         bookingService.markBookingAsRefunded(bookingId);
 
         ApplicationLogger.logMessage(log, Level.INFO, "Booking marked as REFUNDED: bookingId='{}'", event.getBookingId());
+    }
+
+    /** The event's booking_ids, or the single booking_id as a one-element list (legacy events). */
+    private List<String> bookingIdsOf(List<String> bookingIds, String single) {
+        return bookingIds.isEmpty() ? List.of(single) : bookingIds;
     }
 
     private UUID parseBookingId(String bookingId, String eventType) {

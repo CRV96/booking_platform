@@ -55,6 +55,10 @@ public class PaymentEntity {
     @Column(name = BkgPaymentsConstants.BOOKING_ID, nullable = false)
     private String bookingId;
 
+    /** Comma-separated booking IDs this payment covers (an order). Null for single-booking payments. */
+    @Column(name = BkgPaymentsConstants.BOOKING_IDS)
+    private String bookingIds;
+
     /** Keycloak subject (sub claim) of the user who initiated the payment. */
     @Column(name = BkgPaymentsConstants.USER_ID, nullable = false)
     private String userId;

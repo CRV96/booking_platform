@@ -19,8 +19,6 @@ public final class BkgConstants {
         public static final String PAYMENT_GATEWAY_TYPE= "payment.gateway.type";
         public static final String RESPONSE_SUCCEEDED = "succeeded";
         public static final String CARD_PAYMENT_METHOD = "card";
-        // Test payment method for Stripe sandbox — used in PaymentIntentConfirmParams
-        public static final String PAYMENT_METHOD_CARD_VISA = "pm_card_visa";
 
         // ── Webhook ──────────────────────────────────────────────────────────
         public static final String WEBHOOK_PATH = "/api/webhooks/stripe";
@@ -46,6 +44,7 @@ public final class BkgConstants {
         // Outbox event types
         public static final String PAYMENT_ID = "payment_id";
         public static final String BOOKING_ID = "booking_id";
+        public static final String BOOKING_IDS = "booking_ids";
         public static final String REFUND_ID = "refund_id";
         public static final String AMOUNT = "amount";
         public static final String CURRENCY = "currency";
@@ -71,6 +70,7 @@ public final class BkgConstants {
         public static final String INDEX_STATUS = "idx_payments_status";
         public static final String ID = "id";
         public static final String BOOKING_ID = "booking_id";
+        public static final String BOOKING_IDS = "booking_ids";
         public static final String USER_ID = "user_id";
         public static final String AMOUNT = "amount";
         public static final String CURRENCY = "currency";

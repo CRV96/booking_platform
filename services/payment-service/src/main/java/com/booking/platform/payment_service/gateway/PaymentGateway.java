@@ -44,14 +44,6 @@ public interface PaymentGateway {
     CompletableFuture<GatewayPaymentResponse> retrievePaymentIntent(String externalPaymentId);
 
     /**
-     * Confirms a previously created payment intent.
-     *
-     * @param externalPaymentId the gateway's payment ID (e.g. Stripe PaymentIntent ID)
-     * @return future with gateway response containing updated status
-     */
-    CompletableFuture<GatewayPaymentResponse> confirmPayment(String externalPaymentId);
-
-    /**
      * Creates a refund for a completed payment.
      *
      * @param externalPaymentId the gateway's payment ID to refund

@@ -11,7 +11,6 @@ import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.PaymentIntent;
 import com.stripe.model.Refund;
-import com.stripe.param.PaymentIntentConfirmParams;
 import com.stripe.param.PaymentIntentCreateParams;
 import com.stripe.param.RefundCreateParams;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
@@ -127,39 +126,6 @@ public class StripePaymentGateway implements PaymentGateway {
 
     @Override
     @Retry(name = BkgConstants.BkgStripeConstants.STRIPE)
-    @CircuitBreaker(name = BkgConstants.BkgStripeConstants.STRIPE, fallbackMethod = "confirmPaymentFallback")
-    @TimeLimiter(name = BkgConstants.BkgStripeConstants.STRIPE)
-    @Bulkhead(name = BkgConstants.BkgStripeConstants.STRIPE, type = Bulkhead.Type.SEMAPHORE)
-    public CompletableFuture<GatewayPaymentResponse> confirmPayment(String externalPaymentId) {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                PaymentIntent intent = PaymentIntent.retrieve(externalPaymentId);
-
-                PaymentIntentConfirmParams params = PaymentIntentConfirmParams.builder()
-                        .setPaymentMethod(BkgConstants.BkgStripeConstants.PAYMENT_METHOD_CARD_VISA) // Stripe test payment method
-                        .build();
-
-                intent = intent.confirm(params);
-
-                ApplicationLogger.logMessage(log, Level.INFO, "Stripe PaymentIntent confirmed: id='{}', status='{}'",
-                        intent.getId(), intent.getStatus());
-
-                String paymentMethod = intent.getPaymentMethod() != null
-                        ? intent.getPaymentMethod()
-                        : BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD;
-
-                return new GatewayPaymentResponse(intent.getId(), intent.getStatus(), paymentMethod);
-
-            } catch (StripeException e) {
-                ApplicationLogger.logMessage(log, Level.ERROR, LogErrorCode.PAYMENT_CONFIRMATION_FAILED, "Stripe confirmPayment failed: code='{}', message='{}'",
-                        e.getCode(), e.getMessage());
-                throw new PaymentGatewayException("Failed to confirm payment: " + e.getMessage(), e);
-            }
-        });
-    }
-
-    @Override
-    @Retry(name = BkgConstants.BkgStripeConstants.STRIPE)
     @CircuitBreaker(name = BkgConstants.BkgStripeConstants.STRIPE, fallbackMethod = "createRefundFallback")
     @TimeLimiter(name = BkgConstants.BkgStripeConstants.STRIPE)
     @Bulkhead(name = BkgConstants.BkgStripeConstants.STRIPE, type = Bulkhead.Type.SEMAPHORE)
@@ -210,15 +176,6 @@ public class StripePaymentGateway implements PaymentGateway {
         return CompletableFuture.failedFuture(
                 new PaymentGatewayUnavailableException(
                         "Stripe unavailable for retrievePaymentIntent: " + t.getMessage(), t));
-    }
-
-    private CompletableFuture<GatewayPaymentResponse> confirmPaymentFallback(
-            String externalPaymentId, Throwable t) {
-        ApplicationLogger.logMessage(log, Level.WARN, LogErrorCode.PAYMENT_GATEWAY_UNAVAILABLE, "FALLBACK confirmPayment: externalId='{}', cause='{}'",
-                externalPaymentId, t.getMessage());
-        return CompletableFuture.failedFuture(
-                new PaymentGatewayUnavailableException(
-                        "Stripe unavailable for confirmPayment: " + t.getMessage(), t));
     }
 
     private CompletableFuture<GatewayRefundResponse> createRefundFallback(

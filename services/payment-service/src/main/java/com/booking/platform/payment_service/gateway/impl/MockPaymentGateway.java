@@ -66,18 +66,6 @@ public class MockPaymentGateway implements PaymentGateway {
     }
 
     @Override
-    public CompletableFuture<GatewayPaymentResponse> confirmPayment(String externalPaymentId) {
-        return CompletableFuture.supplyAsync(() -> {
-            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Confirming payment: id='{}'", externalPaymentId);
-            simulateDelay();
-            ApplicationLogger.logMessage(log, Level.INFO, "[MOCK] Payment confirmed: id='{}'", externalPaymentId);
-
-            return new GatewayPaymentResponse(externalPaymentId, BkgConstants.BkgStripeConstants.RESPONSE_SUCCEEDED,
-                    BkgConstants.BkgStripeConstants.CARD_PAYMENT_METHOD);
-        });
-    }
-
-    @Override
     public CompletableFuture<GatewayRefundResponse> createRefund(
             String externalPaymentId, BigDecimal amount) {
         return CompletableFuture.supplyAsync(() -> {

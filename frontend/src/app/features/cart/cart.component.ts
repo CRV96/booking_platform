@@ -16,37 +16,40 @@ import { EventArtComponent } from '../../shared/event-art.component';
         <h2>Your <em>Cart</em></h2>
       </div>
 
-      @if (!cart.hasItem()) {
+      @if (!cart.hasItems()) {
         <div class="empty-state">
           <h3>Your cart is empty</h3>
-          <p>Browse <a routerLink="/events" style="color:var(--ink);text-decoration:underline">upcoming events</a> and add a ticket.</p>
+          <p>Browse <a routerLink="/events" style="color:var(--ink);text-decoration:underline">upcoming events</a> and add some tickets.</p>
         </div>
       } @else {
         <div class="cart-layout">
-          <!-- Line item -->
+          <!-- Line items -->
           <div class="cart-main">
-            <div class="cart-row">
-              <div class="cart-thumb">
-                <app-event-art [seed]="artSeed(cart.item()!.eventId)" [title]="cart.item()!.eventTitle" ratio="16/10" />
-              </div>
-              <div class="cart-info">
-                <a [routerLink]="['/events', cart.item()!.eventId]" class="cart-title" style="text-decoration:none">{{ cart.item()!.eventTitle }}</a>
-                <div class="mono xs muted" style="margin-top:6px">{{ cart.item()!.seatCategory }}</div>
-                <div style="margin-top:4px">{{ cart.item()!.currency }} {{ cart.item()!.unitPrice }} <span class="mono xs muted">each</span></div>
+            @for (item of cart.items(); track item.eventId + '|' + item.seatCategory) {
+              <div class="cart-row">
+                <div class="cart-thumb">
+                  <app-event-art [seed]="artSeed(item.eventId)" [title]="item.eventTitle" ratio="16/10" />
+                </div>
+                <div class="cart-info">
+                  <a [routerLink]="['/events', item.eventId]" class="cart-title" style="text-decoration:none">{{ item.eventTitle }}</a>
+                  <div class="mono xs muted" style="margin-top:6px">{{ item.seatCategory }}</div>
+                  <div style="margin-top:4px">{{ item.currency }} {{ item.unitPrice }} <span class="mono xs muted">each</span></div>
 
-                <div class="field" style="max-width:120px;margin-top:16px">
-                  <label>Quantity</label>
-                  <select class="inp" [ngModel]="cart.item()!.quantity" (ngModelChange)="cart.setQuantity(+$event)">
-                    @for (n of quantities; track n) {
-                      <option [value]="n">{{ n }}</option>
-                    }
-                  </select>
+                  <div class="field" style="max-width:120px;margin-top:16px">
+                    <label>Quantity</label>
+                    <select class="inp" [ngModel]="item.quantity" (ngModelChange)="cart.setQuantity(item.eventId, item.seatCategory, +$event)">
+                      @for (n of quantities; track n) {
+                        <option [value]="n">{{ n }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+                <div class="cart-remove">
+                  <div style="font-family:var(--serif);font-size:16px">{{ item.currency }} {{ lineTotal(item) }}</div>
+                  <button class="btn btn-ghost btn-sm" style="margin-top:8px" (click)="cart.remove(item.eventId, item.seatCategory)">Remove</button>
                 </div>
               </div>
-              <div class="cart-remove">
-                <button class="btn btn-ghost btn-sm" (click)="cart.clear()">Remove</button>
-              </div>
-            </div>
+            }
           </div>
 
           <!-- Summary -->
@@ -54,12 +57,12 @@ import { EventArtComponent } from '../../shared/event-art.component';
             <div class="booking-card">
               <div class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px">Order summary</div>
               <div class="summary-line">
-                <span class="muted">{{ cart.item()!.quantity }} × {{ cart.item()!.seatCategory }}</span>
-                <span>{{ cart.item()!.currency }} {{ cart.total() }}</span>
+                <span class="muted">{{ cart.count() }} ticket{{ cart.count() > 1 ? 's' : '' }} · {{ cart.items().length }} event{{ cart.items().length > 1 ? 's' : '' }}</span>
+                <span>{{ cart.currency() }} {{ cart.total() }}</span>
               </div>
               <div class="summary-total">
                 <span class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.08em">Total</span>
-                <span style="font-family:var(--serif);font-size:24px">{{ cart.item()!.currency }} {{ cart.total() }}</span>
+                <span style="font-family:var(--serif);font-size:24px">{{ cart.currency() }} {{ cart.total() }}</span>
               </div>
 
               @if (!auth.isAuthenticated()) {
@@ -83,11 +86,12 @@ import { EventArtComponent } from '../../shared/event-art.component';
     @media (max-width: 768px) { .cart-layout { grid-template-columns: 1fr; } }
 
     .cart-row { display: flex; gap: 20px; align-items: flex-start; padding: 20px 0; border-top: 1px solid var(--line); }
-    .cart-thumb { width: 200px; flex-shrink: 0; border-radius: var(--radius); overflow: hidden; }
+    .cart-row:last-child { border-bottom: 1px solid var(--line); }
+    .cart-thumb { width: 180px; flex-shrink: 0; border-radius: var(--radius); overflow: hidden; }
     .cart-info { flex: 1; min-width: 0; }
     .cart-title { font-family: var(--serif); font-size: 22px; line-height: 1.2; color: var(--ink); display: block; }
     .cart-title:hover { color: var(--ink-2); }
-    .cart-remove { flex-shrink: 0; }
+    .cart-remove { flex-shrink: 0; text-align: right; }
 
     .booking-card {
       position: sticky; top: 88px;
@@ -105,6 +109,10 @@ export class CartComponent {
   private router = inject(Router);
 
   readonly quantities = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  lineTotal(item: { unitPrice: string; quantity: number }): string {
+    return (parseFloat(item.unitPrice) * item.quantity).toFixed(2);
+  }
 
   checkout(): void {
     if (!this.auth.isAuthenticated()) {

@@ -37,7 +37,7 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: '', loadComponent: () => import('./features/checkout/checkout.component').then(m => m.CheckoutComponent) },
-      { path: 'confirmation/:bookingId', loadComponent: () => import('./features/checkout/confirmation.component').then(m => m.ConfirmationComponent) },
+      { path: 'confirmation', loadComponent: () => import('./features/checkout/confirmation.component').then(m => m.ConfirmationComponent) },
     ]
   },
 

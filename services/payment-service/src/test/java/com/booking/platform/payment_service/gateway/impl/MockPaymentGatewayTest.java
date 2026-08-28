@@ -52,22 +52,6 @@ class MockPaymentGatewayTest {
     }
 
     @Test
-    void confirmPayment_returnsOriginalExternalId() throws Exception {
-        String externalId = "mock_pi_abc123";
-
-        GatewayPaymentResponse response = gateway.confirmPayment(externalId).get();
-
-        assertThat(response.externalPaymentId()).isEqualTo(externalId);
-    }
-
-    @Test
-    void confirmPayment_returnsSucceededStatus() throws Exception {
-        GatewayPaymentResponse response = gateway.confirmPayment("mock_pi_xyz").get();
-
-        assertThat(response.status()).isEqualTo("succeeded");
-    }
-
-    @Test
     void retrievePaymentIntent_returnsSameIdAndAClientSecret() throws Exception {
         String externalId = "mock_pi_abc123";
 

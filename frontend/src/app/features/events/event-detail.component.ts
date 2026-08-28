@@ -201,9 +201,9 @@ export class EventDetailComponent implements OnInit {
   addToCart() {
     const ev = this.event()!;
     const cat = this.selectedCategory()!;
-    // Single-item cart: this replaces any existing item. No seats are reserved yet —
-    // the booking (and seat hold) is created at checkout.
-    this.cart.set({
+    // Add to the cart (same event+category replaces its line). No seats are reserved yet —
+    // the bookings (and seat holds) are created at checkout.
+    this.cart.add({
       eventId: ev.id,
       eventTitle: ev.title,
       seatCategory: cat.name,

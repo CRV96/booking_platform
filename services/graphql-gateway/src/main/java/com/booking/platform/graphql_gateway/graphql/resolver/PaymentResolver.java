@@ -13,6 +13,9 @@ import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.stereotype.Controller;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 /**
  * GraphQL resolver for payment operations.
  *
@@ -29,17 +32,32 @@ public class PaymentResolver {
     private final BookingClient bookingClient;
     private final AuthService authService;
 
+    /**
+     * Start (or resume) payment for an order covering several bookings. The amount is summed from
+     * the authoritative bookings (never the client), which also enforces ownership per booking.
+     */
     @MutationMapping
-    public PaymentIntentResult createPaymentIntent(@Argument("bookingId") String bookingId) {
+    public PaymentIntentResult createOrderPaymentIntent(@Argument("orderId") String orderId,
+                                                        @Argument("bookingIds") List<String> bookingIds) {
         String userId = authService.getAuthenticatedUserId();
         ApplicationLogger.logMessage(log, Level.INFO,
-                "GraphQL mutation: createPaymentIntent(booking='{}') for user '{}'", bookingId, userId);
+                "GraphQL mutation: createOrderPaymentIntent(order='{}', {} bookings) for user '{}'",
+                orderId, bookingIds.size(), userId);
 
-        // Authoritative amount/currency come from the booking, never from the client.
-        BookingInfo booking = bookingClient.getBooking(bookingId).getBooking();
+        BigDecimal total = BigDecimal.ZERO;
+        String currency = null;
+        for (String bookingId : bookingIds) {
+            BookingInfo booking = bookingClient.getBooking(bookingId).getBooking();
+            if (currency == null) {
+                currency = booking.getCurrency();
+            } else if (!currency.equals(booking.getCurrency())) {
+                throw new IllegalArgumentException("All items in an order must use the same currency");
+            }
+            total = total.add(new BigDecimal(booking.getTotalPrice()));
+        }
 
         return PaymentIntentResult.fromGrpc(
-                paymentClient.createPaymentIntent(bookingId, booking.getTotalPrice(), booking.getCurrency()));
+                paymentClient.createOrderPaymentIntent(orderId, bookingIds, total.toPlainString(), currency));
     }
 
     /**

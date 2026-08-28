@@ -1,6 +1,6 @@
 import { Injectable, signal, computed } from '@angular/core';
 
-/** A single cart line item (single-item cart for now). */
+/** A cart line item — one event + seat category + quantity. */
 export interface CartItem {
   eventId: string;
   eventTitle: string;
@@ -8,11 +8,8 @@ export interface CartItem {
   unitPrice: string;   // decimal as string, e.g. "49.99"
   currency: string;    // ISO 4217, e.g. "USD"
   quantity: number;
-  /**
-   * Stable idempotency key for the booking this cart will create at checkout. Regenerated
-   * whenever the cart contents change (new item / quantity), so a checkout reload reuses the
-   * same booking, but a real change starts a fresh one.
-   */
+  /** Per-booking idempotency key. Regenerated when this line changes, so checkout reuses the
+   *  same booking on reload but a real change starts a fresh one. */
   idempotencyKey: string;
 }
 
@@ -20,62 +17,90 @@ export interface CartItem {
 export type CartItemInput = Omit<CartItem, 'idempotencyKey'>;
 
 /**
- * Client-side cart. Holds at most one line item, persisted to localStorage so it survives
- * reloads. The cart is purely a client-side intent — no seats are reserved until checkout
- * (that's when the booking is created and the hold starts).
+ * Client-side multi-item cart, persisted to localStorage. Holds several line items and one
+ * `orderId` — the idempotency key for the single payment that covers the whole cart. The order
+ * id is regenerated on any cart change so a changed cart starts a fresh order/payment.
  */
 @Injectable({ providedIn: 'root' })
 export class CartService {
-  private static readonly STORAGE_KEY = 'bkg_cart';
+  private static readonly ITEMS_KEY = 'bkg_cart_items';
+  private static readonly ORDER_KEY = 'bkg_cart_order';
 
-  private readonly _item = signal<CartItem | null>(this.load());
+  private readonly _items = signal<CartItem[]>(this.loadItems());
+  private readonly _orderId = signal<string>(this.loadOrderId());
 
-  readonly item = this._item.asReadonly();
-  readonly hasItem = computed(() => this._item() !== null);
-  readonly count = computed(() => this._item()?.quantity ?? 0);
-  readonly total = computed(() => {
-    const i = this._item();
-    return i ? (parseFloat(i.unitPrice) * i.quantity).toFixed(2) : '0.00';
-  });
+  readonly items = this._items.asReadonly();
+  readonly orderId = this._orderId.asReadonly();
+  readonly hasItems = computed(() => this._items().length > 0);
+  readonly count = computed(() => this._items().reduce((n, i) => n + i.quantity, 0));
+  readonly currency = computed(() => this._items()[0]?.currency ?? '');
+  readonly total = computed(() =>
+    this._items().reduce((sum, i) => sum + parseFloat(i.unitPrice) * i.quantity, 0).toFixed(2));
 
-  /** Single-item cart: adding a new item replaces whatever was there (with a fresh idempotency key). */
-  set(item: CartItemInput): void {
-    this._item.set({ ...item, idempotencyKey: crypto.randomUUID() });
-    this.persist();
+  /** Add a line. If the same event+category is already in the cart, it's replaced (updated qty). */
+  add(input: CartItemInput): void {
+    const items = [...this._items()];
+    const idx = items.findIndex(i => this.sameLine(i, input));
+    const line: CartItem = { ...input, idempotencyKey: crypto.randomUUID() };
+    if (idx >= 0) items[idx] = line;
+    else items.push(line);
+    this._items.set(items);
+    this.onCartChanged();
   }
 
-  setQuantity(quantity: number): void {
-    // Amount changes → new idempotency key, so checkout creates a booking for the new quantity.
-    this._item.update(i => (i ? { ...i, quantity, idempotencyKey: crypto.randomUUID() } : i));
-    this.persist();
+  setQuantity(eventId: string, seatCategory: string, quantity: number): void {
+    this._items.update(items => items.map(i =>
+      (i.eventId === eventId && i.seatCategory === seatCategory)
+        ? { ...i, quantity, idempotencyKey: crypto.randomUUID() }   // amount changed → new key
+        : i));
+    this.onCartChanged();
+  }
+
+  remove(eventId: string, seatCategory: string): void {
+    this._items.update(items => items.filter(i => !(i.eventId === eventId && i.seatCategory === seatCategory)));
+    this.onCartChanged();
   }
 
   clear(): void {
-    this._item.set(null);
+    this._items.set([]);
+    this.onCartChanged();
+  }
+
+  private sameLine(a: { eventId: string; seatCategory: string }, b: { eventId: string; seatCategory: string }): boolean {
+    return a.eventId === b.eventId && a.seatCategory === b.seatCategory;
+  }
+
+  /** Any cart change starts a fresh order (new payment), and re-persists. */
+  private onCartChanged(): void {
+    this._orderId.set(crypto.randomUUID());
     this.persist();
   }
 
   private persist(): void {
     try {
-      const item = this._item();
-      if (item) localStorage.setItem(CartService.STORAGE_KEY, JSON.stringify(item));
-      else localStorage.removeItem(CartService.STORAGE_KEY);
+      localStorage.setItem(CartService.ITEMS_KEY, JSON.stringify(this._items()));
+      localStorage.setItem(CartService.ORDER_KEY, this._orderId());
     } catch {
-      // localStorage unavailable (private mode, blocked) — cart stays in-memory only.
+      // localStorage unavailable — cart stays in-memory only.
     }
   }
 
-  private load(): CartItem | null {
+  private loadItems(): CartItem[] {
     try {
-      const raw = localStorage.getItem(CartService.STORAGE_KEY);
-      if (!raw) return null;
-      const item = JSON.parse(raw) as CartItem;
-      // Backfill the idempotency key for carts persisted before this field existed,
-      // so an older localStorage cart doesn't send a null key to createBooking.
-      if (!item.idempotencyKey) item.idempotencyKey = crypto.randomUUID();
-      return item;
+      const raw = localStorage.getItem(CartService.ITEMS_KEY);
+      const items = raw ? (JSON.parse(raw) as CartItem[]) : [];
+      // Backfill missing idempotency keys (carts saved before this field existed).
+      return items.map(i => i.idempotencyKey ? i : { ...i, idempotencyKey: crypto.randomUUID() });
     } catch {
-      return null;
+      return [];
+    }
+  }
+
+  private loadOrderId(): string {
+    try {
+      return localStorage.getItem(CartService.ORDER_KEY) || crypto.randomUUID();
+    } catch {
+      return crypto.randomUUID();
     }
   }
 }

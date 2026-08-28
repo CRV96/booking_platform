@@ -26,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.List;
 
 /**
@@ -184,6 +186,7 @@ public class OutboxPollingPublisher {
                         .setAmount(json.path(BkgOutboxConstants.AMOUNT).asDouble())
                         .setCurrency(json.path(BkgOutboxConstants.CURRENCY).asText())
                         .setTimestamp(json.path(BkgOutboxConstants.TIMESTAMP).asText())
+                        .addAllBookingIds(readBookingIds(json))
                         .build();
 
                 case BkgOutboxConstants.PAYMENT_FAILED_EVENT -> PaymentFailedEvent.newBuilder()
@@ -191,6 +194,7 @@ public class OutboxPollingPublisher {
                         .setBookingId(json.path(BkgOutboxConstants.BOOKING_ID).asText())
                         .setReason(json.path(BkgOutboxConstants.REASON).asText())
                         .setTimestamp(json.path(BkgOutboxConstants.TIMESTAMP).asText())
+                        .addAllBookingIds(readBookingIds(json))
                         .build();
 
                 case BkgOutboxConstants.REFUND_COMPLETED_EVENT -> RefundCompletedEvent.newBuilder()
@@ -209,6 +213,16 @@ public class OutboxPollingPublisher {
             throw new RuntimeException(
                     "Failed to parse outbox event payload: id=" + event.getId(), e);
         }
+    }
+
+    /** Reads the booking_ids JSON array (payment events) into a list; empty if absent. */
+    private List<String> readBookingIds(JsonNode json) {
+        List<String> ids = new ArrayList<>();
+        JsonNode array = json.path(BkgOutboxConstants.BOOKING_IDS);
+        if (array.isArray()) {
+            array.forEach(node -> ids.add(node.asText()));
+        }
+        return ids;
     }
 
 }

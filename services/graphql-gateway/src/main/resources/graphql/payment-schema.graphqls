@@ -1,10 +1,9 @@
 extend type Mutation {
     """
-    Start (or resume) payment for a booking. Returns the Stripe client secret the browser
-    uses to confirm the card client-side. Idempotent per booking — a repeat call (e.g. a
-    checkout page reload) returns the same intent rather than creating a new one.
+    Start (or resume) payment for an order covering several bookings — one PaymentIntent for the
+    summed total. Idempotent per orderId. On success every booking in the order is confirmed.
     """
-    createPaymentIntent(bookingId: ID!): PaymentIntent!
+    createOrderPaymentIntent(orderId: ID!, bookingIds: [ID!]!): PaymentIntent!
 
     """
     MOCK MODE ONLY. Simulate the payment outcome for a booking using a test card number
