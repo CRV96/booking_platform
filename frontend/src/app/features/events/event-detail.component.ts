@@ -7,6 +7,7 @@ import { GET_EVENT } from '../../shared/graphql/documents';
 import { Event, SeatCategory } from '../../shared/models/models';
 import { AuthService } from '../../core/auth.service';
 import { CartService } from '../../core/cart.service';
+import { LovelistService } from '../../core/lovelist.service';
 import { EventArtComponent } from '../../shared/event-art.component';
 
 @Component({
@@ -33,6 +34,12 @@ import { EventArtComponent } from '../../shared/event-art.component';
               <div class="detail-meta-row">
                 <span class="badge" [class]="statusBadge(event()!.status)">{{ event()!.status }}</span>
                 <span class="mono xs muted" style="margin-left:8px">{{ event()!.category }}</span>
+                <button type="button" class="detail-love" [class.loved]="lovelist.isLoved(event()!.id)"
+                        (click)="toggleLove()"
+                        [attr.aria-pressed]="lovelist.isLoved(event()!.id)"
+                        [attr.aria-label]="lovelist.isLoved(event()!.id) ? 'Remove from lovelist' : 'Add to lovelist'">
+                  {{ lovelist.isLoved(event()!.id) ? '♥ Saved' : '♡ Save' }}
+                </button>
               </div>
 
               <h1 class="detail-title">{{ event()!.title }}</h1>
@@ -129,6 +136,13 @@ import { EventArtComponent } from '../../shared/event-art.component';
     @media (max-width: 768px) { .detail-layout { grid-template-columns: 1fr; } }
 
     .detail-meta-row { display: flex; align-items: center; margin-bottom: 12px; }
+    .detail-love {
+      margin-left: auto; font-family: inherit; font-size: 13px; cursor: pointer;
+      border: 1px solid var(--line); border-radius: 8px; background: transparent;
+      color: var(--ink-3); padding: 6px 12px; transition: all 0.15s;
+    }
+    .detail-love:hover { border-color: var(--ink-4); color: var(--ink); }
+    .detail-love.loved { color: #e0245e; border-color: #e0245e; }
     .detail-title { font-family: var(--serif); font-size: 42px; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 28px; }
 
     .detail-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--line); margin-bottom: 28px; }
@@ -166,6 +180,7 @@ export class EventDetailComponent implements OnInit {
   private apollo = inject(Apollo);
   auth = inject(AuthService);
   private cart = inject(CartService);
+  lovelist = inject(LovelistService);
   private router = inject(Router);
 
   event = signal<Event | null>(null);
@@ -212,6 +227,17 @@ export class EventDetailComponent implements OnInit {
       quantity: Number(this.quantity),
     });
     this.router.navigate(['/cart']);
+  }
+
+  toggleLove() {
+    const ev = this.event()!;
+    this.lovelist.toggle({
+      eventId: ev.id,
+      title: ev.title,
+      category: ev.category,
+      city: ev.venue.city,
+      dateTime: ev.dateTime,
+    });
   }
 
   statusBadge(status: string) {

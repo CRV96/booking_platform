@@ -33,6 +33,11 @@ export const routes: Routes = [
   },
 
   {
+    path: 'lovelist',
+    loadComponent: () => import('./features/lovelist/lovelist.component').then(m => m.LovelistComponent),
+  },
+
+  {
     path: 'checkout',
     canActivate: [authGuard],
     children: [

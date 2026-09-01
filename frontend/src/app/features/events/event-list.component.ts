@@ -1,11 +1,14 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DatePipe } from '@angular/common';
 import { Apollo } from 'apollo-angular';
 import { GET_EVENTS } from '../../shared/graphql/documents';
-import { Event, EventConnection } from '../../shared/models/models';
+import { Event, EventConnection, SeatCategory } from '../../shared/models/models';
 import { EventArtComponent } from '../../shared/event-art.component';
+import { AuthService } from '../../core/auth.service';
+import { CartService } from '../../core/cart.service';
+import { LovelistService } from '../../core/lovelist.service';
 
 const CATEGORIES = [
   { id: '', label: 'All' },
@@ -77,7 +80,23 @@ const CATEGORIES = [
                   @if (minPrice(ev) === 0) { Free }
                   @else { From €{{ minPrice(ev) }}<small>/ ticket</small> }
                 </div>
-                <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
+                @if (auth.isOrganizer()) {
+                  <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
+                }
+              </div>
+              <div class="ev-card-actions">
+                <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
+                        (click)="toggleLove(ev, $event)"
+                        [attr.aria-pressed]="lovelist.isLoved(ev.id)"
+                        [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
+                  {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
+                </button>
+                @if (isInCart(ev.id)) {
+                  <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
+                } @else {
+                  <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
+                          (click)="addToCart(ev, $event)">Add to cart</button>
+                }
               </div>
             </a>
           }
@@ -116,7 +135,23 @@ const CATEGORIES = [
                   @if (minPrice(ev) === 0) { Free }
                   @else { From €{{ minPrice(ev) }}<small>/ ticket</small> }
                 </div>
-                <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
+                @if (auth.isOrganizer()) {
+                  <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
+                }
+              </div>
+              <div class="ev-card-actions">
+                <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
+                        (click)="toggleLove(ev, $event)"
+                        [attr.aria-pressed]="lovelist.isLoved(ev.id)"
+                        [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
+                  {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
+                </button>
+                @if (isInCart(ev.id)) {
+                  <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
+                } @else {
+                  <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
+                          (click)="addToCart(ev, $event)">Add to cart</button>
+                }
               </div>
             </a>
           }
@@ -135,10 +170,33 @@ const CATEGORIES = [
     @media (max-width: 900px) { .ev-grid { grid-template-columns: repeat(2, 1fr); } }
     @media (max-width: 600px) { .ev-grid { grid-template-columns: 1fr; } }
     .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 40px; }
+    /* Push the price + action buttons to the bottom so they align across the row regardless of title length. */
+    .ev-card-foot { margin-top: auto; }
+    .ev-card-actions { display: flex; align-items: center; gap: 8px; }
+    .ev-act {
+      font-family: inherit; font-size: 13px; cursor: pointer;
+      border: 1px solid var(--line); border-radius: 8px; background: transparent;
+      color: var(--ink-3); transition: all 0.15s;
+    }
+    .ev-act:hover { border-color: var(--ink-4); color: var(--ink); }
+    .ev-act:disabled { opacity: 0.45; cursor: not-allowed; }
+    .ev-love {
+      width: 36px; height: 36px; flex-shrink: 0; font-size: 16px; line-height: 1;
+      display: inline-flex; align-items: center; justify-content: center;
+    }
+    .ev-love.loved { color: #e0245e; border-color: #e0245e; }
+    .ev-cart { flex: 1; height: 36px; padding: 0 12px; }
+    .ev-cart.in-cart { color: var(--ink); border-color: var(--ink-4); }
   `]
 })
 export class EventListComponent implements OnInit {
   private apollo = inject(Apollo);
+  private router = inject(Router);
+  auth = inject(AuthService);
+  cart = inject(CartService);
+  lovelist = inject(LovelistService);
+  /** Event ids currently in the cart — for the "In cart ✓" state on each card. */
+  private cartEventIds = computed(() => new Set(this.cart.items().map(i => i.eventId)));
   categories = CATEGORIES;
   filters = { query: '', category: '' };
   aiSearch = false;
@@ -185,5 +243,49 @@ export class EventListComponent implements OnInit {
 
   statusBadge(status: string): string {
     return ({ PUBLISHED: 'badge badge-live', DRAFT: 'badge badge-draft', CANCELLED: 'badge badge-danger', COMPLETED: 'badge' } as Record<string, string>)[status] ?? 'badge';
+  }
+
+  /** The lowest-priced seat category, used for one-click "Add to cart" from the listing. */
+  cheapestCategory(ev: Event): SeatCategory | null {
+    if (!ev.seatCategories?.length) return null;
+    return ev.seatCategories.reduce((min, s) => parseFloat(s.price) < parseFloat(min.price) ? s : min);
+  }
+
+  isInCart(eventId: string): boolean {
+    return this.cartEventIds().has(eventId);
+  }
+
+  addToCart(ev: Event, e: MouseEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    const cat = this.cheapestCategory(ev);
+    if (!cat) return;
+    // Cheapest category, qty 1 — no seats are reserved yet; the booking is created at checkout.
+    this.cart.add({
+      eventId: ev.id,
+      eventTitle: ev.title,
+      seatCategory: cat.name,
+      unitPrice: cat.price,
+      currency: cat.currency,
+      quantity: 1,
+    });
+  }
+
+  goToCart(e: MouseEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    this.router.navigate(['/cart']);
+  }
+
+  toggleLove(ev: Event, e: MouseEvent): void {
+    e.preventDefault();
+    e.stopPropagation();
+    this.lovelist.toggle({
+      eventId: ev.id,
+      title: ev.title,
+      category: ev.category,
+      city: ev.venue.city,
+      dateTime: ev.dateTime,
+    });
   }
 }

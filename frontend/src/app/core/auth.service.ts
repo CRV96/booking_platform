@@ -5,6 +5,8 @@ import { Observable, of, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 import { LOGIN, REGISTER, REFRESH_TOKEN, LOGOUT } from '../shared/graphql/documents';
 import { AuthPayload, User } from '../shared/models/models';
+import { CartService } from './cart.service';
+import { LovelistService } from './lovelist.service';
 
 /** Refresh the access token this many ms before it actually expires, to avoid racing expiry. */
 const TOKEN_EXPIRY_SKEW_MS = 30_000;
@@ -28,7 +30,12 @@ export class AuthService {
   readonly isOrganizer = computed(() => this._user()?.roles.includes('employee') ?? false);
   readonly isCustomer = computed(() => this._user()?.roles.includes('customer') ?? false);
 
-  constructor(private apollo: Apollo, private router: Router) {}
+  constructor(
+    private apollo: Apollo,
+    private router: Router,
+    private cart: CartService,
+    private lovelist: LovelistService,
+  ) {}
 
   login(username: string, password: string) {
     return this.apollo.mutate<{ login: AuthPayload }>({
@@ -136,6 +143,9 @@ export class AuthService {
     localStorage.removeItem(USER_KEY);
     this._user.set(null);
     this._token.set(null);
+    // Cart and lovelist are per-session on the client for now — drop them on sign-out.
+    this.cart.clear();
+    this.lovelist.clear();
     this.apollo.client.resetStore();
   }
 
