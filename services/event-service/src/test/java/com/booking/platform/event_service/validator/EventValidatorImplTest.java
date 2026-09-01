@@ -42,6 +42,33 @@ class EventValidatorImplTest {
                 .addSeatCategories(validSeatCategory());
     }
 
+    // ── validateCreateRequest — seats vs capacity ─────────────────────────────
+
+    @Test
+    void validateCreateRequest_totalSeatsExceedCapacity_throws() {
+        CreateEventRequest request = validRequest()
+                .setVenue(com.booking.platform.common.grpc.event.VenueInfo.newBuilder()
+                        .setName("Arena").setCity("Berlin").setCountry("DE").setCapacity(120).build())
+                .clearSeatCategories()
+                .addSeatCategories(SeatCategoryInfo.newBuilder().setName("A").setPrice(10.0).setCurrency("USD").setTotalSeats(100).build())
+                .addSeatCategories(SeatCategoryInfo.newBuilder().setName("B").setPrice(10.0).setCurrency("USD").setTotalSeats(50).build())
+                .build();
+
+        assertThatThrownBy(() -> validator.validateCreateRequest(request))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("capacity");
+    }
+
+    @Test
+    void validateCreateRequest_totalSeatsWithinCapacity_doesNotThrow() {
+        CreateEventRequest request = validRequest()
+                .setVenue(com.booking.platform.common.grpc.event.VenueInfo.newBuilder()
+                        .setName("Arena").setCity("Berlin").setCountry("DE").setCapacity(200).build())
+                .build();
+
+        assertThatNoException().isThrownBy(() -> validator.validateCreateRequest(request));
+    }
+
     // ── validateCreateRequest — happy path ────────────────────────────────────
 
     @Test

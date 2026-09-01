@@ -84,20 +84,22 @@ const CATEGORIES = [
                   <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
                 }
               </div>
-              <div class="ev-card-actions">
-                <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
-                        (click)="toggleLove(ev, $event)"
-                        [attr.aria-pressed]="lovelist.isLoved(ev.id)"
-                        [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
-                  {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
-                </button>
-                @if (isInCart(ev.id)) {
-                  <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
-                } @else {
-                  <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
-                          (click)="addToCart(ev, $event)">Add to cart</button>
-                }
-              </div>
+              @if (!auth.isOrganizer()) {
+                <div class="ev-card-actions">
+                  <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
+                          (click)="toggleLove(ev, $event)"
+                          [attr.aria-pressed]="lovelist.isLoved(ev.id)"
+                          [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
+                    {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
+                  </button>
+                  @if (isInCart(ev.id)) {
+                    <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
+                  } @else {
+                    <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
+                            (click)="addToCart(ev, $event)">Add to cart</button>
+                  }
+                </div>
+              }
             </a>
           }
         </div>
@@ -139,20 +141,22 @@ const CATEGORIES = [
                   <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
                 }
               </div>
-              <div class="ev-card-actions">
-                <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
-                        (click)="toggleLove(ev, $event)"
-                        [attr.aria-pressed]="lovelist.isLoved(ev.id)"
-                        [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
-                  {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
-                </button>
-                @if (isInCart(ev.id)) {
-                  <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
-                } @else {
-                  <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
-                          (click)="addToCart(ev, $event)">Add to cart</button>
-                }
-              </div>
+              @if (!auth.isOrganizer()) {
+                <div class="ev-card-actions">
+                  <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
+                          (click)="toggleLove(ev, $event)"
+                          [attr.aria-pressed]="lovelist.isLoved(ev.id)"
+                          [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
+                    {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
+                  </button>
+                  @if (isInCart(ev.id)) {
+                    <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
+                  } @else {
+                    <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
+                            (click)="addToCart(ev, $event)">Add to cart</button>
+                  }
+                </div>
+              }
             </a>
           }
         </div>

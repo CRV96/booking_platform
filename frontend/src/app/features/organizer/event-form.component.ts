@@ -49,6 +49,10 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD'];
                 <label>Date & Time <span style="color:var(--danger)">*</span></label>
                 <input formControlName="dateTime" type="datetime-local" class="inp">
               </div>
+              <div class="field">
+                <label>End Date & Time <span class="mono xs muted">(optional — for multi-day events)</span></label>
+                <input formControlName="endDateTime" type="datetime-local" class="inp">
+              </div>
             </div>
           </div>
 
@@ -169,6 +173,7 @@ export class EventFormComponent implements OnInit {
     description: [''],
     category: ['', Validators.required],
     dateTime: ['', Validators.required],
+    endDateTime: [''],
     venue: this.fb.group({
       name: ['', Validators.required],
       address: [''],
@@ -207,8 +212,9 @@ export class EventFormComponent implements OnInit {
           this.loading.set(false);
           const ev = r.data!.event;
           const dt = ev.dateTime ? ev.dateTime.substring(0, 16) : '';
+          const endDt = ev.endDateTime ? ev.endDateTime.substring(0, 16) : '';
           this.form.patchValue({
-            title: ev.title, description: ev.description ?? '', category: ev.category, dateTime: dt,
+            title: ev.title, description: ev.description ?? '', category: ev.category, dateTime: dt, endDateTime: endDt,
             venue: { name: ev.venue.name, address: ev.venue.address ?? '', city: ev.venue.city, country: ev.venue.country, capacity: ev.venue.capacity ?? null },
           });
           ev.seatCategories.forEach((sc: SeatCategory) => {
@@ -232,6 +238,22 @@ export class EventFormComponent implements OnInit {
       this.saveError.set('Add at least one seat category.');
       return;
     }
+
+    // Seats across all categories cannot exceed the venue capacity (when one is set).
+    const capacity = this.form.value.venue?.capacity ? Number(this.form.value.venue.capacity) : null;
+    const totalSeats = (this.form.value.seatCategories as { totalSeats: number }[])
+      .reduce((sum, sc) => sum + Number(sc.totalSeats || 0), 0);
+    if (capacity != null && totalSeats > capacity) {
+      this.saveError.set(`Total seats across categories (${totalSeats}) exceed the venue capacity (${capacity}).`);
+      return;
+    }
+
+    // A multi-day event's end must be after its start.
+    if (this.form.value.endDateTime && this.form.value.dateTime
+        && new Date(this.form.value.endDateTime) <= new Date(this.form.value.dateTime)) {
+      this.saveError.set('End date & time must be after the start.');
+      return;
+    }
     this.saving.set(true);
 
     const v = this.form.value;
@@ -242,6 +264,7 @@ export class EventFormComponent implements OnInit {
       description: v.description || null,
       category: v.category,
       dateTime,
+      endDateTime: v.endDateTime ? new Date(v.endDateTime).toISOString() : null,
       venue: { ...v.venue, capacity: v.venue?.capacity ? Number(v.venue.capacity) : null },
       seatCategories: (v.seatCategories as { name: string; price: number; currency: string; totalSeats: number }[])
         .map(sc => ({ ...sc, price: Number(sc.price), totalSeats: Number(sc.totalSeats) })),

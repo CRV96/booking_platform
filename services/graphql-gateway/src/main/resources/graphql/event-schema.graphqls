@@ -38,6 +38,7 @@ type Event {
     category: EventCategory!
     status: EventStatus!
     dateTime: String!
+    endDateTime: String          # ISO 8601 — set when the event spans more than one day/session
 
     venue: VenueInfo!
     organizer: OrganizerInfo!
@@ -92,6 +93,7 @@ input CreateEventInput {
     description: String
     category: EventCategory!
     dateTime: String!
+    endDateTime: String
     venue: VenueInput!
     seatCategories: [SeatCategoryInput!]!
 }
@@ -101,6 +103,7 @@ input UpdateEventInput {
     description: String
     category: EventCategory
     dateTime: String
+    endDateTime: String
     venue: VenueInput
     seatCategories: [SeatCategoryInput!]
 }

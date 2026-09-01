@@ -32,14 +32,18 @@ import { EventArtComponent } from '../../shared/event-art.component';
 
             <div style="margin-top:28px">
               <div class="detail-meta-row">
-                <span class="badge" [class]="statusBadge(event()!.status)">{{ event()!.status }}</span>
+                @if (auth.isOrganizer()) {
+                  <span class="badge" [class]="statusBadge(event()!.status)">{{ event()!.status }}</span>
+                }
                 <span class="mono xs muted" style="margin-left:8px">{{ event()!.category }}</span>
-                <button type="button" class="detail-love" [class.loved]="lovelist.isLoved(event()!.id)"
-                        (click)="toggleLove()"
-                        [attr.aria-pressed]="lovelist.isLoved(event()!.id)"
-                        [attr.aria-label]="lovelist.isLoved(event()!.id) ? 'Remove from lovelist' : 'Add to lovelist'">
-                  {{ lovelist.isLoved(event()!.id) ? '♥ Saved' : '♡ Save' }}
-                </button>
+                @if (!auth.isOrganizer()) {
+                  <button type="button" class="detail-love" [class.loved]="lovelist.isLoved(event()!.id)"
+                          (click)="toggleLove()"
+                          [attr.aria-pressed]="lovelist.isLoved(event()!.id)"
+                          [attr.aria-label]="lovelist.isLoved(event()!.id) ? 'Remove from lovelist' : 'Add to lovelist'">
+                    {{ lovelist.isLoved(event()!.id) ? '♥ Saved' : '♡ Save' }}
+                  </button>
+                }
               </div>
 
               <h1 class="detail-title">{{ event()!.title }}</h1>
@@ -53,6 +57,12 @@ import { EventArtComponent } from '../../shared/event-art.component';
                   <div class="detail-info-label">Time</div>
                   <div class="detail-info-value">{{ event()!.dateTime | date:'HH:mm' }}</div>
                 </div>
+                @if (event()!.endDateTime) {
+                  <div class="detail-info-item">
+                    <div class="detail-info-label">Ends</div>
+                    <div class="detail-info-value">{{ event()!.endDateTime | date:'EEE, d MMM y, HH:mm' }}</div>
+                  </div>
+                }
                 <div class="detail-info-item">
                   <div class="detail-info-label">Venue</div>
                   <div class="detail-info-value">{{ event()!.venue.name }}</div>
@@ -87,6 +97,8 @@ import { EventArtComponent } from '../../shared/event-art.component';
                   <p style="font-size:13px;color:var(--ink-3);margin-bottom:16px">
                     Please <a routerLink="/auth/login" style="color:var(--ink);text-decoration:underline">sign in</a> to book tickets.
                   </p>
+                } @else if (auth.isOrganizer()) {
+                  <p style="font-size:13px;color:var(--ink-3)">Organizers manage events and can't book tickets.</p>
                 } @else {
                   <div style="margin-bottom:20px">
                     <div class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px">Select category</div>

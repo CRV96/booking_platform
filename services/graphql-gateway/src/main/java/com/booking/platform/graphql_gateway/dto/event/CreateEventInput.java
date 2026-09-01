@@ -10,6 +10,7 @@ public record CreateEventInput(
         String description,
         String category,
         String dateTime,
+        String endDateTime,
         VenueInput venue,
         List<SeatCategoryInput> seatCategories
 ) {

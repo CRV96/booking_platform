@@ -64,7 +64,7 @@ export const UPDATE_PROFILE = gql`
 // ── Events ────────────────────────────────────────────────────────────────────
 
 const EVENT_FIELDS = `
-  id title description category status dateTime
+  id title description category status dateTime endDateTime
   venue { name address city country latitude longitude capacity }
   organizer { userId name email }
   seatCategories { name price currency totalSeats availableSeats }

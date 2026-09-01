@@ -1,4 +1,4 @@
-import { Component, inject, signal, HostListener } from '@angular/core';
+import { Component, inject, signal, effect, HostListener } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { CartService } from '../core/cart.service';
@@ -32,14 +32,16 @@ import { LovelistService } from '../core/lovelist.service';
       </nav>
 
       <div class="hdr-right">
-        <a routerLink="/lovelist" routerLinkActive="hdr-nav-active" class="hdr-cart" style="text-decoration:none">
-          ♥ Lovelist
-          @if (lovelist.count() > 0) { <span class="hdr-cart-badge">{{ lovelist.count() }}</span> }
-        </a>
-        <a routerLink="/cart" routerLinkActive="hdr-nav-active" class="hdr-cart" style="text-decoration:none">
-          Cart
-          @if (cart.count() > 0) { <span class="hdr-cart-badge">{{ cart.count() }}</span> }
-        </a>
+        @if (!auth.isOrganizer()) {
+          <a routerLink="/lovelist" routerLinkActive="hdr-nav-active" class="hdr-cart" style="text-decoration:none">
+            ♥ Lovelist
+            @if (lovelist.count() > 0) { <span class="hdr-cart-badge">{{ lovelist.count() }}</span> }
+          </a>
+          <a routerLink="/cart" routerLinkActive="hdr-nav-active" class="hdr-cart" style="text-decoration:none">
+            Cart
+            @if (cart.count() > 0) { <span class="hdr-cart-badge">{{ cart.count() }}</span> }
+          </a>
+        }
         @if (auth.isAuthenticated()) {
           <div class="hdr-menu">
             <button type="button" class="hdr-user" (click)="toggleMenu($event)"
@@ -138,6 +140,18 @@ export class NavbarComponent {
   cart = inject(CartService);
   lovelist = inject(LovelistService);
   menuOpen = signal(false);
+
+  constructor() {
+    // Load the server-backed cart & lovelist whenever the user is authenticated — covers both
+    // page refresh (session already present) and login. Runs after DI completes, so it avoids the
+    // re-entrancy that broke loading from inside AuthService's constructor.
+    effect(() => {
+      if (this.auth.isAuthenticated() && !this.auth.isOrganizer()) {
+        this.cart.load();
+        this.lovelist.load();
+      }
+    });
+  }
 
   toggleMenu(e: MouseEvent) {
     e.stopPropagation();   // keep the document click-away handler from immediately re-closing

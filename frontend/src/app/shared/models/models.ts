@@ -58,6 +58,7 @@ export interface Event {
   category: string;
   status: string;
   dateTime: string;
+  endDateTime?: string;
   venue: VenueInfo;
   organizer: OrganizerInfo;
   seatCategories: SeatCategory[];

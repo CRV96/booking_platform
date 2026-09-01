@@ -16,6 +16,7 @@ public record Event(
         String category,
         String status,
         String dateTime,
+        String endDateTime,
         VenueInfo venue,
         OrganizerInfo organizer,
         List<SeatCategory> seatCategories,
@@ -33,6 +34,7 @@ public record Event(
                 eventInfo.getCategory(),
                 eventInfo.getStatus(),
                 eventInfo.getDateTime(),
+                eventInfo.getEndDateTime().isBlank() ? null : eventInfo.getEndDateTime(),
                 VenueInfo.fromGrpc(eventInfo.getVenue()),
                 OrganizerInfo.fromGrpc(eventInfo.getOrganizer()),
                 eventInfo.getSeatCategoriesList().stream()

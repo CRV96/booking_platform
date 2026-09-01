@@ -50,7 +50,7 @@ class EventServiceClientImplTest {
     @Test
     void createEvent_setsTitle() {
         CreateEventInput input = new CreateEventInput("Rock Fest", null, "CONCERT",
-                "2026-06-01T20:00:00Z", venue(), null);
+                "2026-06-01T20:00:00Z", null, venue(), null);
         client.createEvent(input);
 
         ArgumentCaptor<CreateEventRequest> captor = ArgumentCaptor.forClass(CreateEventRequest.class);
@@ -62,7 +62,7 @@ class EventServiceClientImplTest {
     @Test
     void createEvent_withDescription_setsDescription() {
         CreateEventInput input = new CreateEventInput("Fest", "Great event", "CONCERT",
-                "2026-06-01T20:00:00Z", venue(), null);
+                "2026-06-01T20:00:00Z", null, venue(), null);
         client.createEvent(input);
 
         ArgumentCaptor<CreateEventRequest> captor = ArgumentCaptor.forClass(CreateEventRequest.class);
@@ -74,7 +74,7 @@ class EventServiceClientImplTest {
     void createEvent_withSeatCategories_addsThemToRequest() {
         SeatCategoryInput seat = new SeatCategoryInput("Floor", 100.0, "USD", 500);
         CreateEventInput input = new CreateEventInput("Fest", null, "CONCERT",
-                "2026-06-01T20:00:00Z", venue(), List.of(seat));
+                "2026-06-01T20:00:00Z", null, venue(), List.of(seat));
         client.createEvent(input);
 
         ArgumentCaptor<CreateEventRequest> captor = ArgumentCaptor.forClass(CreateEventRequest.class);
@@ -86,7 +86,7 @@ class EventServiceClientImplTest {
     @Test
     void createEvent_nullSeatCategories_addsNone() {
         CreateEventInput input = new CreateEventInput("Fest", null, "CONCERT",
-                "2026-06-01T20:00:00Z", venue(), null);
+                "2026-06-01T20:00:00Z", null, venue(), null);
         client.createEvent(input);
 
         ArgumentCaptor<CreateEventRequest> captor = ArgumentCaptor.forClass(CreateEventRequest.class);
@@ -109,7 +109,7 @@ class EventServiceClientImplTest {
 
     @Test
     void updateEvent_allFieldsNull_setsOnlyEventId() {
-        client.updateEvent("ev-1", new UpdateEventInput(null, null, null, null, null, null));
+        client.updateEvent("ev-1", new UpdateEventInput(null, null, null, null, null, null, null));
 
         ArgumentCaptor<UpdateEventRequest> captor = ArgumentCaptor.forClass(UpdateEventRequest.class);
         verify(stub).updateEvent(captor.capture());
@@ -121,7 +121,7 @@ class EventServiceClientImplTest {
 
     @Test
     void updateEvent_withTitle_setsTitle() {
-        client.updateEvent("ev-1", new UpdateEventInput("New Title", null, null, null, null, null));
+        client.updateEvent("ev-1", new UpdateEventInput("New Title", null, null, null, null, null, null));
 
         ArgumentCaptor<UpdateEventRequest> captor = ArgumentCaptor.forClass(UpdateEventRequest.class);
         verify(stub).updateEvent(captor.capture());
