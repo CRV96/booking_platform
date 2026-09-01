@@ -1,0 +1,45 @@
+extend type Query {
+    """The authenticated user's cart."""
+    cart: Cart!
+}
+
+extend type Mutation {
+    """Add a line to the cart (upsert on event + seat category). Returns the updated cart."""
+    addToCart(input: AddToCartInput!): Cart!
+
+    """Set the quantity of a cart line. Returns the updated cart."""
+    updateCartItem(cartItemId: ID!, quantity: Int!): Cart!
+
+    """Remove a cart line. Returns the updated cart."""
+    removeFromCart(cartItemId: ID!): Cart!
+
+    """Empty the cart. Returns the (empty) cart."""
+    clearCart: Cart!
+}
+
+type Cart {
+    items: [CartItem!]!
+    totalPrice: String!          # sum of unitPrice × quantity, decimal as string
+    currency: String             # null when the cart is empty
+}
+
+type CartItem {
+    id: ID!
+    eventId: String!
+    eventTitle: String!          # snapshot taken when the line was added
+    seatCategory: String!
+    quantity: Int!
+    unitPrice: String!           # decimal as string ("49.99")
+    currency: String!            # ISO 4217
+    """Live event details, hydrated from event-service (null if the event no longer exists)."""
+    event: Event
+}
+
+input AddToCartInput {
+    eventId: String!
+    eventTitle: String!
+    seatCategory: String!
+    quantity: Int!
+    unitPrice: String!           # decimal as string
+    currency: String!
+}

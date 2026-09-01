@@ -1,0 +1,19 @@
+extend type Query {
+    """The authenticated user's lovelist (favorited events), most recently added first."""
+    lovelist: [LovelistItem!]!
+}
+
+extend type Mutation {
+    """Add an event to the lovelist. Idempotent. Returns the updated lovelist."""
+    addFavorite(eventId: ID!): [LovelistItem!]!
+
+    """Remove an event from the lovelist. Returns the updated lovelist."""
+    removeFavorite(eventId: ID!): [LovelistItem!]!
+}
+
+type LovelistItem {
+    eventId: String!
+    createdAt: String            # ISO 8601
+    """Live event details, hydrated from event-service (null if the event no longer exists)."""
+    event: Event
+}
