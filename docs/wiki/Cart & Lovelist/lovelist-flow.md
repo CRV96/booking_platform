@@ -66,4 +66,4 @@ sequenceDiagram
     GW-->>C: hydrated lovelist
 ```
 
-See also: [Cart Flow](cart-flow.md) · [Overview](overview.md).
+See also: [Cart flow](cart-flow) · [Overview](overview).

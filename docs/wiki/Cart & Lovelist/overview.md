@@ -84,5 +84,5 @@ flowchart LR
 
 ## Flows
 
-- [Cart Flow](cart-flow.md) — add to cart, hydration, and checkout.
-- [Lovelist Flow](lovelist-flow.md) — toggle favorite and the hydrated lovelist page.
+- [Cart flow](cart-flow) — add to cart, hydration, and checkout.
+- [Lovelist flow](lovelist-flow) — toggle favorite and the hydrated lovelist page.

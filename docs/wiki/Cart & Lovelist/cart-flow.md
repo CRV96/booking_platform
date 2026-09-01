@@ -85,4 +85,4 @@ sequenceDiagram
     FE->>FE: navigate to confirmation
 ```
 
-See also: [Lovelist Flow](lovelist-flow.md) · [Overview](overview.md).
+See also: [Lovelist flow](lovelist-flow) · [Overview](overview).
