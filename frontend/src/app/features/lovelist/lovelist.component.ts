@@ -28,16 +28,20 @@ import { EventArtComponent } from '../../shared/event-art.component';
             <div class="love-row">
               <a class="love-link" [routerLink]="['/events', item.eventId]" style="text-decoration:none;color:inherit">
                 <div class="love-art">
-                  <app-event-art [seed]="artSeed(item.eventId)" [title]="item.title" ratio="16/10" />
+                  <app-event-art [seed]="artSeed(item.eventId)" [title]="item.event?.title || ''" ratio="16/10" />
                 </div>
                 <div class="love-info">
-                  <div class="love-title">{{ item.title }}</div>
+                  <div class="love-title">{{ item.event?.title || 'Event unavailable' }}</div>
                   <div class="love-meta">
-                    <span>{{ item.category }}</span>
-                    <span class="dot"></span>
-                    <span>{{ item.city }}</span>
-                    <span class="dot"></span>
-                    <span>{{ item.dateTime | date:'d MMM y' }}</span>
+                    @if (item.event) {
+                      <span>{{ item.event.category }}</span>
+                      <span class="dot"></span>
+                      <span>{{ item.event.venue.city }}</span>
+                      <span class="dot"></span>
+                      <span>{{ item.event.dateTime | date:'d MMM y' }}</span>
+                    } @else {
+                      <span>This event is no longer available</span>
+                    }
                   </div>
                 </div>
               </a>

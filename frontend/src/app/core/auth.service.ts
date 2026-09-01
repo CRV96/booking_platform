@@ -35,7 +35,18 @@ export class AuthService {
     private router: Router,
     private cart: CartService,
     private lovelist: LovelistService,
-  ) {}
+  ) {
+    // Page refresh with a stored session — hydrate the server-backed cart & lovelist.
+    if (this._token()) {
+      this.loadUserData();
+    }
+  }
+
+  /** Loads the per-user server state (cart + lovelist) into their local mirrors. */
+  private loadUserData(): void {
+    this.cart.load();
+    this.lovelist.load();
+  }
 
   login(username: string, password: string) {
     return this.apollo.mutate<{ login: AuthPayload }>({
@@ -43,7 +54,7 @@ export class AuthService {
       variables: { input: { username, password } },
     }).pipe(
       map(r => r.data!.login),
-      tap(payload => this.storeSession(payload))
+      tap(payload => { this.storeSession(payload); this.loadUserData(); })
     );
   }
 
@@ -56,7 +67,7 @@ export class AuthService {
       variables: { input },
     }).pipe(
       map(r => r.data!.register),
-      tap(payload => { if (payload.accessToken) this.storeSession(payload); })
+      tap(payload => { if (payload.accessToken) { this.storeSession(payload); this.loadUserData(); } })
     );
   }
 
@@ -143,9 +154,10 @@ export class AuthService {
     localStorage.removeItem(USER_KEY);
     this._user.set(null);
     this._token.set(null);
-    // Cart and lovelist are per-session on the client for now — drop them on sign-out.
-    this.cart.clear();
-    this.lovelist.clear();
+    // Drop the local cart/lovelist mirrors on sign-out. Never call the server here — the
+    // saved cart must survive logout and be reloaded on the next sign-in.
+    this.cart.reset();
+    this.lovelist.reset();
     this.apollo.client.resetStore();
   }
 

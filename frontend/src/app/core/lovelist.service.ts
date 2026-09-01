@@ -1,25 +1,35 @@
-import { Injectable, signal, computed } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
+import { Apollo } from 'apollo-angular';
+import { GET_LOVELIST, ADD_FAVORITE, REMOVE_FAVORITE } from '../shared/graphql/documents';
 
-/** A loved event — a small snapshot so the Lovelist page can render without a refetch. */
-export interface LovelistItem {
-  eventId: string;
+/** The live event details hydrated for a lovelist entry (null if the event no longer exists). */
+export interface LovelistEvent {
+  id: string;
   title: string;
   category: string;
-  city: string;
   dateTime: string;
+  venue: { city: string };
+}
+
+/** A lovelist entry — a pointer to an event, plus its hydrated details for display. */
+export interface LovelistItem {
+  eventId: string;
+  createdAt: string | null;
+  event: LovelistEvent | null;
 }
 
 /**
- * Client-side "Lovelist" (favourites), persisted to localStorage and keyed by event.
+ * Per-user "lovelist" (favourites), persisted server-side (booking-service) via the GraphQL
+ * gateway. A local signal mirrors the server state; every mutation replaces it with the
+ * authoritative list the server returns.
  *
- * Phase 1 is intentionally client-only so the UI works immediately; Phase 5 swaps the data
- * source to per-user server storage (GraphQL) while keeping this same public API.
+ * Requires an authenticated user. On sign-out, {@link reset} clears the local mirror only.
  */
 @Injectable({ providedIn: 'root' })
 export class LovelistService {
-  private static readonly KEY = 'bkg_lovelist';
+  private apollo = inject(Apollo);
 
-  private readonly _items = signal<LovelistItem[]>(this.load());
+  private readonly _items = signal<LovelistItem[]>([]);
 
   readonly items = this._items.asReadonly();
   readonly count = computed(() => this._items().length);
@@ -30,41 +40,36 @@ export class LovelistService {
     return this.ids().has(eventId);
   }
 
-  /** Add if absent, remove if present. Returns the new loved state. */
-  toggle(item: LovelistItem): boolean {
-    if (this.isLoved(item.eventId)) {
-      this.remove(item.eventId);
-      return false;
+  /** Load the authenticated user's lovelist from the server. */
+  load(): void {
+    this.apollo.query<{ lovelist: LovelistItem[] }>({ query: GET_LOVELIST, fetchPolicy: 'network-only' })
+      .subscribe({
+        next: r => this._items.set(r.data!.lovelist),
+        error: () => this._items.set([]),
+      });
+  }
+
+  /** Add if absent, remove if present. */
+  toggle(eventId: string): void {
+    if (this.isLoved(eventId)) {
+      this.remove(eventId);
+    } else {
+      this.add(eventId);
     }
-    this._items.update(items => [...items, item]);
-    this.persist();
-    return true;
+  }
+
+  add(eventId: string): void {
+    this.apollo.mutate<{ addFavorite: LovelistItem[] }>({ mutation: ADD_FAVORITE, variables: { eventId } })
+      .subscribe({ next: r => this._items.set(r.data!.addFavorite) });
   }
 
   remove(eventId: string): void {
-    this._items.update(items => items.filter(i => i.eventId !== eventId));
-    this.persist();
+    this.apollo.mutate<{ removeFavorite: LovelistItem[] }>({ mutation: REMOVE_FAVORITE, variables: { eventId } })
+      .subscribe({ next: r => this._items.set(r.data!.removeFavorite) });
   }
 
-  clear(): void {
+  /** Drop the local mirror only — used on sign-out. */
+  reset(): void {
     this._items.set([]);
-    this.persist();
-  }
-
-  private persist(): void {
-    try {
-      localStorage.setItem(LovelistService.KEY, JSON.stringify(this._items()));
-    } catch {
-      // localStorage unavailable — lovelist stays in-memory only.
-    }
-  }
-
-  private load(): LovelistItem[] {
-    try {
-      const raw = localStorage.getItem(LovelistService.KEY);
-      return raw ? (JSON.parse(raw) as LovelistItem[]) : [];
-    } catch {
-      return [];
-    }
   }
 }

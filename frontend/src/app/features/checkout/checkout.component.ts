@@ -141,10 +141,11 @@ export class CheckoutComponent implements OnInit {
       this.router.navigate(['/cart']);
       return;
     }
-    this.orderId = this.cart.orderId();
+    // Fresh idempotency handle for this order's single payment.
+    this.orderId = crypto.randomUUID();
 
-    // 1. Create a booking per cart item (reserve + hold). Each is idempotent on its own key,
-    //    so a checkout reload reuses the same bookings.
+    // 1. Create a booking per cart item (reserve + hold). The stable server cart-line id is the
+    //    booking's idempotency key, so a checkout reload reuses the same bookings.
     const requests = items.map(item =>
       this.apollo.mutate<{ createBooking: Booking }>({
         mutation: CREATE_BOOKING,
@@ -153,7 +154,7 @@ export class CheckoutComponent implements OnInit {
             eventId: item.eventId,
             seatCategory: item.seatCategory,
             quantity: item.quantity,
-            idempotencyKey: item.idempotencyKey,
+            idempotencyKey: item.id,
           }
         }
       })

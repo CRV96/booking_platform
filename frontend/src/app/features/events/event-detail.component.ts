@@ -230,14 +230,8 @@ export class EventDetailComponent implements OnInit {
   }
 
   toggleLove() {
-    const ev = this.event()!;
-    this.lovelist.toggle({
-      eventId: ev.id,
-      title: ev.title,
-      category: ev.category,
-      city: ev.venue.city,
-      dateTime: ev.dateTime,
-    });
+    if (!this.auth.isAuthenticated()) { this.router.navigate(['/auth/login']); return; }
+    this.lovelist.toggle(this.event()!.id);
   }
 
   statusBadge(status: string) {

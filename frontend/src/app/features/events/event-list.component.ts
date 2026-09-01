@@ -258,6 +258,7 @@ export class EventListComponent implements OnInit {
   addToCart(ev: Event, e: MouseEvent): void {
     e.preventDefault();
     e.stopPropagation();
+    if (!this.auth.isAuthenticated()) { this.router.navigate(['/auth/login']); return; }
     const cat = this.cheapestCategory(ev);
     if (!cat) return;
     // Cheapest category, qty 1 — no seats are reserved yet; the booking is created at checkout.
@@ -280,12 +281,7 @@ export class EventListComponent implements OnInit {
   toggleLove(ev: Event, e: MouseEvent): void {
     e.preventDefault();
     e.stopPropagation();
-    this.lovelist.toggle({
-      eventId: ev.id,
-      title: ev.title,
-      category: ev.category,
-      city: ev.venue.city,
-      dateTime: ev.dateTime,
-    });
+    if (!this.auth.isAuthenticated()) { this.router.navigate(['/auth/login']); return; }
+    this.lovelist.toggle(ev.id);
   }
 }
