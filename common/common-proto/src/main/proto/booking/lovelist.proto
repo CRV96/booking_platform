@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package booking.booking;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.booking";
+option java_outer_classname = "LoveListProto";
+
+// ============================================================================
+// Per-user Lovelist (favorites), served by booking-service.
+//
+// The user is ALWAYS taken from the JWT (GrpcUserContext), never from the
+// request. Mutations return the full updated lovelist so the caller
+// (graphql-gateway) gets fresh state in one round trip.
+// ============================================================================
+
+service LoveListService {
+  // Add an event to the caller's lovelist. Idempotent. Returns the updated lovelist.
+  rpc AddToLoveList(AddToLoveListRequest) returns (LoveListResponse);
+
+  // Remove an event from the caller's lovelist. No-op if absent. Returns the updated lovelist.
+  rpc RemoveFromLoveList(RemoveFromLoveListRequest) returns (LoveListResponse);
+
+  // Return the caller's lovelist, most recently added first.
+  rpc GetLoveList(GetLoveListRequest) returns (LoveListResponse);
+}
+
+message AddToLoveListRequest {
+  string event_id = 1;   // MongoDB ObjectId from event-service
+}
+
+message RemoveFromLoveListRequest {
+  string event_id = 1;
+}
+
+message GetLoveListRequest {}   // user comes from the JWT
+
+// A lovelist entry is a pure pointer; display fields (title, city, date, image) are
+// hydrated at the gateway from event-service, so nothing here goes stale.
+message LoveListItem {
+  string event_id = 1;
+  string created_at = 2;   // ISO 8601
+}
+
+message LoveListResponse {
+  repeated LoveListItem items = 1;
+}

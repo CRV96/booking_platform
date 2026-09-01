@@ -1,8 +1,8 @@
 package com.booking.platform.booking_service.service;
 
+import com.booking.platform.booking_service.dto.AddCartItemDto;
 import com.booking.platform.booking_service.entity.CartItemEntity;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -20,8 +20,7 @@ public interface CartService {
      * {@code (event, seatCategory)} line already exists (upsert on the unique key).
      * Idempotent under retries.
      */
-    CartItemEntity addItem(String userId, String eventId, String eventTitle,
-                           String seatCategory, int quantity, BigDecimal unitPrice, String currency);
+    CartItemEntity addItem(AddCartItemDto dto);
 
     /**
      * Sets the quantity of an existing line the user owns.

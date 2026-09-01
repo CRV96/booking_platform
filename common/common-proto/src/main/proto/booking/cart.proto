@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package booking.booking;
+
+option java_multiple_files = true;
+option java_package = "com.booking.platform.common.grpc.booking";
+option java_outer_classname = "CartProto";
+
+// ============================================================================
+// Per-user Cart, served by booking-service.
+//
+// The user is ALWAYS taken from the JWT (GrpcUserContext), never from the
+// request. Mutations return the full updated cart so the caller
+// (graphql-gateway) gets fresh state in one round trip.
+// ============================================================================
+
+service CartService {
+  // Return the caller's cart, oldest line first.
+  rpc GetCart(GetCartRequest) returns (CartResponse);
+
+  // Add a line, or update quantity/snapshot if the same (event, seat category) line
+  // already exists (upsert). Returns the updated cart.
+  rpc AddToCart(AddToCartRequest) returns (CartResponse);
+
+  // Set the quantity of a line the caller owns. Returns the updated cart.
+  rpc UpdateCartItem(UpdateCartItemRequest) returns (CartResponse);
+
+  // Remove a line the caller owns. No-op if absent. Returns the updated cart.
+  rpc RemoveFromCart(RemoveFromCartRequest) returns (CartResponse);
+
+  // Empty the caller's cart. Returns the (empty) cart.
+  rpc ClearCart(ClearCartRequest) returns (CartResponse);
+}
+
+message CartItem {
+  string id = 1;             // cart line UUID — used to update/remove the line
+  string event_id = 2;       // MongoDB ObjectId from event-service
+  string event_title = 3;    // snapshot; the gateway may re-hydrate live event details
+  string seat_category = 4;
+  int32 quantity = 5;
+  string unit_price = 6;     // decimal as string (e.g. "49.99") — avoids float precision loss
+  string currency = 7;       // ISO 4217 (e.g. "USD")
+}
+
+message AddToCartRequest {
+  string event_id = 1;
+  string event_title = 2;
+  string seat_category = 3;
+  int32 quantity = 4;
+  string unit_price = 5;     // decimal as string
+  string currency = 6;
+}
+
+message UpdateCartItemRequest {
+  string cart_item_id = 1;   // UUID of the line to update
+  int32 quantity = 2;
+}
+
+message RemoveFromCartRequest {
+  string cart_item_id = 1;   // UUID of the line to remove
+}
+
+message GetCartRequest {}    // user comes from the JWT
+
+message ClearCartRequest {}  // user comes from the JWT
+
+message CartResponse {
+  repeated CartItem items = 1;
+}

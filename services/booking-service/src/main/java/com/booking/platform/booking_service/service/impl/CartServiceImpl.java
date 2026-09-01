@@ -1,5 +1,6 @@
 package com.booking.platform.booking_service.service.impl;
 
+import com.booking.platform.booking_service.dto.AddCartItemDto;
 import com.booking.platform.booking_service.entity.CartItemEntity;
 import com.booking.platform.booking_service.exception.CartItemNotFoundException;
 import com.booking.platform.booking_service.repository.CartItemRepository;
@@ -11,7 +12,6 @@ import org.slf4j.event.Level;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -38,19 +38,22 @@ public class CartServiceImpl implements CartService {
 
     @Override
     @Transactional
-    public CartItemEntity addItem(String userId, String eventId, String eventTitle,
-                                  String seatCategory, int quantity, BigDecimal unitPrice, String currency) {
+    public CartItemEntity addItem(AddCartItemDto dto) {
+        String userId = dto.userId();
+        String eventId = dto.eventId();
+        String seatCategory = dto.seatCategory();
+
         // Upsert on (userId, eventId, seatCategory): update the existing line, or insert a new one.
         return cartItemRepository.findByUserIdAndEventIdAndSeatCategory(userId, eventId, seatCategory)
                 .map(existing -> {
-                    existing.setQuantity(quantity);
-                    existing.setEventTitle(eventTitle);
-                    existing.setUnitPrice(unitPrice);
-                    existing.setCurrency(currency);
+                    existing.setQuantity(dto.quantity());
+                    existing.setEventTitle(dto.eventTitle());
+                    existing.setUnitPrice(dto.unitPrice());
+                    existing.setCurrency(dto.currency());
 
                     ApplicationLogger.logMessage(log, Level.DEBUG,
                             "Cart addItem (update): user='{}', event='{}', category='{}', qty={}",
-                            userId, eventId, seatCategory, quantity);
+                            userId, eventId, seatCategory, dto.quantity());
 
                     return existing;
                 })
@@ -58,16 +61,16 @@ public class CartServiceImpl implements CartService {
                     CartItemEntity saved = cartItemRepository.save(CartItemEntity.builder()
                             .userId(userId)
                             .eventId(eventId)
-                            .eventTitle(eventTitle)
+                            .eventTitle(dto.eventTitle())
                             .seatCategory(seatCategory)
-                            .quantity(quantity)
-                            .unitPrice(unitPrice)
-                            .currency(currency)
+                            .quantity(dto.quantity())
+                            .unitPrice(dto.unitPrice())
+                            .currency(dto.currency())
                             .build());
 
                     ApplicationLogger.logMessage(log, Level.DEBUG,
                             "Cart addItem (insert): user='{}', event='{}', category='{}', qty={}",
-                            userId, eventId, seatCategory, quantity);
+                            userId, eventId, seatCategory, dto.quantity());
 
                     return saved;
                 });
