@@ -37,7 +37,7 @@ import { EventArtComponent } from '../../shared/event-art.component';
 
                   <div class="field" style="max-width:120px;margin-top:16px">
                     <label>Quantity</label>
-                    <select class="inp" [ngModel]="item.quantity" (ngModelChange)="cart.setQuantity(item.eventId, item.seatCategory, +$event)">
+                    <select class="inp" [ngModel]="item.quantity" (ngModelChange)="cart.setQuantity(item.id, +$event)">
                       @for (n of quantities; track n) {
                         <option [value]="n">{{ n }}</option>
                       }
@@ -46,7 +46,7 @@ import { EventArtComponent } from '../../shared/event-art.component';
                 </div>
                 <div class="cart-remove">
                   <div style="font-family:var(--serif);font-size:16px">{{ item.currency }} {{ lineTotal(item) }}</div>
-                  <button class="btn btn-ghost btn-sm" style="margin-top:8px" (click)="cart.remove(item.eventId, item.seatCategory)">Remove</button>
+                  <button class="btn btn-ghost btn-sm" style="margin-top:8px" (click)="cart.remove(item.id)">Remove</button>
                 </div>
               </div>
             }

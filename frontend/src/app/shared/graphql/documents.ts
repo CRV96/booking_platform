@@ -211,3 +211,61 @@ export const CONFIRM_MOCK_PAYMENT = gql`
     }
   }
 `;
+
+// ── Cart ────────────────────────────────────────────────────────────────────
+
+const CART_FIELDS = `
+  items { id eventId eventTitle seatCategory quantity unitPrice currency }
+  totalPrice
+  currency
+`;
+
+export const GET_CART = gql`
+  query GetCart { cart { ${CART_FIELDS} } }
+`;
+
+export const ADD_TO_CART = gql`
+  mutation AddToCart($input: AddToCartInput!) {
+    addToCart(input: $input) { ${CART_FIELDS} }
+  }
+`;
+
+export const UPDATE_CART_ITEM = gql`
+  mutation UpdateCartItem($cartItemId: ID!, $quantity: Int!) {
+    updateCartItem(cartItemId: $cartItemId, quantity: $quantity) { ${CART_FIELDS} }
+  }
+`;
+
+export const REMOVE_FROM_CART = gql`
+  mutation RemoveFromCart($cartItemId: ID!) {
+    removeFromCart(cartItemId: $cartItemId) { ${CART_FIELDS} }
+  }
+`;
+
+export const CLEAR_CART = gql`
+  mutation ClearCart { clearCart { ${CART_FIELDS} } }
+`;
+
+// ── Lovelist ──────────────────────────────────────────────────────────────────
+
+const LOVELIST_ITEM_FIELDS = `
+  eventId
+  createdAt
+  event { id title category dateTime venue { city } }
+`;
+
+export const GET_LOVELIST = gql`
+  query GetLovelist { lovelist { ${LOVELIST_ITEM_FIELDS} } }
+`;
+
+export const ADD_FAVORITE = gql`
+  mutation AddFavorite($eventId: ID!) {
+    addFavorite(eventId: $eventId) { ${LOVELIST_ITEM_FIELDS} }
+  }
+`;
+
+export const REMOVE_FAVORITE = gql`
+  mutation RemoveFavorite($eventId: ID!) {
+    removeFavorite(eventId: $eventId) { ${LOVELIST_ITEM_FIELDS} }
+  }
+`;

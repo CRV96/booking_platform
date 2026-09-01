@@ -39,6 +39,43 @@ public final class EntityConst {
         public static final String IDX_STATUS = "idx_bookings_status";
     }
 
+    /** Constants for the {@code cart_items} table / {@link com.booking.platform.booking_service.entity.CartItemEntity}. */
+    public static final class CartItem {
+        private CartItem() {}
+
+        public static final String TABLE_NAME = "cart_items";
+
+        public static final String ID = "id";
+        public static final String USER_ID = "user_id";
+        public static final String EVENT_ID = "event_id";
+        public static final String EVENT_TITLE = "event_title";
+        public static final String SEAT_CATEGORY = "seat_category";
+        public static final String QUANTITY = "quantity";
+        public static final String UNIT_PRICE = "unit_price";
+        public static final String CURRENCY = "currency";
+        public static final String CREATED_AT_COLUMN = "created_at";
+        public static final String UPDATED_AT = "updated_at";
+        public static final String VERSION = "version";
+
+        public static final String IDX_USER_ID = "idx_cart_items_user_id";
+        public static final String UQ_USER_EVENT_CATEGORY = "uq_cart_user_event_category";
+    }
+
+    /** Constants for the {@code favorites} table / {@link com.booking.platform.booking_service.entity.FavoriteEntity}. */
+    public static final class Favorite {
+        private Favorite() {}
+
+        public static final String TABLE_NAME = "favorites";
+
+        public static final String ID = "id";
+        public static final String USER_ID = "user_id";
+        public static final String EVENT_ID = "event_id";
+        public static final String CREATED_AT_COLUMN = "created_at";
+
+        public static final String IDX_USER_ID = "idx_favorites_user_id";
+        public static final String UQ_USER_EVENT = "uq_favorite_user_event";
+    }
+
     /** Cancellation reason constants used when system-cancelling bookings. */
     public static final class CancellationReason {
         private CancellationReason() {}

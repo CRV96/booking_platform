@@ -5,6 +5,8 @@ import { Observable, of, throwError } from 'rxjs';
 import { catchError, finalize, map, shareReplay, tap } from 'rxjs/operators';
 import { LOGIN, REGISTER, REFRESH_TOKEN, LOGOUT } from '../shared/graphql/documents';
 import { AuthPayload, User } from '../shared/models/models';
+import { CartService } from './cart.service';
+import { LovelistService } from './lovelist.service';
 
 /** Refresh the access token this many ms before it actually expires, to avoid racing expiry. */
 const TOKEN_EXPIRY_SKEW_MS = 30_000;
@@ -28,7 +30,23 @@ export class AuthService {
   readonly isOrganizer = computed(() => this._user()?.roles.includes('employee') ?? false);
   readonly isCustomer = computed(() => this._user()?.roles.includes('customer') ?? false);
 
-  constructor(private apollo: Apollo, private router: Router) {}
+  constructor(
+    private apollo: Apollo,
+    private router: Router,
+    private cart: CartService,
+    private lovelist: LovelistService,
+  ) {
+    // Page refresh with a stored session — hydrate the server-backed cart & lovelist.
+    if (this._token()) {
+      this.loadUserData();
+    }
+  }
+
+  /** Loads the per-user server state (cart + lovelist) into their local mirrors. */
+  private loadUserData(): void {
+    this.cart.load();
+    this.lovelist.load();
+  }
 
   login(username: string, password: string) {
     return this.apollo.mutate<{ login: AuthPayload }>({
@@ -36,7 +54,7 @@ export class AuthService {
       variables: { input: { username, password } },
     }).pipe(
       map(r => r.data!.login),
-      tap(payload => this.storeSession(payload))
+      tap(payload => { this.storeSession(payload); this.loadUserData(); })
     );
   }
 
@@ -49,7 +67,7 @@ export class AuthService {
       variables: { input },
     }).pipe(
       map(r => r.data!.register),
-      tap(payload => { if (payload.accessToken) this.storeSession(payload); })
+      tap(payload => { if (payload.accessToken) { this.storeSession(payload); this.loadUserData(); } })
     );
   }
 
@@ -136,6 +154,10 @@ export class AuthService {
     localStorage.removeItem(USER_KEY);
     this._user.set(null);
     this._token.set(null);
+    // Drop the local cart/lovelist mirrors on sign-out. Never call the server here — the
+    // saved cart must survive logout and be reloaded on the next sign-in.
+    this.cart.reset();
+    this.lovelist.reset();
     this.apollo.client.resetStore();
   }
 
