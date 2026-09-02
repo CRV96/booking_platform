@@ -67,7 +67,7 @@ public class EventGrpcService extends EventServiceGrpc.EventServiceImplBase {
 
         int page = Math.max(request.getPage(), 0);
         int pageSize = normalizePageSize(request.getPageSize());
-        int totalCount = events.size();
+        int totalCount = (int) eventService.countEvents(request);   // full match count, not just this page
         int totalPages = pageSize > 0 ? (int) Math.ceil((double) totalCount / pageSize) : 0;
 
         SearchEventsResponse response = SearchEventsResponse.newBuilder()

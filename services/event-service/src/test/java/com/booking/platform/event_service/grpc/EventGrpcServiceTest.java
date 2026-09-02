@@ -110,6 +110,8 @@ class EventGrpcServiceTest {
         when(smartSearchService.search(any(), anyBoolean()))
                 .thenReturn(new SmartSearchResult(List.of(eventOwnedBy(USER_ID)), List.of(eventOwnedBy(USER_ID))));
         when(eventMapper.toProtoList(any())).thenReturn(List.of(EventInfo.getDefaultInstance()));
+        // Total count comes from the full match count, not the size of this page.
+        when(eventService.countEvents(any())).thenReturn(25L);
 
         grpcService.searchEvents(SearchEventsRequest.newBuilder().setAiSearch(true).build(), searchObserver);
 
@@ -120,7 +122,8 @@ class EventGrpcServiceTest {
         SearchEventsResponse response = captor.getValue();
         assertThat(response.getEventsCount()).isEqualTo(1);
         assertThat(response.getSmartResultsCount()).isEqualTo(1);
-        assertThat(response.getPagination().getTotalCount()).isEqualTo(1);
+        assertThat(response.getPagination().getTotalCount()).isEqualTo(25);
+        assertThat(response.getPagination().getTotalPages()).isEqualTo(2);   // ceil(25 / 20)
     }
 
     @Test

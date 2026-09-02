@@ -32,12 +32,18 @@ import { LovelistService } from '../core/lovelist.service';
       </nav>
 
       <div class="hdr-right">
-        @if (!auth.isOrganizer()) {
+        @if (auth.isAuthenticated() && !auth.isOrganizer()) {
           <a routerLink="/lovelist" routerLinkActive="hdr-nav-active" class="hdr-cart" style="text-decoration:none">
             ♥ Lovelist
             @if (lovelist.count() > 0) { <span class="hdr-cart-badge">{{ lovelist.count() }}</span> }
           </a>
           <a routerLink="/cart" routerLinkActive="hdr-nav-active" class="hdr-cart" style="text-decoration:none">
+            <svg class="hdr-cart-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="9" cy="21" r="1" />
+              <circle cx="20" cy="21" r="1" />
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+            </svg>
             Cart
             @if (cart.count() > 0) { <span class="hdr-cart-badge">{{ cart.count() }}</span> }
           </a>
@@ -126,6 +132,7 @@ import { LovelistService } from '../core/lovelist.service';
       border-radius: 4px; transition: color 0.15s, background 0.15s;
     }
     .hdr-cart:hover { color: #14130f; }
+    .hdr-cart-icon { width: 15px; height: 15px; flex-shrink: 0; }
     .hdr-cart.hdr-nav-active { color: #14130f; background: #f2f1ec; }
     .hdr-cart-badge {
       min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;

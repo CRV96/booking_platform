@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+import { DatePipe, CurrencyPipe } from '@angular/common';
 import { Apollo } from 'apollo-angular';
 import { GET_EVENTS } from '../../shared/graphql/documents';
 import { Event, EventConnection, SeatCategory } from '../../shared/models/models';
@@ -23,7 +23,7 @@ const CATEGORIES = [
 @Component({
   selector: 'app-event-list',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe, EventArtComponent],
+  imports: [RouterLink, FormsModule, DatePipe, CurrencyPipe, EventArtComponent],
   template: `
     <div class="container" style="padding-top:48px;padding-bottom:60px">
       <!-- Section head -->
@@ -78,13 +78,13 @@ const CATEGORIES = [
               <div class="ev-card-foot">
                 <div class="ev-card-price">
                   @if (minPrice(ev) === 0) { Free }
-                  @else { From €{{ minPrice(ev) }}<small>/ ticket</small> }
+                  @else { From {{ minPrice(ev) | currency:currencyOf(ev) }}<small>/ ticket</small> }
                 </div>
                 @if (auth.isOrganizer()) {
                   <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
                 }
               </div>
-              @if (!auth.isOrganizer()) {
+              @if (auth.isAuthenticated() && !auth.isOrganizer()) {
                 <div class="ev-card-actions">
                   <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
                           (click)="toggleLove(ev, $event)"
@@ -135,13 +135,13 @@ const CATEGORIES = [
               <div class="ev-card-foot">
                 <div class="ev-card-price">
                   @if (minPrice(ev) === 0) { Free }
-                  @else { From €{{ minPrice(ev) }}<small>/ ticket</small> }
+                  @else { From {{ minPrice(ev) | currency:currencyOf(ev) }}<small>/ ticket</small> }
                 </div>
                 @if (auth.isOrganizer()) {
                   <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
                 }
               </div>
-              @if (!auth.isOrganizer()) {
+              @if (auth.isAuthenticated() && !auth.isOrganizer()) {
                 <div class="ev-card-actions">
                   <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
                           (click)="toggleLove(ev, $event)"
@@ -243,6 +243,11 @@ export class EventListComponent implements OnInit {
   minPrice(ev: Event): number {
     if (!ev.seatCategories?.length) return 0;
     return Math.min(...ev.seatCategories.map(s => parseFloat(s.price)));
+  }
+
+  /** Currency of the cheapest seat category — so each card shows the event's real currency. */
+  currencyOf(ev: Event): string {
+    return this.cheapestCategory(ev)?.currency ?? 'EUR';
   }
 
   statusBadge(status: string): string {

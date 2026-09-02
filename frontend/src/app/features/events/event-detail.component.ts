@@ -36,7 +36,7 @@ import { EventArtComponent } from '../../shared/event-art.component';
                   <span class="badge" [class]="statusBadge(event()!.status)">{{ event()!.status }}</span>
                 }
                 <span class="mono xs muted" style="margin-left:8px">{{ event()!.category }}</span>
-                @if (!auth.isOrganizer()) {
+                @if (auth.isAuthenticated() && !auth.isOrganizer()) {
                   <button type="button" class="detail-love" [class.loved]="lovelist.isLoved(event()!.id)"
                           (click)="toggleLove()"
                           [attr.aria-pressed]="lovelist.isLoved(event()!.id)"
