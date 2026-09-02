@@ -157,6 +157,13 @@ export const CANCEL_BOOKING = gql`
   }
 `;
 
+// Hard-delete an unpaid PENDING booking (abandoned checkout) — releases seats, no email.
+export const DISCARD_BOOKING = gql`
+  mutation DiscardBooking($id: ID!) {
+    discardBooking(id: $id)
+  }
+`;
+
 // ── Tickets ───────────────────────────────────────────────────────────────────
 
 const TICKET_FIELDS = `

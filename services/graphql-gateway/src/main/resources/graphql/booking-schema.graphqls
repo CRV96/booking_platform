@@ -16,6 +16,9 @@ extend type Mutation {
 
     """Cancel a booking (PENDING or CONFIRMED → CANCELLED, releases seats)"""
     cancelBooking(id: ID!, reason: String): Booking!
+
+    """Discard an unpaid (PENDING) booking outright — releases seats, deletes it, no email. For abandoned checkout."""
+    discardBooking(id: ID!): Boolean!
 }
 
 type Booking {

@@ -30,6 +30,13 @@ public interface BookingService {
     BookingEntity cancelBooking(UUID bookingId, String userId, String reason);
 
     /**
+     * Discards an unpaid (PENDING) booking owned by the user: releases the held seats and
+     * hard-deletes the row, publishing no cancellation event/email. Used when a customer
+     * abandons checkout, so no stray booking lingers in their history.
+     */
+    void discardBooking(UUID bookingId, String userId);
+
+    /**
      * Confirms a PENDING booking after successful payment.
      * Transitions status from PENDING → CONFIRMED and publishes a
      * {@code BookingConfirmedEvent} to Kafka.

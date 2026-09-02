@@ -1,10 +1,10 @@
-import { Component, ElementRef, inject, signal, effect, viewChild, OnInit } from '@angular/core';
+import { Component, ElementRef, inject, signal, effect, viewChild, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Apollo } from 'apollo-angular';
 import { forkJoin } from 'rxjs';
 import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
-import { CREATE_BOOKING, CREATE_ORDER_PAYMENT_INTENT, CONFIRM_MOCK_PAYMENT, UPDATE_PROFILE } from '../../shared/graphql/documents';
+import { CREATE_BOOKING, CREATE_ORDER_PAYMENT_INTENT, CONFIRM_MOCK_PAYMENT, UPDATE_PROFILE, DISCARD_BOOKING } from '../../shared/graphql/documents';
 import { Booking, PaymentIntent } from '../../shared/models/models';
 import { CartService } from '../../core/cart.service';
 
@@ -134,7 +134,7 @@ import { CartService } from '../../core/cart.service';
     .bill-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   `]
 })
-export class CheckoutComponent implements OnInit {
+export class CheckoutComponent implements OnInit, OnDestroy {
   private apollo = inject(Apollo);
   private router = inject(Router);
   cart = inject(CartService);
@@ -151,6 +151,7 @@ export class CheckoutComponent implements OnInit {
 
   private orderId = '';
   private bookingIds: string[] = [];
+  private completed = false;   // set once payment succeeds, so we don't cancel on teardown
   private clientSecret: string | null = null;
   private stripe: Stripe | null = null;
   private card: StripeCardElement | null = null;
@@ -297,9 +298,23 @@ export class CheckoutComponent implements OnInit {
   }
 
   private goToConfirmation() {
+    this.completed = true;
     const bookings = this.bookingIds.join(',');
     this.cart.clear();
     this.router.navigate(['/checkout/confirmation'], { queryParams: { bookings } });
+  }
+
+  /**
+   * Leaving checkout without paying (back button, navigation) discards the PENDING bookings we
+   * reserved on entry — hard-deletes them and releases their seats — so nothing lingers in
+   * "My Bookings" (not even a cancelled one) and no email is sent.
+   */
+  ngOnDestroy() {
+    if (this.completed || this.bookingIds.length === 0) return;
+    for (const id of this.bookingIds) {
+      this.apollo.mutate({ mutation: DISCARD_BOOKING, variables: { id } })
+        .subscribe({ error: () => {} });
+    }
   }
 
   lineTotal(item: { unitPrice: string; quantity: number }): string {

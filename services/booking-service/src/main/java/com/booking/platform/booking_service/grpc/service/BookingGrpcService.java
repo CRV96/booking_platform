@@ -131,6 +131,20 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
     }
 
     @Override
+    public void discardBooking(DiscardBookingRequest request,
+                               StreamObserver<DiscardBookingResponse> responseObserver) {
+        String userId = requireUserId();
+
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC DiscardBooking: user='{}', bookingId='{}'", userId, request.getBookingId());
+
+        UUID bookingId = parseUuid(request.getBookingId(), "booking_id");
+        bookingService.discardBooking(bookingId, userId);
+
+        responseObserver.onNext(DiscardBookingResponse.newBuilder().setSuccess(true).build());
+        responseObserver.onCompleted();
+    }
+
+    @Override
     public void getBookingAttendees(GetBookingAttendeesRequest request, StreamObserver<GetBookingAttendeesResponse> responseObserver) {
         ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetBookingAttendees for the eventId='{}'", request.getEventId());
 

@@ -117,4 +117,11 @@ public class BookingResolver {
 
         return Booking.fromGrpc(bookingClient.cancelBooking(id, reason).getBooking());
     }
+
+    @MutationMapping
+    public Boolean discardBooking(@Argument("id") String id) {
+        String userId = authService.getAuthenticatedUserId();
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: discardBooking({}) for user '{}'", id, userId);
+        return bookingClient.discardBooking(id);
+    }
 }
