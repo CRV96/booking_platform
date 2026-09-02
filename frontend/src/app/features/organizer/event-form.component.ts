@@ -37,6 +37,10 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'CAD', 'AUD'];
               <label>Description</label>
               <textarea formControlName="description" class="inp" placeholder="What's this event about?"></textarea>
             </div>
+            <div class="field">
+              <label>Image URL <span class="mono xs muted">(optional — leave empty to use generated art)</span></label>
+              <input formControlName="imageUrl" class="inp" placeholder="https://example.com/event.jpg">
+            </div>
             <div class="form-row-2">
               <div class="field">
                 <label>Category <span style="color:var(--danger)">*</span></label>
@@ -174,6 +178,7 @@ export class EventFormComponent implements OnInit {
     category: ['', Validators.required],
     dateTime: ['', Validators.required],
     endDateTime: [''],
+    imageUrl: [''],
     venue: this.fb.group({
       name: ['', Validators.required],
       address: [''],
@@ -215,6 +220,7 @@ export class EventFormComponent implements OnInit {
           const endDt = ev.endDateTime ? ev.endDateTime.substring(0, 16) : '';
           this.form.patchValue({
             title: ev.title, description: ev.description ?? '', category: ev.category, dateTime: dt, endDateTime: endDt,
+            imageUrl: ev.images?.[0] ?? '',
             venue: { name: ev.venue.name, address: ev.venue.address ?? '', city: ev.venue.city, country: ev.venue.country, capacity: ev.venue.capacity ?? null },
           });
           ev.seatCategories.forEach((sc: SeatCategory) => {
@@ -265,6 +271,7 @@ export class EventFormComponent implements OnInit {
       category: v.category,
       dateTime,
       endDateTime: v.endDateTime ? new Date(v.endDateTime).toISOString() : null,
+      images: v.imageUrl ? [v.imageUrl.trim()] : [],
       venue: { ...v.venue, capacity: v.venue?.capacity ? Number(v.venue.capacity) : null },
       seatCategories: (v.seatCategories as { name: string; price: number; currency: string; totalSeats: number }[])
         .map(sc => ({ ...sc, price: Number(sc.price), totalSeats: Number(sc.totalSeats) })),

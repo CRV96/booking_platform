@@ -1,6 +1,7 @@
 package com.booking.platform.graphql_gateway.grpc.client.impl;
 
 import com.booking.platform.common.grpc.user.*;
+import com.booking.platform.graphql_gateway.dto.user.BillingAddressInput;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -70,7 +71,8 @@ class UserServiceClientImplTest {
     @Test
     void updateUser_allFieldsNonNull_setsAllOnRequest() {
         client.updateUser("u-1", "John", "Doe", "j@d.com",
-                "+1234", "US", "en", "USD", "UTC", "http://pic", true, false);
+                "+1234", "US", "en", "USD", "UTC", "http://pic", true, false,
+                new BillingAddressInput("John Doe", "123 Main St", null, "NYC", "NY", "10001", "US"));
 
         ArgumentCaptor<UpdateUserRequest> captor = ArgumentCaptor.forClass(UpdateUserRequest.class);
         verify(stub).updateUser(captor.capture());
@@ -81,11 +83,15 @@ class UserServiceClientImplTest {
         assertThat(req.getEmail()).isEqualTo("j@d.com");
         assertThat(req.getPhoneNumber()).isEqualTo("+1234");
         assertThat(req.getCountry()).isEqualTo("US");
+        assertThat(req.getBillingAddress().getLine1()).isEqualTo("123 Main St");
+        assertThat(req.getBillingAddress().getCity()).isEqualTo("NYC");
+        // null line2 becomes empty string in the proto
+        assertThat(req.getBillingAddress().getLine2()).isEmpty();
     }
 
     @Test
     void updateUser_nullFirstName_notSetOnRequest() {
-        client.updateUser("u-1", null, null, null, null, null, null, null, null, null, null, null);
+        client.updateUser("u-1", null, null, null, null, null, null, null, null, null, null, null, null);
 
         ArgumentCaptor<UpdateUserRequest> captor = ArgumentCaptor.forClass(UpdateUserRequest.class);
         verify(stub).updateUser(captor.capture());
@@ -95,7 +101,7 @@ class UserServiceClientImplTest {
 
     @Test
     void updateUser_returnsUserFromResponse() {
-        UserInfo result = client.updateUser("u-1", null, null, null, null, null, null, null, null, null, null, null);
+        UserInfo result = client.updateUser("u-1", null, null, null, null, null, null, null, null, null, null, null, null);
         assertThat(result).isEqualTo(defaultUser);
     }
 

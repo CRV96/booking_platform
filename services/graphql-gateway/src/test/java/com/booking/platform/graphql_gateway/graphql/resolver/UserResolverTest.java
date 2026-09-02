@@ -2,6 +2,7 @@ package com.booking.platform.graphql_gateway.graphql.resolver;
 
 import com.booking.platform.common.grpc.user.SearchUsersResponse;
 import com.booking.platform.common.grpc.user.UserInfo;
+import com.booking.platform.graphql_gateway.dto.user.BillingAddressInput;
 import com.booking.platform.graphql_gateway.dto.user.UpdateProfileInput;
 import com.booking.platform.graphql_gateway.dto.user.User;
 import com.booking.platform.graphql_gateway.dto.user.UserConnection;
@@ -123,30 +124,31 @@ class UserResolverTest {
     void updateProfile_usesAuthenticatedUserId() {
         when(authService.getAuthenticatedUserId()).thenReturn("u-5");
         UpdateProfileInput input = new UpdateProfileInput(
-                "Bob", "Jones", "bob@test.com", null, null, null, null, null, null, null, null);
+                "Bob", "Jones", "bob@test.com", null, null, null, null, null, null, null, null, null);
         when(userOperationsClient.updateUser(anyString(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any())).thenReturn(USER_INFO);
+                any(), any(), any(), any(), any(), any(), any())).thenReturn(USER_INFO);
 
         resolver.updateProfile(input);
 
         verify(authService).getAuthenticatedUserId();
         verify(userOperationsClient).updateUser(eq("u-5"), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any());
+                any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void updateProfile_mapsInputFieldsToClient() {
         when(authService.getAuthenticatedUserId()).thenReturn("u-1");
+        BillingAddressInput billing = new BillingAddressInput("Carol White", "5 Baker St", null, "London", null, "NW1", "GB");
         UpdateProfileInput input = new UpdateProfileInput(
                 "Carol", "White", "carol@test.com", "+44999", "GB",
-                "en", "GBP", "Europe/London", "https://pic.url", true, false);
+                "en", "GBP", "Europe/London", "https://pic.url", true, false, billing);
         when(userOperationsClient.updateUser(anyString(), any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any())).thenReturn(USER_INFO);
+                any(), any(), any(), any(), any(), any(), any())).thenReturn(USER_INFO);
 
         resolver.updateProfile(input);
 
         verify(userOperationsClient).updateUser(
                 "u-1", "Carol", "White", "carol@test.com", "+44999", "GB",
-                "en", "GBP", "Europe/London", "https://pic.url", true, false);
+                "en", "GBP", "Europe/London", "https://pic.url", true, false, billing);
     }
 }

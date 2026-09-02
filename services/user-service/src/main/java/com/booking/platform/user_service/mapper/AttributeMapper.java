@@ -73,6 +73,9 @@ public class AttributeMapper {
         if (request.hasSmsNotifications()) {
             attributes.put(UserAttributes.SMS_NOTIFICATIONS, String.valueOf(request.getSmsNotifications()));
         }
+        if (request.hasBillingAddress()) {
+            attributes.put(UserAttributes.BILLING_ADDRESS, BillingAddressCodec.toJson(request.getBillingAddress()));
+        }
 
         return attributes;
     }

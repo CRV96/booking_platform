@@ -20,6 +20,7 @@ public record Event(
         VenueInfo venue,
         OrganizerInfo organizer,
         List<SeatCategory> seatCategories,
+        List<String> images,
         String createdAt,
         String updatedAt
 ) {
@@ -40,6 +41,7 @@ public record Event(
                 eventInfo.getSeatCategoriesList().stream()
                         .map(SeatCategory::fromGrpc)
                         .toList(),
+                eventInfo.getImagesList().stream().toList(),
                 eventInfo.getCreatedAt().isBlank() ? null : eventInfo.getCreatedAt(),
                 eventInfo.getUpdatedAt().isBlank() ? null : eventInfo.getUpdatedAt()
         );

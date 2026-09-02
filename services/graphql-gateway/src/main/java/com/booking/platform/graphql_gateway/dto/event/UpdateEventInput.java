@@ -13,6 +13,7 @@ public record UpdateEventInput(
         String dateTime,
         String endDateTime,
         VenueInput venue,
-        List<SeatCategoryInput> seatCategories
+        List<SeatCategoryInput> seatCategories,
+        List<String> images
 ) {
 }

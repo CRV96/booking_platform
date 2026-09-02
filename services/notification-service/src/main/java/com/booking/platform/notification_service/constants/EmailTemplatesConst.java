@@ -46,6 +46,7 @@ public final class EmailTemplatesConst {
         public static final class Vars {
             public static final String BOOKING_ID    = "bookingId";
             public static final String EVENT_ID      = "eventId";
+            public static final String EVENT_TITLE   = "eventTitle";
             public static final String TICKET_IDS    = "ticketIds";
             public static final String SEAT_CATEGORY = "seatCategory";
             public static final String QUANTITY      = "quantity";

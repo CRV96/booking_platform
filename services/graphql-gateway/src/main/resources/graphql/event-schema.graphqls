@@ -43,6 +43,7 @@ type Event {
     venue: VenueInfo!
     organizer: OrganizerInfo!
     seatCategories: [SeatCategory!]!
+    images: [String!]            # image URLs; the first is used as the display image
 
     createdAt: String
     updatedAt: String
@@ -96,6 +97,7 @@ input CreateEventInput {
     endDateTime: String
     venue: VenueInput!
     seatCategories: [SeatCategoryInput!]!
+    images: [String!]
 }
 
 input UpdateEventInput {
@@ -106,6 +108,7 @@ input UpdateEventInput {
     endDateTime: String
     venue: VenueInput
     seatCategories: [SeatCategoryInput!]
+    images: [String!]
 }
 
 input VenueInput {

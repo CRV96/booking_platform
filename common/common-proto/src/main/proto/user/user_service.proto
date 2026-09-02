@@ -77,6 +77,7 @@ message UpdateUserRequest {
   optional string profile_picture_url = 10;
   optional bool email_notifications = 11;
   optional bool sms_notifications = 12;
+  BillingAddress billing_address = 13;
 }
 
 message SearchUsersRequest {

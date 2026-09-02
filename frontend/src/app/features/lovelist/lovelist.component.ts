@@ -28,7 +28,11 @@ import { EventArtComponent } from '../../shared/event-art.component';
             <div class="love-row">
               <a class="love-link" [routerLink]="['/events', item.eventId]" style="text-decoration:none;color:inherit">
                 <div class="love-art">
-                  <app-event-art [seed]="artSeed(item.eventId)" [title]="item.event?.title || ''" ratio="16/10" />
+                  @if (imageOf(item.event?.images); as img) {
+                    <img class="thumb-img" [src]="img" [alt]="item.event?.title || ''">
+                  } @else {
+                    <app-event-art [seed]="artSeed(item.eventId)" [title]="item.event?.title || ''" ratio="16/10" />
+                  }
                 </div>
                 <div class="love-info">
                   <div class="love-title">{{ item.event?.title || 'Event unavailable' }}</div>
@@ -61,6 +65,7 @@ import { EventArtComponent } from '../../shared/event-art.component';
     }
     .love-link { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
     .love-art { width: 92px; flex-shrink: 0; }
+    .thumb-img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; border-radius: 4px; }
     .love-info { flex: 1; min-width: 0; }
     .love-title { font-family: var(--serif); font-size: 20px; line-height: 1.15; }
     .love-meta {
@@ -73,6 +78,10 @@ import { EventArtComponent } from '../../shared/event-art.component';
 })
 export class LovelistComponent {
   lovelist = inject(LovelistService);
+
+  imageOf(images?: string[]): string | null {
+    return images?.[0]?.trim() || null;
+  }
 
   /** Same deterministic seed the events listing uses, so a card's art matches its lovelist thumbnail. */
   artSeed(eventId: string): number {

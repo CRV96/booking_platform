@@ -9,6 +9,7 @@ export interface LovelistEvent {
   category: string;
   dateTime: string;
   venue: { city: string };
+  images?: string[];
 }
 
 /** A lovelist entry — a pointer to an event, plus its hydrated details for display. */

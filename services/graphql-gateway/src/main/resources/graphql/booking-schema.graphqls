@@ -34,6 +34,8 @@ type Booking {
     cancellationReason: String
     createdAt: String!           # ISO 8601
     updatedAt: String!           # ISO 8601
+    """Live event details, hydrated from event-service (null if the event no longer exists)."""
+    event: Event
 }
 
 enum BookingStatus {

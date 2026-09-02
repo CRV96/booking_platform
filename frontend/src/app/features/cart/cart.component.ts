@@ -28,7 +28,11 @@ import { EventArtComponent } from '../../shared/event-art.component';
             @for (item of cart.items(); track item.eventId + '|' + item.seatCategory) {
               <div class="cart-row">
                 <div class="cart-thumb">
-                  <app-event-art [seed]="artSeed(item.eventId)" [title]="item.eventTitle" ratio="16/10" />
+                  @if (imageOf(item.event?.images); as img) {
+                    <img class="thumb-img" [src]="img" [alt]="item.eventTitle">
+                  } @else {
+                    <app-event-art [seed]="artSeed(item.eventId)" [title]="item.eventTitle" ratio="16/10" />
+                  }
                 </div>
                 <div class="cart-info">
                   <a [routerLink]="['/events', item.eventId]" class="cart-title" style="text-decoration:none">{{ item.eventTitle }}</a>
@@ -88,6 +92,7 @@ import { EventArtComponent } from '../../shared/event-art.component';
     .cart-row { display: flex; gap: 20px; align-items: flex-start; padding: 20px 0; border-top: 1px solid var(--line); }
     .cart-row:last-child { border-bottom: 1px solid var(--line); }
     .cart-thumb { width: 180px; flex-shrink: 0; border-radius: var(--radius); overflow: hidden; }
+    .thumb-img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; }
     .cart-info { flex: 1; min-width: 0; }
     .cart-title { font-family: var(--serif); font-size: 22px; line-height: 1.2; color: var(--ink); display: block; }
     .cart-title:hover { color: var(--ink-2); }
@@ -120,6 +125,10 @@ export class CartComponent {
       return;
     }
     this.router.navigate(['/checkout']);
+  }
+
+  imageOf(images?: string[]): string | null {
+    return images?.[0]?.trim() || null;
   }
 
   artSeed(eventId: string): number {

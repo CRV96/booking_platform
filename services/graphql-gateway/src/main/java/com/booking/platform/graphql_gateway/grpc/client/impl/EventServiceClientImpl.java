@@ -32,6 +32,7 @@ public class EventServiceClientImpl implements EventClient {
 
         if (input.description() != null) requestBuilder.setDescription(input.description());
         if (input.endDateTime() != null) requestBuilder.setEndDateTime(input.endDateTime());
+        if (input.images() != null) requestBuilder.addAllImages(input.images());
 
         if (input.seatCategories() != null) {
             input.seatCategories().forEach(sc -> requestBuilder.addSeatCategories(
@@ -68,6 +69,7 @@ public class EventServiceClientImpl implements EventClient {
         if (input.category() != null) requestBuilder.setCategory(input.category());
         if (input.dateTime() != null) requestBuilder.setDateTime(input.dateTime());
         if (input.endDateTime() != null) requestBuilder.setEndDateTime(input.endDateTime());
+        if (input.images() != null) requestBuilder.addAllImages(input.images());
 
         if (input.venue() != null) {
             requestBuilder.setVenue(buildVenue(input.venue()));

@@ -28,7 +28,11 @@ import { EventArtComponent } from '../../shared/event-art.component';
         <div class="detail-layout">
           <!-- Left column -->
           <div class="detail-main">
-            <app-event-art [seed]="artSeed()" [title]="event()!.title" ratio="16/7" />
+            @if (eventImage(); as img) {
+              <div class="detail-img"><img [src]="img" [alt]="event()!.title"></div>
+            } @else {
+              <app-event-art [seed]="artSeed()" [title]="event()!.title" ratio="16/7" />
+            }
 
             <div style="margin-top:28px">
               <div class="detail-meta-row">
@@ -144,6 +148,8 @@ import { EventArtComponent } from '../../shared/event-art.component';
     </div>
   `,
   styles: [`
+    .detail-img { aspect-ratio: 16 / 7; border-radius: 4px; overflow: hidden; background: var(--bg-sunk); }
+    .detail-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .detail-layout { display: grid; grid-template-columns: 1fr 320px; gap: 40px; align-items: start; }
     @media (max-width: 768px) { .detail-layout { grid-template-columns: 1fr; } }
 
@@ -223,6 +229,11 @@ export class EventDetailComponent implements OnInit {
     const ev = this.event();
     if (!ev?.id) return 1;
     return ev.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 100;
+  }
+
+  /** The event's own image if set, else null (falls back to generated art). */
+  eventImage(): string | null {
+    return this.event()?.images?.[0]?.trim() || null;
   }
 
   addToCart() {

@@ -30,8 +30,8 @@ import { AuthService } from '../../core/auth.service';
             <div class="identity-email mono xs muted">{{ user()?.email }}</div>
             <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:center">
               @for (role of user()?.roles ?? []; track role) {
-                @if (role === 'customer' || role === 'employee') {
-                  <span class="badge badge-accent">{{ role }}</span>
+                @if (role === 'employee') {
+                  <span class="badge badge-accent">Organizer</span>
                 }
               }
             </div>
@@ -100,6 +100,30 @@ import { AuthService } from '../../core/auth.service';
                 </div>
               </div>
 
+              <div class="form-section" formGroupName="billingAddress">
+                <div class="form-section-label">Billing address</div>
+                <div class="field">
+                  <label>Full name</label>
+                  <input formControlName="fullName" class="inp">
+                </div>
+                <div class="field">
+                  <label>Address line 1</label>
+                  <input formControlName="line1" class="inp">
+                </div>
+                <div class="field">
+                  <label>Address line 2</label>
+                  <input formControlName="line2" class="inp">
+                </div>
+                <div class="form-row-2">
+                  <div class="field"><label>City</label><input formControlName="city" class="inp"></div>
+                  <div class="field"><label>State / Region</label><input formControlName="state" class="inp"></div>
+                </div>
+                <div class="form-row-2">
+                  <div class="field"><label>Postal code</label><input formControlName="postalCode" class="inp"></div>
+                  <div class="field"><label>Country</label><input formControlName="country" class="inp"></div>
+                </div>
+              </div>
+
               <div style="margin-top:24px">
                 <button class="btn btn-primary" type="submit" [disabled]="saving()">
                   @if (saving()) { <span class="spinner"></span> } Save changes
@@ -158,6 +182,9 @@ export class ProfileComponent implements OnInit {
     phoneNumber: [''], country: [''], preferredLanguage: [''],
     preferredCurrency: [''], timezone: [''],
     emailNotifications: [false], smsNotifications: [false],
+    billingAddress: this.fb.group({
+      fullName: [''], line1: [''], line2: [''], city: [''], state: [''], postalCode: [''], country: [''],
+    }),
   });
 
   ngOnInit() {
@@ -174,6 +201,15 @@ export class ProfileComponent implements OnInit {
           timezone: u.timezone ?? '',
           emailNotifications: u.emailNotifications ?? false,
           smsNotifications: u.smsNotifications ?? false,
+          billingAddress: {
+            fullName: u.billingAddress?.fullName ?? '',
+            line1: u.billingAddress?.line1 ?? '',
+            line2: u.billingAddress?.line2 ?? '',
+            city: u.billingAddress?.city ?? '',
+            state: u.billingAddress?.state ?? '',
+            postalCode: u.billingAddress?.postalCode ?? '',
+            country: u.billingAddress?.country ?? '',
+          },
         });
       },
       error: err => { this.loading.set(false); this.error.set(err.message || 'Failed to load'); }

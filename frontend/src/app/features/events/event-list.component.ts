@@ -66,7 +66,11 @@ const CATEGORIES = [
         <div class="ev-grid">
           @for (ev of events(); track ev.id) {
             <a class="ev-card fade-up" [routerLink]="['/events', ev.id]">
-              <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              @if (eventImage(ev); as img) {
+                <div class="ev-card-img"><img [src]="img" [alt]="ev.title"></div>
+              } @else {
+                <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              }
               <div class="ev-card-meta">
                 <span>{{ ev.category }}</span>
                 <span class="dot"></span>
@@ -80,9 +84,6 @@ const CATEGORIES = [
                   @if (minPrice(ev) === 0) { Free }
                   @else { From {{ minPrice(ev) | currency:currencyOf(ev) }}<small>/ ticket</small> }
                 </div>
-                @if (auth.isOrganizer()) {
-                  <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
-                }
               </div>
               @if (auth.isAuthenticated() && !auth.isOrganizer()) {
                 <div class="ev-card-actions">
@@ -123,7 +124,11 @@ const CATEGORIES = [
         <div class="ev-grid">
           @for (ev of smartResults(); track ev.id) {
             <a class="ev-card fade-up" [routerLink]="['/events', ev.id]">
-              <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              @if (eventImage(ev); as img) {
+                <div class="ev-card-img"><img [src]="img" [alt]="ev.title"></div>
+              } @else {
+                <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              }
               <div class="ev-card-meta">
                 <span>{{ ev.category }}</span>
                 <span class="dot"></span>
@@ -137,9 +142,6 @@ const CATEGORIES = [
                   @if (minPrice(ev) === 0) { Free }
                   @else { From {{ minPrice(ev) | currency:currencyOf(ev) }}<small>/ ticket</small> }
                 </div>
-                @if (auth.isOrganizer()) {
-                  <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
-                }
               </div>
               @if (auth.isAuthenticated() && !auth.isOrganizer()) {
                 <div class="ev-card-actions">
@@ -176,6 +178,8 @@ const CATEGORIES = [
     .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 40px; }
     /* Push the price + action buttons to the bottom so they align across the row regardless of title length. */
     .ev-card-foot { margin-top: auto; }
+    .ev-card-img { aspect-ratio: 16 / 10; border-radius: 4px; overflow: hidden; background: #f2f1ec; }
+    .ev-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .ev-card-actions { display: flex; align-items: center; gap: 8px; }
     .ev-act {
       font-family: inherit; font-size: 13px; cursor: pointer;
@@ -248,6 +252,11 @@ export class EventListComponent implements OnInit {
   /** Currency of the cheapest seat category — so each card shows the event's real currency. */
   currencyOf(ev: Event): string {
     return this.cheapestCategory(ev)?.currency ?? 'EUR';
+  }
+
+  /** The event's own image if set, else null (falls back to generated art). */
+  eventImage(ev: Event): string | null {
+    return ev.images?.[0]?.trim() || null;
   }
 
   statusBadge(status: string): string {

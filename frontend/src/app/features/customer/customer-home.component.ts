@@ -45,7 +45,11 @@ function timeOfDay(): string {
               @for (b of bookings(); track b.id) {
                 <div class="panel-item">
                   <div class="panel-item-art">
-                    <app-event-art [seed]="artSeed(b.eventId)" [title]="b.eventTitle" ratio="1/1" />
+                    @if (imageOf(b.event?.images); as img) {
+                      <img class="panel-item-img" [src]="img" [alt]="b.eventTitle">
+                    } @else {
+                      <app-event-art [seed]="artSeed(b.eventId)" [title]="b.eventTitle" ratio="1/1" />
+                    }
                   </div>
                   <div class="panel-item-info">
                     <a [routerLink]="['/events', b.eventId]" class="panel-item-title" style="text-decoration:none">{{ b.eventTitle }}</a>
@@ -127,6 +131,7 @@ function timeOfDay(): string {
     .panel-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
     .panel-item:last-child { border-bottom: none; }
     .panel-item-art { width: 44px; height: 44px; flex-shrink: 0; border-radius: var(--radius); overflow: hidden; }
+    .panel-item-img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .panel-item-info { flex: 1; min-width: 0; }
     .panel-item-title { font-size: 13px; font-weight: 500; color: var(--ink); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .panel-item-title:hover { color: var(--ink-2); }
@@ -184,6 +189,10 @@ export class CustomerHomeComponent implements OnInit {
       },
       error: () => this.ticketsLoading.set(false)
     });
+  }
+
+  imageOf(images?: string[]): string | null {
+    return images?.[0]?.trim() || null;
   }
 
   artSeed(eventId: string): number {

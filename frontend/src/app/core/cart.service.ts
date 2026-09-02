@@ -11,6 +11,7 @@ export interface CartItem {
   unitPrice: string;   // decimal as string, e.g. "49.99"
   currency: string;    // ISO 4217, e.g. "USD"
   quantity: number;
+  event?: { images?: string[] };   // hydrated — for the thumbnail
 }
 
 /** Fields needed to add a line — the server assigns the id. */
