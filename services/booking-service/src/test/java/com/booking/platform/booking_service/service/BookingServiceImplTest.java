@@ -390,6 +390,42 @@ class BookingServiceImplTest {
         verify(bookingEventPublisher).publishBookingCancelled(result);
     }
 
+    // ── discardBooking ─────────────────────────────────────────────────────────
+
+    @Test
+    void discardBooking_notFound_throwsBookingNotFoundException() {
+        UUID id = UUID.randomUUID();
+        when(bookingRepository.findByIdAndUserId(id, USER_ID)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.discardBooking(id, USER_ID))
+                .isInstanceOf(BookingNotFoundException.class);
+    }
+
+    @Test
+    void discardBooking_notPending_throwsInvalidStateAndDoesNotDelete() {
+        UUID id = UUID.randomUUID();
+        BookingEntity booking = pendingBooking(id);
+        booking.setStatus(BookingStatus.CONFIRMED);
+        when(bookingRepository.findByIdAndUserId(id, USER_ID)).thenReturn(Optional.of(booking));
+
+        assertThatThrownBy(() -> service.discardBooking(id, USER_ID))
+                .isInstanceOf(InvalidBookingStateException.class);
+        verify(bookingRepository, never()).delete(any());
+    }
+
+    @Test
+    void discardBooking_pending_releasesSeatsDeletesAndPublishesNothing() {
+        UUID id = UUID.randomUUID();
+        BookingEntity booking = pendingBooking(id);
+        when(bookingRepository.findByIdAndUserId(id, USER_ID)).thenReturn(Optional.of(booking));
+
+        service.discardBooking(id, USER_ID);
+
+        verify(eventServiceClient).updateSeatAvailability(EVENT_ID, SEAT_CATEGORY, 2);
+        verify(bookingRepository).delete(booking);
+        verify(bookingEventPublisher, never()).publishBookingCancelled(any());
+    }
+
     // ── confirmBooking ────────────────────────────────────────────────────────
 
     @Test

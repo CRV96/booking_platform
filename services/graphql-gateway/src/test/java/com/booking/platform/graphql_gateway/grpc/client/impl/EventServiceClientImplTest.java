@@ -94,6 +94,17 @@ class EventServiceClientImplTest {
         assertThat(captor.getValue().getSeatCategoriesCount()).isEqualTo(0);
     }
 
+    @Test
+    void createEvent_withImages_addsThemToRequest() {
+        CreateEventInput input = new CreateEventInput("Fest", null, "CONCERT",
+                "2026-06-01T20:00:00Z", null, venue(), null, List.of("https://img/1.jpg"));
+        client.createEvent(input);
+
+        ArgumentCaptor<CreateEventRequest> captor = ArgumentCaptor.forClass(CreateEventRequest.class);
+        verify(stub).createEvent(captor.capture());
+        assertThat(captor.getValue().getImagesList()).containsExactly("https://img/1.jpg");
+    }
+
     // ── getEvent ──────────────────────────────────────────────────────────────
 
     @Test

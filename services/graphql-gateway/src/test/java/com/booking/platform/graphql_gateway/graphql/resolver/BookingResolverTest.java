@@ -3,11 +3,16 @@ package com.booking.platform.graphql_gateway.graphql.resolver;
 import com.booking.platform.common.grpc.booking.BookingInfo;
 import com.booking.platform.common.grpc.booking.BookingResponse;
 import com.booking.platform.common.grpc.booking.GetUserBookingsResponse;
+import com.booking.platform.common.grpc.event.EventInfo;
+import com.booking.platform.common.grpc.event.EventResponse;
 import com.booking.platform.graphql_gateway.dto.booking.Booking;
 import com.booking.platform.graphql_gateway.dto.booking.BookingConnection;
 import com.booking.platform.graphql_gateway.dto.booking.CreateBookingInput;
+import com.booking.platform.graphql_gateway.dto.event.Event;
 import com.booking.platform.graphql_gateway.grpc.client.BookingClient;
+import com.booking.platform.graphql_gateway.grpc.client.EventClient;
 import com.booking.platform.graphql_gateway.service.AuthService;
+import io.grpc.Status;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +27,7 @@ import static org.mockito.Mockito.*;
 class BookingResolverTest {
 
     @Mock private BookingClient bookingClient;
+    @Mock private EventClient eventClient;
     @Mock private AuthService authService;
 
     @InjectMocks private BookingResolver resolver;
@@ -126,5 +132,41 @@ class BookingResolverTest {
         resolver.cancelBooking("bk-1", "reason");
 
         verify(authService).getAuthenticatedUserId();
+    }
+
+    // ── discardBooking mutation ───────────────────────────────────────────────
+
+    @Test
+    void discardBooking_delegatesToClient() {
+        when(authService.getAuthenticatedUserId()).thenReturn("u-1");
+        when(bookingClient.discardBooking("bk-1")).thenReturn(true);
+
+        Boolean result = resolver.discardBooking("bk-1");
+
+        verify(bookingClient).discardBooking("bk-1");
+        assertThat(result).isTrue();
+    }
+
+    // ── event hydration ───────────────────────────────────────────────────────
+
+    @Test
+    void event_hydratesFromEventService() {
+        Booking booking = Booking.fromGrpc(BookingInfo.newBuilder().setEventId("ev-1").build());
+        when(eventClient.getEvent("ev-1")).thenReturn(EventResponse.newBuilder()
+                .setEvent(EventInfo.newBuilder().setId("ev-1").setTitle("Rock Fest").build())
+                .build());
+
+        Event event = resolver.event(booking);
+
+        assertThat(event).isNotNull();
+        assertThat(event.id()).isEqualTo("ev-1");
+    }
+
+    @Test
+    void event_whenEventGone_returnsNull() {
+        Booking booking = Booking.fromGrpc(BookingInfo.newBuilder().setEventId("gone").build());
+        when(eventClient.getEvent("gone")).thenThrow(Status.NOT_FOUND.asRuntimeException());
+
+        assertThat(resolver.event(booking)).isNull();
     }
 }

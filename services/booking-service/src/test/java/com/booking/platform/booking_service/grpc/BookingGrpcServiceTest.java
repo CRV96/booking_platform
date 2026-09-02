@@ -43,6 +43,7 @@ class BookingGrpcServiceTest {
     @Mock private StreamObserver<BookingResponse> bookingObserver;
     @Mock private StreamObserver<GetUserBookingsResponse> listObserver;
     @Mock private StreamObserver<GetBookingAttendeesResponse> attendeesObserver;
+    @Mock private StreamObserver<DiscardBookingResponse> discardObserver;
 
     @InjectMocks private BookingGrpcService grpcService;
 
@@ -275,6 +276,28 @@ class BookingGrpcServiceTest {
 
         verify(bookingService).cancelBooking(BOOKING_UUID, USER_ID, "changed mind");
         verify(bookingObserver).onCompleted();
+    }
+
+    // ── discardBooking ────────────────────────────────────────────────────────
+
+    @Test
+    void discardBooking_valid_delegatesAndReturnsSuccess() {
+        grpcService.discardBooking(
+                DiscardBookingRequest.newBuilder().setBookingId(BOOKING_UUID.toString()).build(),
+                discardObserver);
+
+        verify(bookingService).discardBooking(BOOKING_UUID, USER_ID);
+        ArgumentCaptor<DiscardBookingResponse> captor = ArgumentCaptor.forClass(DiscardBookingResponse.class);
+        verify(discardObserver).onNext(captor.capture());
+        assertThat(captor.getValue().getSuccess()).isTrue();
+        verify(discardObserver).onCompleted();
+    }
+
+    @Test
+    void discardBooking_invalidUuid_throwsIllegalArgument() {
+        assertThatThrownBy(() -> grpcService.discardBooking(
+                DiscardBookingRequest.newBuilder().setBookingId("bad").build(), discardObserver))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("booking_id");
     }
 
     // ── getBookingAttendees ───────────────────────────────────────────────────
