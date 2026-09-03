@@ -150,7 +150,7 @@ Docs are authored in [`docs/wiki/`](docs/wiki) and published to the GitHub Wiki 
 ## Repository layout
 
 ```
-booking-platform/
+ticketing-platform/
 ├── common/            # shared modules: common-proto, common-events, common-core, common-security
 ├── services/          # the 10 Spring Boot services
 ├── frontend/          # Angular 22 SPA
