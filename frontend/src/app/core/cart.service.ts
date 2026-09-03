@@ -11,6 +11,7 @@ export interface CartItem {
   unitPrice: string;   // decimal as string, e.g. "49.99"
   currency: string;    // ISO 4217, e.g. "USD"
   quantity: number;
+  event?: { images?: string[] };   // hydrated — for the thumbnail
 }
 
 /** Fields needed to add a line — the server assigns the id. */
@@ -59,8 +60,27 @@ export class CartService {
       });
   }
 
-  /** Add a line (upsert on event + seat category server-side). */
+  /**
+   * Add a line (upsert on event + seat category server-side). A cart can only hold one
+   * currency — payment is a single charge — so adding an item in a different currency prompts
+   * the user to empty the cart first (confirm) and then adds only the new item.
+   */
   add(input: CartItemInput): void {
+    const current = this.currency();
+    if (this.hasItems() && current && input.currency !== current) {
+      const ok = window.confirm(
+        `Your cart is in ${current}, but this item is priced in ${input.currency}. `
+        + `A cart can only use one currency, so we'll empty your cart and add just this item. Continue?`);
+      if (!ok) return;
+      // Replace the cart: clear it on the server, then add the new item.
+      this.apollo.mutate<{ clearCart: CartData }>({ mutation: CLEAR_CART })
+        .subscribe({ next: () => this.mutateAdd(input) });
+      return;
+    }
+    this.mutateAdd(input);
+  }
+
+  private mutateAdd(input: CartItemInput): void {
     this.apollo.mutate<{ addToCart: CartData }>({ mutation: ADD_TO_CART, variables: { input } })
       .subscribe({ next: r => this._items.set(r.data!.addToCart.items) });
   }

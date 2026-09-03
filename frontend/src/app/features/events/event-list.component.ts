@@ -1,7 +1,7 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { DatePipe } from '@angular/common';
+import { DatePipe, CurrencyPipe } from '@angular/common';
 import { Apollo } from 'apollo-angular';
 import { GET_EVENTS } from '../../shared/graphql/documents';
 import { Event, EventConnection, SeatCategory } from '../../shared/models/models';
@@ -23,7 +23,7 @@ const CATEGORIES = [
 @Component({
   selector: 'app-event-list',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe, EventArtComponent],
+  imports: [RouterLink, FormsModule, DatePipe, CurrencyPipe, EventArtComponent],
   template: `
     <div class="container" style="padding-top:48px;padding-bottom:60px">
       <!-- Section head -->
@@ -66,7 +66,11 @@ const CATEGORIES = [
         <div class="ev-grid">
           @for (ev of events(); track ev.id) {
             <a class="ev-card fade-up" [routerLink]="['/events', ev.id]">
-              <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              @if (eventImage(ev); as img) {
+                <div class="ev-card-img"><img [src]="img" [alt]="ev.title"></div>
+              } @else {
+                <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              }
               <div class="ev-card-meta">
                 <span>{{ ev.category }}</span>
                 <span class="dot"></span>
@@ -78,26 +82,25 @@ const CATEGORIES = [
               <div class="ev-card-foot">
                 <div class="ev-card-price">
                   @if (minPrice(ev) === 0) { Free }
-                  @else { From €{{ minPrice(ev) }}<small>/ ticket</small> }
+                  @else { From {{ minPrice(ev) | currency:currencyOf(ev) }}<small>/ ticket</small> }
                 </div>
-                @if (auth.isOrganizer()) {
-                  <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
-                }
               </div>
-              <div class="ev-card-actions">
-                <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
-                        (click)="toggleLove(ev, $event)"
-                        [attr.aria-pressed]="lovelist.isLoved(ev.id)"
-                        [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
-                  {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
-                </button>
-                @if (isInCart(ev.id)) {
-                  <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
-                } @else {
-                  <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
-                          (click)="addToCart(ev, $event)">Add to cart</button>
-                }
-              </div>
+              @if (auth.isAuthenticated() && !auth.isOrganizer()) {
+                <div class="ev-card-actions">
+                  <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
+                          (click)="toggleLove(ev, $event)"
+                          [attr.aria-pressed]="lovelist.isLoved(ev.id)"
+                          [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
+                    {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
+                  </button>
+                  @if (isInCart(ev.id)) {
+                    <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
+                  } @else {
+                    <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
+                            (click)="addToCart(ev, $event)">Add to cart</button>
+                  }
+                </div>
+              }
             </a>
           }
         </div>
@@ -121,7 +124,11 @@ const CATEGORIES = [
         <div class="ev-grid">
           @for (ev of smartResults(); track ev.id) {
             <a class="ev-card fade-up" [routerLink]="['/events', ev.id]">
-              <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              @if (eventImage(ev); as img) {
+                <div class="ev-card-img"><img [src]="img" [alt]="ev.title"></div>
+              } @else {
+                <app-event-art [seed]="artSeed(ev)" [title]="ev.title" />
+              }
               <div class="ev-card-meta">
                 <span>{{ ev.category }}</span>
                 <span class="dot"></span>
@@ -133,26 +140,25 @@ const CATEGORIES = [
               <div class="ev-card-foot">
                 <div class="ev-card-price">
                   @if (minPrice(ev) === 0) { Free }
-                  @else { From €{{ minPrice(ev) }}<small>/ ticket</small> }
+                  @else { From {{ minPrice(ev) | currency:currencyOf(ev) }}<small>/ ticket</small> }
                 </div>
-                @if (auth.isOrganizer()) {
-                  <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
-                }
               </div>
-              <div class="ev-card-actions">
-                <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
-                        (click)="toggleLove(ev, $event)"
-                        [attr.aria-pressed]="lovelist.isLoved(ev.id)"
-                        [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
-                  {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
-                </button>
-                @if (isInCart(ev.id)) {
-                  <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
-                } @else {
-                  <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
-                          (click)="addToCart(ev, $event)">Add to cart</button>
-                }
-              </div>
+              @if (auth.isAuthenticated() && !auth.isOrganizer()) {
+                <div class="ev-card-actions">
+                  <button type="button" class="ev-act ev-love" [class.loved]="lovelist.isLoved(ev.id)"
+                          (click)="toggleLove(ev, $event)"
+                          [attr.aria-pressed]="lovelist.isLoved(ev.id)"
+                          [attr.aria-label]="lovelist.isLoved(ev.id) ? 'Remove from lovelist' : 'Add to lovelist'">
+                    {{ lovelist.isLoved(ev.id) ? '♥' : '♡' }}
+                  </button>
+                  @if (isInCart(ev.id)) {
+                    <button type="button" class="ev-act ev-cart in-cart" (click)="goToCart($event)">In cart ✓</button>
+                  } @else {
+                    <button type="button" class="ev-act ev-cart" [disabled]="!cheapestCategory(ev)"
+                            (click)="addToCart(ev, $event)">Add to cart</button>
+                  }
+                </div>
+              }
             </a>
           }
         </div>
@@ -172,6 +178,8 @@ const CATEGORIES = [
     .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 40px; }
     /* Push the price + action buttons to the bottom so they align across the row regardless of title length. */
     .ev-card-foot { margin-top: auto; }
+    .ev-card-img { aspect-ratio: 16 / 10; border-radius: 4px; overflow: hidden; background: #f2f1ec; }
+    .ev-card-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .ev-card-actions { display: flex; align-items: center; gap: 8px; }
     .ev-act {
       font-family: inherit; font-size: 13px; cursor: pointer;
@@ -239,6 +247,16 @@ export class EventListComponent implements OnInit {
   minPrice(ev: Event): number {
     if (!ev.seatCategories?.length) return 0;
     return Math.min(...ev.seatCategories.map(s => parseFloat(s.price)));
+  }
+
+  /** Currency of the cheapest seat category — so each card shows the event's real currency. */
+  currencyOf(ev: Event): string {
+    return this.cheapestCategory(ev)?.currency ?? 'EUR';
+  }
+
+  /** The event's own image if set, else null (falls back to generated art). */
+  eventImage(ev: Event): string | null {
+    return ev.images?.[0]?.trim() || null;
   }
 
   statusBadge(status: string): string {

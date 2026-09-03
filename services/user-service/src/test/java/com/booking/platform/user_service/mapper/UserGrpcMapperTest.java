@@ -155,6 +155,20 @@ class UserGrpcMapperTest {
 
     // ── Helper ────────────────────────────────────────────────────────────────
 
+    @Test
+    void toUserInfo_withBillingAddressJson_populatesStructuredBillingAddress() {
+        UserRepresentation user = fullUser();
+        user.setAttributes(Map.of(UserAttributes.BILLING_ADDRESS,
+                List.of("{\"line1\":\"5 Baker St\",\"city\":\"London\",\"country\":\"GB\"}")));
+
+        UserInfo info = mapper.toUserInfo(user, List.of());
+
+        assertThat(info.hasBillingAddress()).isTrue();
+        assertThat(info.getBillingAddress().getLine1()).isEqualTo("5 Baker St");
+        assertThat(info.getBillingAddress().getCity()).isEqualTo("London");
+        assertThat(info.getBillingAddress().getCountry()).isEqualTo("GB");
+    }
+
     private UserRepresentation fullUser() {
         UserRepresentation user = new UserRepresentation();
         user.setId("user-123");

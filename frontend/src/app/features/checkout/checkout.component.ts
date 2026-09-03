@@ -1,10 +1,10 @@
-import { Component, ElementRef, inject, signal, effect, viewChild, OnInit } from '@angular/core';
+import { Component, ElementRef, inject, signal, effect, viewChild, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Apollo } from 'apollo-angular';
 import { forkJoin } from 'rxjs';
 import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
-import { CREATE_BOOKING, CREATE_ORDER_PAYMENT_INTENT, CONFIRM_MOCK_PAYMENT } from '../../shared/graphql/documents';
+import { CREATE_BOOKING, CREATE_ORDER_PAYMENT_INTENT, CONFIRM_MOCK_PAYMENT, UPDATE_PROFILE, DISCARD_BOOKING } from '../../shared/graphql/documents';
 import { Booking, PaymentIntent } from '../../shared/models/models';
 import { CartService } from '../../core/cart.service';
 
@@ -28,6 +28,34 @@ import { CartService } from '../../core/cart.service';
         <div class="checkout-layout">
           <!-- Payment form -->
           <div class="checkout-main">
+            <div class="booking-card" style="position:static;margin-bottom:16px">
+              <div class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px">Billing address</div>
+              <div class="field">
+                <label>Full name</label>
+                <input class="inp" [(ngModel)]="billing.fullName" placeholder="Jane Doe">
+              </div>
+              <div class="field">
+                <label>Address line 1</label>
+                <input class="inp" [(ngModel)]="billing.line1" placeholder="Street and number">
+              </div>
+              <div class="field">
+                <label>Address line 2 <span class="mono xs muted">(optional)</span></label>
+                <input class="inp" [(ngModel)]="billing.line2" placeholder="Apartment, suite, etc.">
+              </div>
+              <div class="bill-row">
+                <div class="field"><label>City</label><input class="inp" [(ngModel)]="billing.city"></div>
+                <div class="field"><label>State / Region</label><input class="inp" [(ngModel)]="billing.state"></div>
+              </div>
+              <div class="bill-row">
+                <div class="field"><label>Postal code</label><input class="inp" [(ngModel)]="billing.postalCode"></div>
+                <div class="field"><label>Country</label><input class="inp" [(ngModel)]="billing.country" placeholder="NL"></div>
+              </div>
+              <label class="save-address">
+                <input type="checkbox" [(ngModel)]="saveBillingAddress">
+                Save this address to my account
+              </label>
+            </div>
+
             <div class="booking-card" style="position:static">
               <div class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px">Card details</div>
 
@@ -101,9 +129,12 @@ import { CartService } from '../../core/cart.service';
     .mock-hint { margin-top: 20px; padding-top: 16px; border-top: 1px dashed var(--line); }
     .muted-2 { color: var(--ink-4); line-height: 1.6; }
     .loading-center { display: flex; flex-direction: column; align-items: center; padding: 80px 0; }
+    .save-address { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+    .save-address input { cursor: pointer; }
+    .bill-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   `]
 })
-export class CheckoutComponent implements OnInit {
+export class CheckoutComponent implements OnInit, OnDestroy {
   private apollo = inject(Apollo);
   private router = inject(Router);
   cart = inject(CartService);
@@ -115,9 +146,12 @@ export class CheckoutComponent implements OnInit {
   provider = signal<string>('');
   stripeReady = signal(false);
   cardNumber = '';
+  billing = { fullName: '', line1: '', line2: '', city: '', state: '', postalCode: '', country: '' };
+  saveBillingAddress = false;
 
   private orderId = '';
   private bookingIds: string[] = [];
+  private completed = false;   // set once payment succeeds, so we don't cancel on teardown
   private clientSecret: string | null = null;
   private stripe: Stripe | null = null;
   private card: StripeCardElement | null = null;
@@ -208,8 +242,19 @@ export class CheckoutComponent implements OnInit {
   }
 
   pay() {
+    this.maybeSaveBillingAddress();
     if (this.provider() === 'stripe') this.payWithStripe();
     else this.payWithMock();
+  }
+
+  /** If the customer ticked "save", persist the billing address to their profile (fire-and-forget). */
+  private maybeSaveBillingAddress() {
+    if (!this.saveBillingAddress) return;
+    const b = this.billing;
+    const empty = !b.fullName && !b.line1 && !b.city && !b.postalCode && !b.country;
+    if (empty) return;
+    this.apollo.mutate({ mutation: UPDATE_PROFILE, variables: { input: { billingAddress: b } } })
+      .subscribe({ error: () => {} });
   }
 
   private async payWithStripe() {
@@ -253,9 +298,23 @@ export class CheckoutComponent implements OnInit {
   }
 
   private goToConfirmation() {
+    this.completed = true;
     const bookings = this.bookingIds.join(',');
     this.cart.clear();
     this.router.navigate(['/checkout/confirmation'], { queryParams: { bookings } });
+  }
+
+  /**
+   * Leaving checkout without paying (back button, navigation) discards the PENDING bookings we
+   * reserved on entry — hard-deletes them and releases their seats — so nothing lingers in
+   * "My Bookings" (not even a cancelled one) and no email is sent.
+   */
+  ngOnDestroy() {
+    if (this.completed || this.bookingIds.length === 0) return;
+    for (const id of this.bookingIds) {
+      this.apollo.mutate({ mutation: DISCARD_BOOKING, variables: { id } })
+        .subscribe({ error: () => {} });
+    }
   }
 
   lineTotal(item: { unitPrice: string; quantity: number }): string {

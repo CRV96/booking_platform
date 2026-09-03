@@ -16,9 +16,11 @@ public record Event(
         String category,
         String status,
         String dateTime,
+        String endDateTime,
         VenueInfo venue,
         OrganizerInfo organizer,
         List<SeatCategory> seatCategories,
+        List<String> images,
         String createdAt,
         String updatedAt
 ) {
@@ -33,11 +35,13 @@ public record Event(
                 eventInfo.getCategory(),
                 eventInfo.getStatus(),
                 eventInfo.getDateTime(),
+                eventInfo.getEndDateTime().isBlank() ? null : eventInfo.getEndDateTime(),
                 VenueInfo.fromGrpc(eventInfo.getVenue()),
                 OrganizerInfo.fromGrpc(eventInfo.getOrganizer()),
                 eventInfo.getSeatCategoriesList().stream()
                         .map(SeatCategory::fromGrpc)
                         .toList(),
+                eventInfo.getImagesList().stream().toList(),
                 eventInfo.getCreatedAt().isBlank() ? null : eventInfo.getCreatedAt(),
                 eventInfo.getUpdatedAt().isBlank() ? null : eventInfo.getUpdatedAt()
         );

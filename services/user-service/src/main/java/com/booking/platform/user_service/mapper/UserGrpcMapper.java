@@ -45,6 +45,11 @@ public class UserGrpcMapper {
         setIfPresent(builder, attrs, UserAttributes.TIMEZONE, UserInfo.Builder::setTimezone);
         setIfPresent(builder, attrs, UserAttributes.PROFILE_PICTURE_URL, UserInfo.Builder::setProfilePictureUrl);
 
+        // Structured billing address — stored as JSON in a single attribute.
+        if (attrs.containsKey(UserAttributes.BILLING_ADDRESS) && !attrs.get(UserAttributes.BILLING_ADDRESS).isEmpty()) {
+            builder.setBillingAddress(BillingAddressCodec.fromJson(attrs.get(UserAttributes.BILLING_ADDRESS).get(0)));
+        }
+
         // Boolean attributes
         setBooleanIfPresent(builder, attrs, UserAttributes.EMAIL_NOTIFICATIONS, UserInfo.Builder::setEmailNotifications);
         setBooleanIfPresent(builder, attrs, UserAttributes.SMS_NOTIFICATIONS, UserInfo.Builder::setSmsNotifications);

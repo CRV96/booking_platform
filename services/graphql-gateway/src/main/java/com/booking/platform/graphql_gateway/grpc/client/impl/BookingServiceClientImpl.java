@@ -78,4 +78,13 @@ public class BookingServiceClientImpl implements BookingClient {
 
         return bookingServiceStub.cancelBooking(builder.build());
     }
+
+    @Override
+    public boolean discardBooking(String bookingId) {
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling booking-service: DiscardBooking id='{}'", bookingId);
+
+        return bookingServiceStub.discardBooking(
+                DiscardBookingRequest.newBuilder().setBookingId(bookingId).build()
+        ).getSuccess();
+    }
 }

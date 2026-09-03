@@ -208,13 +208,7 @@ public class EventServiceImpl implements EventService {
         ApplicationLogger.logMessage(log, Level.DEBUG, "Searching events: query='{}', category='{}', city='{}', page={} (cache miss)",
                 request.getQuery(), request.getCategory(), request.getCity(), request.getPage());
 
-        List<Criteria> criteriaList = getCriteriaList(request);
-
-        Query query = new Query(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
-
-        if (request.hasQuery() && !request.getQuery().isBlank()) {
-            query.addCriteria(TextCriteria.forDefaultLanguage().matchingAny(request.getQuery()));
-        }
+        Query query = buildSearchQuery(request);
 
         EventProperties.Pagination pagination = eventProperties.pagination();
         int page = Math.max(request.getPage(), 0);
@@ -227,6 +221,23 @@ public class EventServiceImpl implements EventService {
         query.skip(skip).limit(pageSize);
 
         return mongoTemplate.find(query, EventDocument.class);
+    }
+
+    @Override
+    public long countEvents(SearchEventsRequest request) {
+        // Same filter as searchEvents but without pagination — the true match count drives total pages.
+        return mongoTemplate.count(buildSearchQuery(request), EventDocument.class);
+    }
+
+    /** Builds the shared filter (criteria + optional full-text) used by both search and count. */
+    private Query buildSearchQuery(SearchEventsRequest request) {
+        List<Criteria> criteriaList = getCriteriaList(request);
+        Query query = new Query(new Criteria().andOperator(criteriaList.toArray(new Criteria[0])));
+
+        if (request.hasQuery() && !request.getQuery().isBlank()) {
+            query.addCriteria(TextCriteria.forDefaultLanguage().matchingAny(request.getQuery()));
+        }
+        return query;
     }
 
     // =========================================================================

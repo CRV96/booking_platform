@@ -17,4 +17,6 @@ public interface BookingClient {
                                             int pageSize, String statusFilter);
 
     BookingResponse cancelBooking(String bookingId, String reason);
+
+    boolean discardBooking(String bookingId);
 }

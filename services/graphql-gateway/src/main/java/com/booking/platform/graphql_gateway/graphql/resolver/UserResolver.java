@@ -93,7 +93,8 @@ public class UserResolver {
                 input.timezone(),
                 input.profilePictureUrl(),
                 input.emailNotifications(),
-                input.smsNotifications()
+                input.smsNotifications(),
+                input.billingAddress()
         );
 
         return User.fromGrpc(userInfo);

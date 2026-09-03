@@ -2,6 +2,7 @@ package com.booking.platform.graphql_gateway.grpc.client;
 
 import com.booking.platform.common.grpc.user.SearchUsersResponse;
 import com.booking.platform.common.grpc.user.UserInfo;
+import com.booking.platform.graphql_gateway.dto.user.BillingAddressInput;
 
 public interface UserOperationsClient {
 
@@ -12,7 +13,7 @@ public interface UserOperationsClient {
     UserInfo updateUser(String userId, String firstName, String lastName, String email,
                         String phoneNumber, String country, String preferredLanguage,
                         String preferredCurrency, String timezone, String profilePictureUrl,
-                        Boolean emailNotifications, Boolean smsNotifications);
+                        Boolean emailNotifications, Boolean smsNotifications, BillingAddressInput billingAddress);
 
     SearchUsersResponse searchUsers(String query, int page, int pageSize);
 }

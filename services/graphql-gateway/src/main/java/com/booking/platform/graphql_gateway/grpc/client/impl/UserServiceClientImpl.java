@@ -1,6 +1,7 @@
 package com.booking.platform.graphql_gateway.grpc.client.impl;
 
 import com.booking.platform.common.grpc.user.*;
+import com.booking.platform.graphql_gateway.dto.user.BillingAddressInput;
 import com.booking.platform.graphql_gateway.grpc.client.UserOperationsClient;
 import com.booking.platform.graphql_gateway.constants.UserServiceConst;
 import lombok.RequiredArgsConstructor;
@@ -46,7 +47,7 @@ public class UserServiceClientImpl implements UserOperationsClient {
     public UserInfo updateUser(String userId, String firstName, String lastName, String email,
                                String phoneNumber, String country, String preferredLanguage,
                                String preferredCurrency, String timezone, String profilePictureUrl,
-                               Boolean emailNotifications, Boolean smsNotifications) {
+                               Boolean emailNotifications, Boolean smsNotifications, BillingAddressInput billingAddress) {
         ApplicationLogger.logMessage(log, Level.DEBUG, "Calling user-service: UpdateUser {}", userId);
 
         UpdateUserRequest.Builder builder = UpdateUserRequest.newBuilder()
@@ -63,9 +64,24 @@ public class UserServiceClientImpl implements UserOperationsClient {
         if (profilePictureUrl != null) builder.setProfilePictureUrl(profilePictureUrl);
         if (emailNotifications != null) builder.setEmailNotifications(emailNotifications);
         if (smsNotifications != null) builder.setSmsNotifications(smsNotifications);
+        if (billingAddress != null) {
+            builder.setBillingAddress(BillingAddress.newBuilder()
+                    .setFullName(nvl(billingAddress.fullName()))
+                    .setLine1(nvl(billingAddress.line1()))
+                    .setLine2(nvl(billingAddress.line2()))
+                    .setCity(nvl(billingAddress.city()))
+                    .setState(nvl(billingAddress.state()))
+                    .setPostalCode(nvl(billingAddress.postalCode()))
+                    .setCountry(nvl(billingAddress.country()))
+                    .build());
+        }
 
         UserResponse response = userServiceStub.updateUser(builder.build());
         return response.getUser();
+    }
+
+    private static String nvl(String value) {
+        return value != null ? value : "";
     }
 
     @Override

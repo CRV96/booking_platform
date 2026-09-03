@@ -11,5 +11,6 @@ public record UpdateProfileInput(
     String timezone,
     String profilePictureUrl,
     Boolean emailNotifications,
-    Boolean smsNotifications
+    Boolean smsNotifications,
+    BillingAddressInput billingAddress
 ) {}

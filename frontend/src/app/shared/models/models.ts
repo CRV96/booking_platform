@@ -15,7 +15,18 @@ export interface User {
   profilePictureUrl?: string;
   emailNotifications?: boolean;
   smsNotifications?: boolean;
+  billingAddress?: BillingAddress;
   roles: string[];
+}
+
+export interface BillingAddress {
+  fullName?: string;
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
 }
 
 export interface AuthPayload {
@@ -58,9 +69,11 @@ export interface Event {
   category: string;
   status: string;
   dateTime: string;
+  endDateTime?: string;
   venue: VenueInfo;
   organizer: OrganizerInfo;
   seatCategories: SeatCategory[];
+  images?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -90,6 +103,7 @@ export interface Booking {
   cancellationReason?: string;
   createdAt: string;
   updatedAt: string;
+  event?: { images?: string[] };
 }
 
 export interface BookingConnection {

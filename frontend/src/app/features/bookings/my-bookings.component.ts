@@ -39,7 +39,11 @@ const STATUSES = ['PENDING','PAYMENT_PROCESSING','CONFIRMED','CANCELLED','REFUND
           @for (b of bookings(); track b.id) {
             <div class="booking-row">
               <div class="booking-thumb">
-                <app-event-art [seed]="artSeed(b.eventId)" [title]="b.eventTitle" ratio="16/10" />
+                @if (imageOf(b.event?.images); as img) {
+                  <img class="thumb-img" [src]="img" [alt]="b.eventTitle">
+                } @else {
+                  <app-event-art [seed]="artSeed(b.eventId)" [title]="b.eventTitle" ratio="16/10" />
+                }
               </div>
               <div class="booking-info">
                 <a [routerLink]="['/events', b.eventId]" class="booking-title" style="text-decoration:none">{{ b.eventTitle }}</a>
@@ -85,6 +89,7 @@ const STATUSES = ['PENDING','PAYMENT_PROCESSING','CONFIRMED','CANCELLED','REFUND
     .booking-row { display: flex; gap: 20px; align-items: flex-start; padding: 20px 0; border-bottom: 1px solid var(--line); }
     .booking-row:last-child { border-bottom: none; }
     .booking-thumb { width: 180px; flex-shrink: 0; border-radius: var(--radius); overflow: hidden; }
+    .thumb-img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; }
     .booking-info { flex: 1; min-width: 0; }
     .booking-title { font-family: var(--serif); font-size: 20px; line-height: 1.2; color: var(--ink); display: block; margin-bottom: 8px; }
     .booking-title:hover { color: var(--ink-2); }
@@ -148,6 +153,10 @@ export class MyBookingsComponent implements OnInit {
 
   prevPage() { this.page.update(p => p - 1); this.load(); }
   nextPage() { this.page.update(p => p + 1); this.load(); }
+
+  imageOf(images?: string[]): string | null {
+    return images?.[0]?.trim() || null;
+  }
 
   artSeed(eventId: string): number {
     return eventId ? eventId.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % 100 : 1;

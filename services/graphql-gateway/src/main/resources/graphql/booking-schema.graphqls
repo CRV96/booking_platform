@@ -16,6 +16,9 @@ extend type Mutation {
 
     """Cancel a booking (PENDING or CONFIRMED → CANCELLED, releases seats)"""
     cancelBooking(id: ID!, reason: String): Booking!
+
+    """Discard an unpaid (PENDING) booking outright — releases seats, deletes it, no email. For abandoned checkout."""
+    discardBooking(id: ID!): Boolean!
 }
 
 type Booking {
@@ -34,6 +37,8 @@ type Booking {
     cancellationReason: String
     createdAt: String!           # ISO 8601
     updatedAt: String!           # ISO 8601
+    """Live event details, hydrated from event-service (null if the event no longer exists)."""
+    event: Event
 }
 
 enum BookingStatus {

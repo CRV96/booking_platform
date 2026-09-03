@@ -74,7 +74,11 @@ function timeOfDay(): string {
                 @for (ev of events(); track ev.id) {
                   <div class="event-row">
                     <div class="event-row-art">
-                      <app-event-art [seed]="artSeed(ev)" [title]="ev.title" ratio="1/1" />
+                      @if (imageOf(ev.images); as img) {
+                        <img class="row-img" [src]="img" [alt]="ev.title">
+                      } @else {
+                        <app-event-art [seed]="artSeed(ev)" [title]="ev.title" ratio="1/1" />
+                      }
                     </div>
                     <div class="event-row-info">
                       <div class="event-row-title">{{ ev.title }}</div>
@@ -175,6 +179,7 @@ function timeOfDay(): string {
     }
     .event-row:last-child { border-bottom: none; }
     .event-row-art { width: 64px; height: 64px; flex-shrink: 0; border-radius: var(--radius); overflow: hidden; }
+    .row-img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .event-row-info { flex: 1; min-width: 0; }
     .event-row-title { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .event-row-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
@@ -234,6 +239,10 @@ export class OrganizerDashboardComponent implements OnInit {
       },
       error: err => { this.loading.set(false); this.error.set(err.message || 'Failed to load'); }
     });
+  }
+
+  imageOf(images?: string[]): string | null {
+    return images?.[0]?.trim() || null;
   }
 
   artSeed(ev: Event): number {

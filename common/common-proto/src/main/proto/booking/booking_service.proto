@@ -20,6 +20,10 @@ service BookingService {
   // Cancel a booking. Allowed transitions: PENDING → CANCELLED, CONFIRMED → CANCELLED.
   rpc CancelBooking(CancelBookingRequest) returns (BookingResponse);
 
+  // Discard an unpaid (PENDING) booking outright — releases seats and hard-deletes the row,
+  // with no cancellation event/email. Used when a customer abandons checkout.
+  rpc DiscardBooking(DiscardBookingRequest) returns (DiscardBookingResponse);
+
   // Get a list of attendees (user IDs) for a given event, filtered by booking status.
   rpc GetBookingAttendees(GetBookingAttendeesRequest) returns (GetBookingAttendeesResponse);
 }
@@ -50,6 +54,14 @@ message GetUserBookingsResponse {
 message CancelBookingRequest {
   string booking_id = 1;          // UUID string
   optional string reason = 2;     // Human-readable cancellation reason
+}
+
+message DiscardBookingRequest {
+  string booking_id = 1;   // UUID string
+}
+
+message DiscardBookingResponse {
+  bool success = 1;
 }
 
 message BookingResponse {

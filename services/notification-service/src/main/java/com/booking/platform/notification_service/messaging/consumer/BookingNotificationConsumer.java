@@ -88,6 +88,7 @@ public class BookingNotificationConsumer {
                 Map.of(
                         EmailTemplatesConst.BookingConfirmation.Vars.BOOKING_ID,    event.getBookingId(),
                         EmailTemplatesConst.BookingConfirmation.Vars.EVENT_ID,      event.getEventId(),
+                        EmailTemplatesConst.BookingConfirmation.Vars.EVENT_TITLE,   event.getEventTitle(),
                         EmailTemplatesConst.BookingConfirmation.Vars.TICKET_IDS,    event.getTicketIdsList(),
                         EmailTemplatesConst.BookingConfirmation.Vars.TIMESTAMP,     event.getTimestamp(),
                         EmailTemplatesConst.BookingConfirmation.Vars.SEAT_CATEGORY, event.getSeatCategory(),

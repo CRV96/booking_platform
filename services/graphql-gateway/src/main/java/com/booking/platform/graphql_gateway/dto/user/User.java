@@ -21,6 +21,7 @@ public record User(
     String profilePictureUrl,
     Boolean emailNotifications,
     Boolean smsNotifications,
+    BillingAddress billingAddress,
     List<String> roles
 ) {
     /**
@@ -44,6 +45,7 @@ public record User(
             userInfo.hasProfilePictureUrl() ? userInfo.getProfilePictureUrl() : null,
             userInfo.hasEmailNotifications() ? userInfo.getEmailNotifications() : null,
             userInfo.hasSmsNotifications() ? userInfo.getSmsNotifications() : null,
+            userInfo.hasBillingAddress() ? BillingAddress.fromGrpc(userInfo.getBillingAddress()) : null,
             userInfo.getRolesList()
         );
     }

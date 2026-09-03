@@ -33,4 +33,18 @@ message UserInfo {
 
   // Roles assigned to the user
   repeated string roles = 17;
+
+  // Billing
+  BillingAddress billing_address = 18;
+}
+
+// Structured billing address (all fields optional; empty ones are omitted).
+message BillingAddress {
+  string full_name = 1;
+  string line1 = 2;
+  string line2 = 3;
+  string city = 4;
+  string state = 5;
+  string postal_code = 6;
+  string country = 7;
 }

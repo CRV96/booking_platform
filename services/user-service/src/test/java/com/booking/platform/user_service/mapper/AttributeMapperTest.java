@@ -1,5 +1,6 @@
 package com.booking.platform.user_service.mapper;
 
+import com.booking.platform.common.grpc.user.BillingAddress;
 import com.booking.platform.common.grpc.user.RegisterRequest;
 import com.booking.platform.common.grpc.user.UpdateUserRequest;
 import com.booking.platform.user_service.constants.UserAttributes;
@@ -133,5 +134,19 @@ class AttributeMapperTest {
 
         Map<String, String> attrs = mapper.fromUpdateRequest(request);
         assertThat(attrs).containsOnlyKeys(UserAttributes.TIMEZONE);
+    }
+
+    @Test
+    void fromUpdateRequest_withBillingAddress_serializesToJsonAttribute() {
+        UpdateUserRequest request = UpdateUserRequest.newBuilder()
+                .setUserId("u")
+                .setBillingAddress(BillingAddress.newBuilder().setLine1("123 Main St").setCity("NYC").build())
+                .build();
+
+        Map<String, String> attrs = mapper.fromUpdateRequest(request);
+
+        assertThat(attrs.get(UserAttributes.BILLING_ADDRESS))
+                .contains("\"line1\":\"123 Main St\"")
+                .contains("\"city\":\"NYC\"");
     }
 }

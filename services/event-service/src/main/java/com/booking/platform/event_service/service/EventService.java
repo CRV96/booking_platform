@@ -31,6 +31,9 @@ public interface EventService {
     /** Searches published events by query, category, city, and date range with pagination. */
     List<EventDocument> searchEvents(SearchEventsRequest request);
 
+    /** Counts all events matching a search (ignoring pagination), to compute total pages. */
+    long countEvents(SearchEventsRequest request);
+
     /** Atomically increments/decrements available seats for a category. Used by booking-service. */
     EventDocument updateSeatAvailability(String eventId, String seatCategoryName, int delta);
 }

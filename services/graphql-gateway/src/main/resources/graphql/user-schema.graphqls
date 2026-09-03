@@ -89,8 +89,31 @@ type User {
     emailNotifications: Boolean
     smsNotifications: Boolean
 
+    # Billing
+    billingAddress: BillingAddress
+
     # Roles
     roles: [String!]!
+}
+
+type BillingAddress {
+    fullName: String
+    line1: String
+    line2: String
+    city: String
+    state: String
+    postalCode: String
+    country: String
+}
+
+input BillingAddressInput {
+    fullName: String
+    line1: String
+    line2: String
+    city: String
+    state: String
+    postalCode: String
+    country: String
 }
 
 input UpdateProfileInput {
@@ -105,6 +128,7 @@ input UpdateProfileInput {
     profilePictureUrl: String
     emailNotifications: Boolean
     smsNotifications: Boolean
+    billingAddress: BillingAddressInput
 }
 
 type UserConnection {

@@ -3,15 +3,19 @@ package com.booking.platform.graphql_gateway.graphql.resolver;
 import com.booking.platform.graphql_gateway.dto.booking.Booking;
 import com.booking.platform.graphql_gateway.dto.booking.BookingConnection;
 import com.booking.platform.graphql_gateway.dto.booking.CreateBookingInput;
+import com.booking.platform.graphql_gateway.dto.event.Event;
 import com.booking.platform.graphql_gateway.grpc.client.BookingClient;
+import com.booking.platform.graphql_gateway.grpc.client.EventClient;
 import com.booking.platform.graphql_gateway.service.AuthService;
 import com.booking.platform.common.logging.ApplicationLogger;
+import io.grpc.StatusRuntimeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.event.Level;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.graphql.data.method.annotation.SchemaMapping;
 import org.springframework.stereotype.Controller;
 
 import java.util.List;
@@ -32,7 +36,18 @@ import java.util.List;
 public class BookingResolver {
 
     private final BookingClient bookingClient;
+    private final EventClient eventClient;
     private final AuthService authService;
+
+    /** Hydrates live event details for a booking (for the thumbnail); null if the event is gone. */
+    @SchemaMapping(typeName = "Booking", field = "event")
+    public Event event(Booking booking) {
+        try {
+            return Event.fromGrpc(eventClient.getEvent(booking.eventId()).getEvent());
+        } catch (StatusRuntimeException e) {
+            return null;
+        }
+    }
 
     // =========================================================================
     // QUERIES
@@ -101,5 +116,12 @@ public class BookingResolver {
         ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: cancelBooking({}, reason='{}') for user '{}'", id, reason, userId);
 
         return Booking.fromGrpc(bookingClient.cancelBooking(id, reason).getBooking());
+    }
+
+    @MutationMapping
+    public Boolean discardBooking(@Argument("id") String id) {
+        String userId = authService.getAuthenticatedUserId();
+        ApplicationLogger.logMessage(log, Level.INFO, "GraphQL mutation: discardBooking({}) for user '{}'", id, userId);
+        return bookingClient.discardBooking(id);
     }
 }

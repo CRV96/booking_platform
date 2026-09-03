@@ -46,6 +46,7 @@ export const ME = gql`
       firstName lastName createdAt
       phoneNumber country preferredLanguage preferredCurrency
       timezone profilePictureUrl emailNotifications smsNotifications
+      billingAddress { fullName line1 line2 city state postalCode country }
       roles
     }
   }
@@ -56,7 +57,9 @@ export const UPDATE_PROFILE = gql`
     updateProfile(input: $input) {
       id username email firstName lastName
       phoneNumber country preferredLanguage preferredCurrency
-      timezone emailNotifications smsNotifications roles
+      timezone emailNotifications smsNotifications
+      billingAddress { fullName line1 line2 city state postalCode country }
+      roles
     }
   }
 `;
@@ -64,10 +67,11 @@ export const UPDATE_PROFILE = gql`
 // ── Events ────────────────────────────────────────────────────────────────────
 
 const EVENT_FIELDS = `
-  id title description category status dateTime
+  id title description category status dateTime endDateTime
   venue { name address city country latitude longitude capacity }
   organizer { userId name email }
   seatCategories { name price currency totalSeats availableSeats }
+  images
   createdAt updatedAt
 `;
 
@@ -123,6 +127,7 @@ const BOOKING_FIELDS = `
   id userId eventId eventTitle status seatCategory quantity
   unitPrice totalPrice currency idempotencyKey
   holdExpiresAt cancellationReason createdAt updatedAt
+  event { images }
 `;
 
 export const GET_MY_BOOKINGS = gql`
@@ -149,6 +154,13 @@ export const CREATE_BOOKING = gql`
 export const CANCEL_BOOKING = gql`
   mutation CancelBooking($id: ID!, $reason: String) {
     cancelBooking(id: $id, reason: $reason) { id status cancellationReason }
+  }
+`;
+
+// Hard-delete an unpaid PENDING booking (abandoned checkout) — releases seats, no email.
+export const DISCARD_BOOKING = gql`
+  mutation DiscardBooking($id: ID!) {
+    discardBooking(id: $id)
   }
 `;
 
@@ -215,7 +227,7 @@ export const CONFIRM_MOCK_PAYMENT = gql`
 // ── Cart ────────────────────────────────────────────────────────────────────
 
 const CART_FIELDS = `
-  items { id eventId eventTitle seatCategory quantity unitPrice currency }
+  items { id eventId eventTitle seatCategory quantity unitPrice currency event { images } }
   totalPrice
   currency
 `;
@@ -251,7 +263,7 @@ export const CLEAR_CART = gql`
 const LOVELIST_ITEM_FIELDS = `
   eventId
   createdAt
-  event { id title category dateTime venue { city } }
+  event { id title category dateTime venue { city } images }
 `;
 
 export const GET_LOVELIST = gql`

@@ -59,6 +59,24 @@ public class EventValidatorImpl implements EventValidator {
                 throw new ValidationException("Seat category currency must not be blank: " + sc.getName());
             }
         });
+
+        checkIfThereAreEnoughSeatsAvailable(request);
+
+    }
+
+    // The seats across all categories cannot exceed the venue's capacity (when one is set).
+    private void checkIfThereAreEnoughSeatsAvailable(CreateEventRequest request){
+        if (request.hasVenue() && request.getVenue().hasCapacity()) {
+            int capacity = request.getVenue().getCapacity();
+            int totalSeats = request.getSeatCategoriesList().stream()
+                    .mapToInt(sc -> sc.getTotalSeats())
+                    .sum();
+            if (totalSeats > capacity) {
+                throw new ValidationException(
+                        "Total seats across categories (" + totalSeats
+                                + ") exceed the venue capacity (" + capacity + ")");
+            }
+        }
     }
 
     @Override
@@ -88,4 +106,5 @@ public class EventValidatorImpl implements EventValidator {
             throw new ValidationException("Cannot publish event: must have at least one seat category");
         }
     }
+
 }

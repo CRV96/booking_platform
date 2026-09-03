@@ -113,4 +113,17 @@ class BookingServiceClientImplTest {
         verify(stub).cancelBooking(captor.capture());
         assertThat(captor.getValue().hasReason()).isFalse();
     }
+
+    @Test
+    void discardBooking_sendsIdAndReturnsSuccess() {
+        when(stub.discardBooking(any()))
+                .thenReturn(DiscardBookingResponse.newBuilder().setSuccess(true).build());
+
+        boolean result = client.discardBooking("bk-1");
+
+        ArgumentCaptor<DiscardBookingRequest> captor = ArgumentCaptor.forClass(DiscardBookingRequest.class);
+        verify(stub).discardBooking(captor.capture());
+        assertThat(captor.getValue().getBookingId()).isEqualTo("bk-1");
+        assertThat(result).isTrue();
+    }
 }

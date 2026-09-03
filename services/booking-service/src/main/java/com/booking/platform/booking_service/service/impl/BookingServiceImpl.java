@@ -165,6 +165,24 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
+    public void discardBooking(UUID bookingId, String userId) {
+        BookingEntity booking = bookingRepository.findByIdAndUserId(bookingId, userId)
+                .orElseThrow(() -> new BookingNotFoundException(bookingId.toString()));
+
+        // Only an unpaid hold may be discarded outright; anything further along must go through cancellation.
+        if (booking.getStatus() != BookingStatus.PENDING) {
+            throw new InvalidBookingStateException(bookingId.toString(), booking.getStatus(), BookingStatus.PENDING);
+        }
+
+        releaseSeats(booking);
+        bookingRepository.delete(booking);
+
+        ApplicationLogger.logMessage(log, Level.INFO,
+                "Booking discarded (abandoned checkout): id='{}', event='{}'", bookingId, booking.getEventId());
+    }
+
+    @Override
+    @Transactional
     public BookingEntity confirmBooking(UUID bookingId) {
         BookingEntity booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new BookingNotFoundException(bookingId.toString()));

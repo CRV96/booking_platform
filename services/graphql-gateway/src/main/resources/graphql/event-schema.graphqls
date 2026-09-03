@@ -38,10 +38,12 @@ type Event {
     category: EventCategory!
     status: EventStatus!
     dateTime: String!
+    endDateTime: String          # ISO 8601 — set when the event spans more than one day/session
 
     venue: VenueInfo!
     organizer: OrganizerInfo!
     seatCategories: [SeatCategory!]!
+    images: [String!]            # image URLs; the first is used as the display image
 
     createdAt: String
     updatedAt: String
@@ -92,8 +94,10 @@ input CreateEventInput {
     description: String
     category: EventCategory!
     dateTime: String!
+    endDateTime: String
     venue: VenueInput!
     seatCategories: [SeatCategoryInput!]!
+    images: [String!]
 }
 
 input UpdateEventInput {
@@ -101,8 +105,10 @@ input UpdateEventInput {
     description: String
     category: EventCategory
     dateTime: String
+    endDateTime: String
     venue: VenueInput
     seatCategories: [SeatCategoryInput!]
+    images: [String!]
 }
 
 input VenueInput {
