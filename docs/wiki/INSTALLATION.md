@@ -592,15 +592,15 @@ The Angular SPA lives in `frontend/`. It connects to the GraphQL gateway via a d
 
 | Tool | Version |
 |------|---------|
-| Node.js | 18+ |
-| npm | 9+ |
+| Node.js | 20+ |
+| npm | 10+ |
 
 ### Start the dev server
 
 ```bash
 cd frontend
-npm install          # first time only
-npm start            # http://localhost:4200
+npm install --legacy-peer-deps   # first time only (Angular 22 + Apollo 4 peer ranges)
+npm start                         # http://localhost:4200
 ```
 
 `npm start` runs `ng serve --proxy-config proxy.conf.json`, which forwards all `/graphql` requests to `http://localhost:8080`. The backend (Option A or Option B) must be running first.
@@ -621,7 +621,7 @@ cd frontend
 npm run build        # output in frontend/dist/
 ```
 
-See **[docs/frontend-guide.md](Frontend/frontend-guide.md)** for a complete walkthrough of the Angular app structure, components, and how to make changes.
+See the **[Frontend guide](frontend-guide)** for a complete walkthrough of the Angular app structure, components, and how to make changes.
 
 ---
 
