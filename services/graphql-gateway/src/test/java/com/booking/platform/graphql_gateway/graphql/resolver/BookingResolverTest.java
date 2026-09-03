@@ -2,17 +2,22 @@ package com.booking.platform.graphql_gateway.graphql.resolver;
 
 import com.booking.platform.common.grpc.booking.BookingInfo;
 import com.booking.platform.common.grpc.booking.BookingResponse;
+import com.booking.platform.common.grpc.booking.GetEventBookingsResponse;
 import com.booking.platform.common.grpc.booking.GetUserBookingsResponse;
 import com.booking.platform.common.grpc.event.EventInfo;
 import com.booking.platform.common.grpc.event.EventResponse;
+import com.booking.platform.common.grpc.event.OrganizerInfo;
 import com.booking.platform.graphql_gateway.dto.booking.Booking;
 import com.booking.platform.graphql_gateway.dto.booking.BookingConnection;
 import com.booking.platform.graphql_gateway.dto.booking.CreateBookingInput;
 import com.booking.platform.graphql_gateway.dto.event.Event;
+import com.booking.platform.graphql_gateway.exception.ErrorCode;
+import com.booking.platform.graphql_gateway.exception.GraphQLException;
 import com.booking.platform.graphql_gateway.grpc.client.BookingClient;
 import com.booking.platform.graphql_gateway.grpc.client.EventClient;
 import com.booking.platform.graphql_gateway.service.AuthService;
 import io.grpc.Status;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -145,6 +151,41 @@ class BookingResolverTest {
 
         verify(bookingClient).discardBooking("bk-1");
         assertThat(result).isTrue();
+    }
+
+    // ── eventBookings query (organizer stats) ─────────────────────────────────
+
+    @Test
+    void eventBookings_ownerCanRead() {
+        when(authService.getAuthenticatedUserId()).thenReturn("org-1");
+        when(eventClient.getEvent("ev-1")).thenReturn(EventResponse.newBuilder()
+                .setEvent(EventInfo.newBuilder().setId("ev-1")
+                        .setOrganizer(OrganizerInfo.newBuilder().setUserId("org-1")))
+                .build());
+        when(bookingClient.getEventBookings("ev-1")).thenReturn(GetEventBookingsResponse.newBuilder()
+                .addBookings(BookingInfo.newBuilder().setId("bk-1").build())
+                .addBookings(BookingInfo.newBuilder().setId("bk-2").build())
+                .build());
+
+        List<Booking> result = resolver.eventBookings("ev-1");
+
+        verify(authService).requireRole("employee"); // Roles.EMPLOYEE.getValue()
+        assertThat(result).extracting(Booking::id).containsExactly("bk-1", "bk-2");
+    }
+
+    @Test
+    void eventBookings_nonOwnerForbidden() {
+        when(authService.getAuthenticatedUserId()).thenReturn("intruder");
+        when(eventClient.getEvent("ev-1")).thenReturn(EventResponse.newBuilder()
+                .setEvent(EventInfo.newBuilder().setId("ev-1")
+                        .setOrganizer(OrganizerInfo.newBuilder().setUserId("org-1")))
+                .build());
+
+        assertThatThrownBy(() -> resolver.eventBookings("ev-1"))
+                .isInstanceOf(GraphQLException.class)
+                .extracting("errorCode").isEqualTo(ErrorCode.FORBIDDEN);
+
+        verify(bookingClient, never()).getEventBookings(anyString());
     }
 
     // ── event hydration ───────────────────────────────────────────────────────

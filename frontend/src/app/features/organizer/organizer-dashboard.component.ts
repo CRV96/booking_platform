@@ -97,6 +97,7 @@ function timeOfDay(): string {
                     <div class="event-row-right">
                       <span class="badge" [class]="statusBadge(ev.status)">{{ ev.status }}</span>
                       <div class="event-row-actions">
+                        <a [routerLink]="['/organizer/events', ev.id, 'stats']" class="btn btn-ghost btn-sm" style="text-decoration:none">Stats</a>
                         <a [routerLink]="['/organizer/events', ev.id, 'edit']" class="btn btn-ghost btn-sm" style="text-decoration:none">Edit</a>
                         <a [routerLink]="['/events', ev.id]" class="btn btn-ghost btn-sm" style="text-decoration:none">View</a>
                         @if (ev.status === 'DRAFT') {

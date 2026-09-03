@@ -260,6 +260,15 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<BookingEntity> getEventBookings(String eventId) {
+        if (eventId == null || eventId.isBlank()) {
+            throw new IllegalArgumentException("Event ID must not be null or blank");
+        }
+        return bookingRepository.findByEventId(eventId);
+    }
+
+    @Override
     public List<String> getAttendeeIdsForEvent(String eventId, BookingStatus status) {
         if(eventId == null || eventId.isBlank()) {
             throw new IllegalArgumentException("Event ID must not be null or blank");

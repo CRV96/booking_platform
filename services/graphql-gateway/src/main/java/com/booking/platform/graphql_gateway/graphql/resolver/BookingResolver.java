@@ -1,9 +1,12 @@
 package com.booking.platform.graphql_gateway.graphql.resolver;
 
+import com.booking.platform.common.enums.Roles;
 import com.booking.platform.graphql_gateway.dto.booking.Booking;
 import com.booking.platform.graphql_gateway.dto.booking.BookingConnection;
 import com.booking.platform.graphql_gateway.dto.booking.CreateBookingInput;
 import com.booking.platform.graphql_gateway.dto.event.Event;
+import com.booking.platform.graphql_gateway.exception.ErrorCode;
+import com.booking.platform.graphql_gateway.exception.GraphQLException;
 import com.booking.platform.graphql_gateway.grpc.client.BookingClient;
 import com.booking.platform.graphql_gateway.grpc.client.EventClient;
 import com.booking.platform.graphql_gateway.service.AuthService;
@@ -49,10 +52,6 @@ public class BookingResolver {
         }
     }
 
-    // =========================================================================
-    // QUERIES
-    // =========================================================================
-
     @QueryMapping
     public Booking booking(@Argument("id") String id) {
         String userId = authService.getAuthenticatedUserId();
@@ -89,9 +88,22 @@ public class BookingResolver {
         );
     }
 
-    // =========================================================================
-    // MUTATIONS
-    // =========================================================================
+    @QueryMapping
+    public List<Booking> eventBookings(@Argument("eventId") String eventId) {
+        String userId = authService.getAuthenticatedUserId();
+        authService.requireRole(Roles.EMPLOYEE.getValue());
+
+        // Ownership: only the event's own organizer may read its bookings.
+        var event = eventClient.getEvent(eventId).getEvent();
+        if (!userId.equals(event.getOrganizer().getUserId())) {
+            throw new GraphQLException(ErrorCode.FORBIDDEN);
+        }
+
+        ApplicationLogger.logMessage(log, Level.DEBUG, "GraphQL query: eventBookings({}) for organizer '{}'", eventId, userId);
+        return bookingClient.getEventBookings(eventId).getBookingsList().stream()
+                .map(Booking::fromGrpc)
+                .toList();
+    }
 
     @MutationMapping
     public Booking createBooking(@Argument("input") CreateBookingInput input) {

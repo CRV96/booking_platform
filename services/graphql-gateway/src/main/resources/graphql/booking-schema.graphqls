@@ -8,6 +8,9 @@ extend type Query {
         pageSize: Int = 20
         status: BookingStatus
     ): BookingConnection!
+
+    """All bookings for one of the organizer's own events (organizer-only) — for statistics."""
+    eventBookings(eventId: ID!): [Booking!]!
 }
 
 extend type Mutation {

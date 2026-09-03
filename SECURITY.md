@@ -2,12 +2,14 @@
 
 ## Supported Versions
 
+Releases are date-based (e.g. `v2026.09.01`). Security fixes are applied to the **latest release only**.
+
 | Version | Supported |
 |---------|-----------|
-| v1.0.x (latest) | ✅ |
-| older releases | ❌ |
+| Latest release (`main`) | ✅ |
+| Older / archived releases | ❌ |
 
-Security fixes are applied to the latest release only. If you are running an older version, upgrade before reporting.
+If you are running an older version, upgrade before reporting. See the [Releases](../../wiki/releases) guide for the upgrade process.
 
 ---
 

@@ -1,6 +1,7 @@
 package com.booking.platform.graphql_gateway.grpc.client;
 
 import com.booking.platform.common.grpc.booking.BookingResponse;
+import com.booking.platform.common.grpc.booking.GetEventBookingsResponse;
 import com.booking.platform.common.grpc.booking.GetUserBookingsResponse;
 
 /**
@@ -19,4 +20,6 @@ public interface BookingClient {
     BookingResponse cancelBooking(String bookingId, String reason);
 
     boolean discardBooking(String bookingId);
+
+    GetEventBookingsResponse getEventBookings(String eventId);
 }

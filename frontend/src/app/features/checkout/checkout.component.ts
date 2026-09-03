@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { Apollo } from 'apollo-angular';
 import { forkJoin } from 'rxjs';
 import { loadStripe, Stripe, StripeCardElement } from '@stripe/stripe-js';
-import { CREATE_BOOKING, CREATE_ORDER_PAYMENT_INTENT, CONFIRM_MOCK_PAYMENT, UPDATE_PROFILE, DISCARD_BOOKING } from '../../shared/graphql/documents';
-import { Booking, PaymentIntent } from '../../shared/models/models';
+import { CREATE_BOOKING, CREATE_ORDER_PAYMENT_INTENT, CONFIRM_MOCK_PAYMENT, UPDATE_PROFILE, DISCARD_BOOKING, ME } from '../../shared/graphql/documents';
+import { Booking, PaymentIntent, BillingAddress, User } from '../../shared/models/models';
 import { CartService } from '../../core/cart.service';
 
 @Component({
@@ -30,30 +30,47 @@ import { CartService } from '../../core/cart.service';
           <div class="checkout-main">
             <div class="booking-card" style="position:static;margin-bottom:16px">
               <div class="mono xs muted" style="text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px">Billing address</div>
-              <div class="field">
-                <label>Full name</label>
-                <input class="inp" [(ngModel)]="billing.fullName" placeholder="Jane Doe">
-              </div>
-              <div class="field">
-                <label>Address line 1</label>
-                <input class="inp" [(ngModel)]="billing.line1" placeholder="Street and number">
-              </div>
-              <div class="field">
-                <label>Address line 2 <span class="mono xs muted">(optional)</span></label>
-                <input class="inp" [(ngModel)]="billing.line2" placeholder="Apartment, suite, etc.">
-              </div>
-              <div class="bill-row">
-                <div class="field"><label>City</label><input class="inp" [(ngModel)]="billing.city"></div>
-                <div class="field"><label>State / Region</label><input class="inp" [(ngModel)]="billing.state"></div>
-              </div>
-              <div class="bill-row">
-                <div class="field"><label>Postal code</label><input class="inp" [(ngModel)]="billing.postalCode"></div>
-                <div class="field"><label>Country</label><input class="inp" [(ngModel)]="billing.country" placeholder="NL"></div>
-              </div>
-              <label class="save-address">
-                <input type="checkbox" [(ngModel)]="saveBillingAddress">
-                Save this address to my account
-              </label>
+
+              @if (savedBilling() && !editingAddress()) {
+                <!-- Address on file — shown as the default -->
+                <div class="saved-address">
+                  @if (billing.fullName) { <div class="saved-name">{{ billing.fullName }}</div> }
+                  <div class="mono xs muted">{{ savedSummary() }}</div>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" style="margin-top:12px" (click)="useDifferentAddress()">
+                  Use a different billing address
+                </button>
+              } @else {
+                <div class="field">
+                  <label>Full name</label>
+                  <input class="inp" [(ngModel)]="billing.fullName" placeholder="Jane Doe">
+                </div>
+                <div class="field">
+                  <label>Address line 1</label>
+                  <input class="inp" [(ngModel)]="billing.line1" placeholder="Street and number">
+                </div>
+                <div class="field">
+                  <label>Address line 2 <span class="mono xs muted">(optional)</span></label>
+                  <input class="inp" [(ngModel)]="billing.line2" placeholder="Apartment, suite, etc.">
+                </div>
+                <div class="bill-row">
+                  <div class="field"><label>City</label><input class="inp" [(ngModel)]="billing.city"></div>
+                  <div class="field"><label>State / Region</label><input class="inp" [(ngModel)]="billing.state"></div>
+                </div>
+                <div class="bill-row">
+                  <div class="field"><label>Postal code</label><input class="inp" [(ngModel)]="billing.postalCode"></div>
+                  <div class="field"><label>Country</label><input class="inp" [(ngModel)]="billing.country" placeholder="NL"></div>
+                </div>
+                <label class="save-address">
+                  <input type="checkbox" [(ngModel)]="saveBillingAddress">
+                  {{ savedBilling() ? 'Save & replace the address on my account' : 'Save this address to my account' }}
+                </label>
+                @if (savedBilling()) {
+                  <button type="button" class="btn btn-ghost btn-sm" style="margin-top:10px" (click)="useSavedAddress()">
+                    ← Use my saved address
+                  </button>
+                }
+              }
             </div>
 
             <div class="booking-card" style="position:static">
@@ -132,6 +149,8 @@ import { CartService } from '../../core/cart.service';
     .save-address { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
     .save-address input { cursor: pointer; }
     .bill-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .saved-address { padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-sunk); }
+    .saved-name { font-size: 14px; font-weight: 500; margin-bottom: 4px; }
   `]
 })
 export class CheckoutComponent implements OnInit, OnDestroy {
@@ -148,6 +167,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
   cardNumber = '';
   billing = { fullName: '', line1: '', line2: '', city: '', state: '', postalCode: '', country: '' };
   saveBillingAddress = false;
+  savedBilling = signal<BillingAddress | null>(null);  // address already on the user's account
+  editingAddress = signal(false);                      // true = entering a different address
 
   private orderId = '';
   private bookingIds: string[] = [];
@@ -177,6 +198,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     }
     // Fresh idempotency handle for this order's single payment.
     this.orderId = crypto.randomUUID();
+
+    this.loadSavedBillingAddress();
 
     // 1. Create a booking per cart item (reserve + hold). The stable server cart-line id is the
     //    booking's idempotency key, so a checkout reload reuses the same bookings.
@@ -247,9 +270,65 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     else this.payWithMock();
   }
 
-  /** If the customer ticked "save", persist the billing address to their profile (fire-and-forget). */
+  /** Load the address saved on the user's account and prefill the form with it. */
+  private loadSavedBillingAddress() {
+    this.apollo.query<{ me: User }>({ query: ME }).subscribe({
+      next: r => {
+        const saved = r.data?.me?.billingAddress;
+        if (saved && this.hasAny(saved)) {
+          this.savedBilling.set(saved);
+          this.billing = {
+            fullName: saved.fullName ?? '', line1: saved.line1 ?? '', line2: saved.line2 ?? '',
+            city: saved.city ?? '', state: saved.state ?? '', postalCode: saved.postalCode ?? '',
+            country: saved.country ?? '',
+          };
+        } else {
+          // No saved address — go straight to the editable form.
+          this.editingAddress.set(true);
+        }
+      },
+      error: () => { this.editingAddress.set(true); }
+    });
+  }
+
+  /** Switch to entering a different address; starts blank and will replace the saved one if saved. */
+  useDifferentAddress() {
+    this.billing = { fullName: '', line1: '', line2: '', city: '', state: '', postalCode: '', country: '' };
+    this.saveBillingAddress = true;   // a new address is meant to replace the one on file
+    this.editingAddress.set(true);
+  }
+
+  /** Discard the edited address and go back to using the one saved on the account. */
+  useSavedAddress() {
+    const saved = this.savedBilling();
+    if (saved) {
+      this.billing = {
+        fullName: saved.fullName ?? '', line1: saved.line1 ?? '', line2: saved.line2 ?? '',
+        city: saved.city ?? '', state: saved.state ?? '', postalCode: saved.postalCode ?? '',
+        country: saved.country ?? '',
+      };
+    }
+    this.saveBillingAddress = false;
+    this.editingAddress.set(false);
+  }
+
+  /** One-line summary of the saved address for the read-only view. */
+  savedSummary(): string {
+    const b = this.savedBilling();
+    if (!b) return '';
+    return [b.line1, b.line2, b.city, b.state, b.postalCode, b.country].filter(Boolean).join(', ');
+  }
+
+  private hasAny(b: BillingAddress): boolean {
+    return !!(b.fullName || b.line1 || b.line2 || b.city || b.state || b.postalCode || b.country);
+  }
+
+  /**
+   * If the customer ticked "save" while entering an address, persist it to their profile
+   * (fire-and-forget), replacing whatever was on file.
+   */
   private maybeSaveBillingAddress() {
-    if (!this.saveBillingAddress) return;
+    if (!this.editingAddress() || !this.saveBillingAddress) return;
     const b = this.billing;
     const empty = !b.fullName && !b.line1 && !b.city && !b.postalCode && !b.country;
     if (empty) return;

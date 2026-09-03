@@ -145,6 +145,15 @@ export const GET_BOOKING = gql`
   }
 `;
 
+// Organizer-only: all bookings for one of their events (for the stats page).
+export const GET_EVENT_BOOKINGS = gql`
+  query GetEventBookings($eventId: ID!) {
+    eventBookings(eventId: $eventId) {
+      id seatCategory quantity status totalPrice currency createdAt
+    }
+  }
+`;
+
 export const CREATE_BOOKING = gql`
   mutation CreateBooking($input: CreateBookingInput!) {
     createBooking(input: $input) { ${BOOKING_FIELDS} }

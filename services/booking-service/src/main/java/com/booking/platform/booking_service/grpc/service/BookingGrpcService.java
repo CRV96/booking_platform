@@ -156,6 +156,18 @@ public class BookingGrpcService extends BookingServiceGrpc.BookingServiceImplBas
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void getEventBookings(GetEventBookingsRequest request, StreamObserver<GetEventBookingsResponse> responseObserver) {
+        ApplicationLogger.logMessage(log, Level.DEBUG, "gRPC GetEventBookings for eventId='{}'", request.getEventId());
+
+        List<BookingEntity> bookings = bookingService.getEventBookings(request.getEventId());
+
+        responseObserver.onNext(GetEventBookingsResponse.newBuilder()
+                .addAllBookings(bookingMapper.toProtoList(bookings))
+                .build());
+        responseObserver.onCompleted();
+    }
+
     private BookingResponse buildBookingResponse(BookingEntity booking) {
         return BookingResponse.newBuilder()
                 .setBooking(bookingMapper.toProto(booking))
