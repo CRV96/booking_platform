@@ -1,33 +1,18 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Apollo } from 'apollo-angular';
+import qrcode from 'qrcode-generator';
 import { GET_MY_TICKETS } from '../../shared/graphql/documents';
 import { Ticket, TicketConnection } from '../../shared/models/models';
 
-function qrSvg(seed: string): string {
-  const s = seed || 'X';
-  const cells: boolean[][] = [];
-  for (let r = 0; r < 11; r++) {
-    cells[r] = [];
-    for (let c = 0; c < 11; c++) {
-      const v = s.charCodeAt((r * 11 + c) % s.length);
-      cells[r][c] = ((v * (r + 1) * (c + 1)) % 7) < 3;
-    }
-  }
-  let rects = '';
-  for (let r = 0; r < 11; r++) {
-    for (let c = 0; c < 11; c++) {
-      if (cells[r][c]) {
-        rects += `<rect x="${4 + c * 8}" y="${4 + r * 8}" width="7" height="7" fill="currentColor"/>`;
-      }
-    }
-  }
-  // Corner markers
-  const corner = (x: number, y: number) =>
-    `<rect x="${x}" y="${y}" width="19" height="19" fill="currentColor"/>` +
-    `<rect x="${x+3}" y="${y+3}" width="13" height="13" fill="white"/>` +
-    `<rect x="${x+6}" y="${y+6}" width="7" height="7" fill="currentColor"/>`;
-  return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="color:currentColor">${rects}${corner(4,4)}${corner(77,4)}${corner(4,77)}</svg>`;
+/** Generates a real, scannable QR code (as an SVG string) encoding the given value. */
+function qrSvg(data: string): string {
+  const qr = qrcode(0, 'M');           // type 0 = auto-size, error correction level M
+  qr.addData(data || 'X');
+  qr.make();
+  // margin 0 — the white padding around .qr-box provides the quiet zone; scalable → viewBox.
+  return qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
 }
 
 @Component({
@@ -126,13 +111,15 @@ function qrSvg(seed: string): string {
       align-items: center; justify-content: center;
       padding: 16px;
     }
-    .qr-box { width: 88px; height: 88px; color: var(--ink); }
+    .qr-box { width: 88px; height: 88px; background: #fff; padding: 6px; border-radius: 4px; box-sizing: border-box; }
+    .qr-box svg { width: 100%; height: 100%; display: block; }
     .qr-invalid { opacity: 0.25; }
     .pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 32px; }
   `]
 })
 export class MyTicketsComponent implements OnInit {
   private apollo = inject(Apollo);
+  private sanitizer = inject(DomSanitizer);
   tickets = signal<Ticket[]>([]);
   connection = signal<TicketConnection | null>(null);
   loading = signal(false);
@@ -144,8 +131,8 @@ export class MyTicketsComponent implements OnInit {
   prevPage() { this.page.update(p => p - 1); this.load(); }
   nextPage() { this.page.update(p => p + 1); this.load(); }
 
-  qr(ticketNumber: string): string {
-    return qrSvg(ticketNumber || 'X');
+  qr(ticketNumber: string): SafeHtml {
+    return this.sanitizer.bypassSecurityTrustHtml(qrSvg(ticketNumber || 'X'));
   }
 
   private load() {
