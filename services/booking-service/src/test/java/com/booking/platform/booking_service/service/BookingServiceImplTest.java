@@ -619,4 +619,22 @@ class BookingServiceImplTest {
 
         assertThat(result).containsExactly("u-1", "u-2");
     }
+
+    @Test
+    void getEventBookings_blankEventId_throwsIllegalArgument() {
+        assertThatThrownBy(() -> service.getEventBookings("  "))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(bookingRepository, never()).findByEventId(anyString());
+    }
+
+    @Test
+    void getEventBookings_success_delegatesToRepository() {
+        BookingEntity b1 = BookingEntity.builder().eventId(EVENT_ID).build();
+        when(bookingRepository.findByEventId(EVENT_ID)).thenReturn(List.of(b1));
+
+        List<BookingEntity> result = service.getEventBookings(EVENT_ID);
+
+        assertThat(result).containsExactly(b1);
+        verify(bookingRepository).findByEventId(EVENT_ID);
+    }
 }

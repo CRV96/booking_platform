@@ -71,6 +71,7 @@ export const routes: Routes = [
       { path: '', loadComponent: () => import('./features/organizer/organizer-dashboard.component').then(m => m.OrganizerDashboardComponent) },
       { path: 'events/new', loadComponent: () => import('./features/organizer/event-form.component').then(m => m.EventFormComponent) },
       { path: 'events/:id/edit', loadComponent: () => import('./features/organizer/event-form.component').then(m => m.EventFormComponent) },
+      { path: 'events/:id/stats', loadComponent: () => import('./features/organizer/event-stats.component').then(m => m.EventStatsComponent) },
       { path: 'tickets', loadComponent: () => import('./features/organizer/ticket-scanner.component').then(m => m.TicketScannerComponent) },
     ]
   },

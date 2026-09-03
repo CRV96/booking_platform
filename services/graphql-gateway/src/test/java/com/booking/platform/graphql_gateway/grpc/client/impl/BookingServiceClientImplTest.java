@@ -126,4 +126,19 @@ class BookingServiceClientImplTest {
         assertThat(captor.getValue().getBookingId()).isEqualTo("bk-1");
         assertThat(result).isTrue();
     }
+
+    @Test
+    void getEventBookings_sendsEventIdAndReturnsResponse() {
+        GetEventBookingsResponse response = GetEventBookingsResponse.newBuilder()
+                .addBookings(BookingInfo.newBuilder().setId("bk-1").build())
+                .build();
+        when(stub.getEventBookings(any())).thenReturn(response);
+
+        GetEventBookingsResponse result = client.getEventBookings("ev-1");
+
+        ArgumentCaptor<GetEventBookingsRequest> captor = ArgumentCaptor.forClass(GetEventBookingsRequest.class);
+        verify(stub).getEventBookings(captor.capture());
+        assertThat(captor.getValue().getEventId()).isEqualTo("ev-1");
+        assertThat(result).isEqualTo(response);
+    }
 }

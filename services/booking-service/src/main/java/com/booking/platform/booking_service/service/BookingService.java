@@ -80,4 +80,7 @@ public interface BookingService {
     void markBookingAsRefunded(UUID bookingId);
 
     List<String> getAttendeeIdsForEvent(String eventId, BookingStatus bookingStatus);
+
+    /** All bookings for an event — used by the organizer statistics view (ownership checked upstream). */
+    List<BookingEntity> getEventBookings(String eventId);
 }

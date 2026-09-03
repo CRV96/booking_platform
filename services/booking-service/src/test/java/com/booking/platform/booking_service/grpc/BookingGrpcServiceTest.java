@@ -44,6 +44,7 @@ class BookingGrpcServiceTest {
     @Mock private StreamObserver<GetUserBookingsResponse> listObserver;
     @Mock private StreamObserver<GetBookingAttendeesResponse> attendeesObserver;
     @Mock private StreamObserver<DiscardBookingResponse> discardObserver;
+    @Mock private StreamObserver<GetEventBookingsResponse> eventBookingsObserver;
 
     @InjectMocks private BookingGrpcService grpcService;
 
@@ -319,6 +320,27 @@ class BookingGrpcServiceTest {
         verify(attendeesObserver).onNext(captor.capture());
         assertThat(captor.getValue().getAttendeesList()).containsExactly("u-1", "u-2");
         verify(attendeesObserver).onCompleted();
+    }
+
+    // ── getEventBookings ──────────────────────────────────────────────────────
+
+    @Test
+    void getEventBookings_returnsMappedBookings() {
+        BookingEntity entity = bookingEntity();
+        when(bookingService.getEventBookings("ev-1")).thenReturn(List.of(entity));
+        when(bookingMapper.toProtoList(List.of(entity)))
+                .thenReturn(List.of(BookingInfo.newBuilder().setId("bk-1").build()));
+
+        grpcService.getEventBookings(
+                GetEventBookingsRequest.newBuilder().setEventId("ev-1").build(),
+                eventBookingsObserver);
+
+        ArgumentCaptor<GetEventBookingsResponse> captor =
+                ArgumentCaptor.forClass(GetEventBookingsResponse.class);
+        verify(bookingService).getEventBookings("ev-1");
+        verify(eventBookingsObserver).onNext(captor.capture());
+        assertThat(captor.getValue().getBookingsList()).extracting(BookingInfo::getId).containsExactly("bk-1");
+        verify(eventBookingsObserver).onCompleted();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -26,6 +26,9 @@ service BookingService {
 
   // Get a list of attendees (user IDs) for a given event, filtered by booking status.
   rpc GetBookingAttendees(GetBookingAttendeesRequest) returns (GetBookingAttendeesResponse);
+
+  // Get all bookings for an event (for organizer statistics). Ownership is enforced at the gateway.
+  rpc GetEventBookings(GetEventBookingsRequest) returns (GetEventBookingsResponse);
 }
 
 message CreateBookingRequest {
@@ -100,4 +103,12 @@ message GetBookingAttendeesRequest {
 
 message GetBookingAttendeesResponse {
   repeated string attendees = 1;
+}
+
+message GetEventBookingsRequest {
+  string event_id = 1;
+}
+
+message GetEventBookingsResponse {
+  repeated BookingInfo bookings = 1;
 }

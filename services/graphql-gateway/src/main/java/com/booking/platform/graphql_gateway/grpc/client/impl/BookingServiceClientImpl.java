@@ -87,4 +87,13 @@ public class BookingServiceClientImpl implements BookingClient {
                 DiscardBookingRequest.newBuilder().setBookingId(bookingId).build()
         ).getSuccess();
     }
+
+    @Override
+    public GetEventBookingsResponse getEventBookings(String eventId) {
+        ApplicationLogger.logMessage(log, Level.DEBUG, "Calling booking-service: GetEventBookings event='{}'", eventId);
+
+        return bookingServiceStub.getEventBookings(
+                GetEventBookingsRequest.newBuilder().setEventId(eventId).build()
+        );
+    }
 }
