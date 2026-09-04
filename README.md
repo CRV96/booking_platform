@@ -3,7 +3,12 @@
 A production-grade **event ticketing platform** built with Java 21 and Spring Boot microservices, fronted by an Angular single-page app. It handles registration and login (via Keycloak), event management with a publishing workflow, seat booking under distributed locks, payment processing (Stripe or a mock gateway), QR ticket generation, email notifications, real-time analytics, and AI-powered **semantic ("smart") event search** — all wired together with gRPC, Kafka, and a single GraphQL gateway.
 
 > 📚 **Full documentation lives in the [Wiki](../../wiki).** This README is the map; the wiki has the territory.
-> Application video DEMO -> https://youtu.be/Fy2iXuYOAps
+
+## Demo
+
+[![Watch the demo video](https://img.youtube.com/vi/Fy2iXuYOAps/maxresdefault.jpg)](https://youtu.be/Fy2iXuYOAps)
+
+▶️ **[Watch the demo on YouTube](https://youtu.be/Fy2iXuYOAps)** — a walkthrough of the platform end to end.
 
 ## Architecture
 

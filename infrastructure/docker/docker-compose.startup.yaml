@@ -2,7 +2,6 @@ name: bkg-platform
 
 services:
 
-# ==================== DATABASES ====================
   postgres:
     image: postgres:16-alpine
     container_name: bkg-postgres
@@ -25,16 +24,8 @@ services:
       - bkg-network
 
   mongodb:
-    # Atlas-local bundles mongod + mongot (the Atlas Search / Vector Search engine)
-    # and runs as a single-node replica set. Same data API as stock mongo, plus
-    # $vectorSearch. Note: env vars use the MONGODB_ prefix (not MONGO_).
     image: mongodb/mongodb-atlas-local:7.0.14
     container_name: bkg-mongodb
-    # Stable hostname so the single-node replica set's member address stays valid
-    # across container recreation (default would be the random container ID, which
-    # changes each recreate and breaks the RS config). Resolvable via Docker DNS
-    # for in-network services; host clients use directConnection=true (bypasses
-    # topology discovery, so they never need to resolve this name).
     hostname: bkg-mongodb
     ports:
       - "27017:27017"
